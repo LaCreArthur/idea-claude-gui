@@ -822,7 +822,7 @@ const App = () => {
       }
     });
 
-    // 发送消息（智能体提示词由后端自动注入）
+    // Send message (agent prompt is automatically injected by backend)
     if (hasAttachments) {
       try {
         const payload = JSON.stringify({
