@@ -223,12 +223,13 @@ interface Window {
 
   /**
    * Apply IDEA editor font configuration (called from Java backend)
-   * @param config Font configuration object containing fontFamily, fontSize, lineSpacing
+   * @param config Font configuration object containing fontFamily, fontSize, lineSpacing, fallbackFonts
    */
   applyIdeaFontConfig?: (config: {
     fontFamily: string;
     fontSize: number;
     lineSpacing: number;
+    fallbackFonts?: string[];
   }) => void;
 
   /**
@@ -238,6 +239,7 @@ interface Window {
     fontFamily: string;
     fontSize: number;
     lineSpacing: number;
+    fallbackFonts?: string[];
   };
 
   /**
