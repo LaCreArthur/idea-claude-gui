@@ -9,8 +9,8 @@ checkstyle {
     configFile = file('checkstyle.xml')
 }
 
-group = 'com.github.idea-claude-code-gui'
-version = '0.1.4-beta4'
+group = 'com.lacrearthur.idea-claude-gui'
+version = '0.2.0'
 
 java {
     sourceCompatibility = JavaVersion.VERSION_17
@@ -119,33 +119,33 @@ tasks.named('runIde') {
     jvmArgumentProviders.add({
         [
             '-Djcef.sandbox.enable=false',
-            // 禁用插件自动卸载（避免检测到文件变更时自动卸载）
+            // Disable plugin auto-unload (prevent unloading when file changes detected)
             '-Didea.auto.reload.plugins=false',
-            // 禁用插件动态卸载
+            // Disable dynamic plugin unloading
             '-Didea.dynamic.plugins.allowed=false',
-            // 启用内部模式
+            // Enable internal mode
             '-Didea.is.internal=true',
-            // 禁用文件系统事件监控（可选）
+            // Disable file system event monitoring (optional)
             // '-Didea.filewatcher.disabled=true',
-            // 增加插件加载超时
+            // Increase plugin loading timeout
             '-Didea.plugins.load.timeout=60000'
         ]
     } as CommandLineArgumentProvider)
 
-    // 设置系统属性
+    // Set system properties
     systemProperty 'idea.auto.reload.plugins', 'false'
     systemProperty 'idea.dynamic.plugins.allowed', 'false'
     systemProperty 'idea.is.internal', 'true'
     systemProperty 'idea.plugin.in.sandbox.mode', 'true'
 
-    // 配置日志输出到控制台
+    // Configure log output to console
     systemProperty 'idea.log.debug.categories', '#com.github.claudecodegui'
 
-    // 重定向标准输出
+    // Redirect standard output
     standardOutput = System.out
     errorOutput = System.err
 
-    // 复制自定义配置到sandbox
+    // Copy custom config to sandbox
     doFirst {
         def sandboxConfig = file('sandbox-idea.properties')
         if (sandboxConfig.exists()) {
@@ -158,17 +158,17 @@ tasks.named('runIde') {
                 into configDir
                 rename { 'idea.properties' }
             }
-            println "已复制sandbox配置到: ${configDir}/idea.properties"
+            println "Copied sandbox config to: ${configDir}/idea.properties"
         }
     }
 }
 
-// 统一的 AI Bridge（合并 Claude 和 Codex）
+// Unified AI Bridge (merged Claude and Codex)
 def aiBridgeDir = file("ai-bridge")
 def aiBridgePackDir = layout.buildDirectory.dir('ai-bridge-pack').get().asFile
 def aiBridgeArchive = new File(aiBridgePackDir, 'ai-bridge.zip')
 
-// 自动构建 webview
+// Auto-build webview
 def webviewDir = file('webview')
 def requestedTasks = gradle.startParameter.taskNames.collect { it.toLowerCase() }
 def enableVConsoleInWebview = requestedTasks.any { it.contains('runide') }
@@ -187,8 +187,8 @@ tasks.register('buildWebview', Exec) {
     doLast { println "Webview build completed." }
 }
 
-// 确保 processResources 在 buildWebview 之后执行
-// 使用 mustRunAfter 确保执行顺序，同时在 compileJava 前触发 buildWebview
+// Ensure processResources runs after buildWebview
+// Use mustRunAfter to ensure execution order, trigger buildWebview before compileJava
 tasks.named('compileJava') {
     dependsOn('buildWebview')
 }
@@ -203,12 +203,12 @@ tasks.register('packageAiBridge', Zip) {
     destinationDirectory = aiBridgePackDir
     from(aiBridgeDir)
     exclude('node_modules/.pnpm/**')
-    // 排除 codex-sdk 的多平台二进制文件（约 310MB），运行时会自动下载对应平台的版本
+    // Exclude codex-sdk multi-platform binaries (~310MB), runtime will auto-download platform-specific versions
     exclude('node_modules/@openai/codex-sdk/vendor/**')
     includeEmptyDirs = true
 }
 
-// 提取插件名称
+// Extract plugin name
 def pluginName = project.name
 
 tasks.matching { it.name.startsWith('prepareSandbox') }.configureEach {
@@ -217,7 +217,7 @@ tasks.matching { it.name.startsWith('prepareSandbox') }.configureEach {
 
     doLast {
         if (!aiBridgeDir.exists() && !aiBridgeArchive.exists()) {
-            throw new GradleException('ai-bridge 目录不存在，请确保已拉取并安装依赖。')
+            throw new GradleException('ai-bridge directory not found. Please ensure it has been pulled and dependencies installed.')
         }
         def sandboxRoot = sandboxRootProvider.get().asFile
         def pluginDir = new File(sandboxRoot, "plugins/${pluginName}")
@@ -233,7 +233,7 @@ tasks.matching { it.name.startsWith('prepareSandbox') }.configureEach {
     }
 }
 
-// 配置 prepareSandbox 之后的任务，确保 ai-bridge.zip 被包含
+// Configure tasks after prepareSandbox to ensure ai-bridge.zip is included
 tasks.matching { it.name == 'preparePluginForDistribution' || it.name == 'composedJar' }.configureEach {
     dependsOn('packageAiBridge')
 }
@@ -242,19 +242,19 @@ tasks.named('buildPlugin') {
     dependsOn('packageAiBridge', 'checkstyleMain')
 
     doLast {
-        // 解压插件 zip，添加 ai-bridge.zip，然后重新打包
+        // Extract plugin zip, add ai-bridge.zip, then repack
         def distributionFile = archiveFile.get().asFile
         if (distributionFile.exists() && aiBridgeArchive.exists()) {
             def tempDir = file("${layout.buildDirectory.get()}/tmp/plugin-repack")
             delete(tempDir)
 
-            // 解压
+            // Extract
             copy {
                 from zipTree(distributionFile)
                 into tempDir
             }
 
-            // 找到插件目录并添加 ai-bridge.zip
+            // Find plugin directory and add ai-bridge.zip
             def pluginDir = new File(tempDir, pluginName)
             if (pluginDir.exists()) {
                 copy {
@@ -262,20 +262,20 @@ tasks.named('buildPlugin') {
                     into pluginDir
                 }
 
-                // 删除 searchableOptions jar（如果存在）
+                // Delete searchableOptions jar (if exists)
                 fileTree(new File(pluginDir, 'lib')).matching {
                     include '**/*searchableOptions*.jar'
                 }.each { jarFile ->
                     delete(jarFile)
-                    println "已删除 searchableOptions jar: ${jarFile.name}"
+                    println "Deleted searchableOptions jar: ${jarFile.name}"
                 }
 
-                // 重新打包
+                // Repack
                 delete(distributionFile)
                 ant.zip(destfile: distributionFile) {
                     fileset(dir: tempDir)
                 }
-                println "已将 ai-bridge.zip 添加到插件包并移除 searchableOptions jar"
+                println "Added ai-bridge.zip to plugin package and removed searchableOptions jar"
             }
 
             delete(tempDir)

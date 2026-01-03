@@ -1,10 +1,18 @@
 <idea-plugin>
-    <id>com.github.idea-claude-code-gui</id>
-    <name>Claude Code GUI</name>
-    <vendor>CodeMossAI</vendor>
+    <id>com.lacrearthur.idea-claude-gui</id>
+    <name>Claude GUI</name>
+    <vendor>Arthur Scheidel</vendor>
 
     <description><![CDATA[
         <p><strong>Claude Code GUI</strong> - A powerful AI assistant and productivity tool that brings Claude Code capabilities with an intuitive graphical interface directly into IntelliJ IDEA.</p>
+
+        <h2>🔐 Zero-Config Authentication</h2>
+        <p>Already logged in to Claude Code? <strong>You're ready to go.</strong></p>
+        <ul>
+            <li><strong>Claude Subscription</strong>: The plugin automatically detects your existing <code>claude login</code> session. No copy-pasting, no re-authentication—just open the plugin and start coding.</li>
+            <li><strong>API Key</strong>: Prefer direct API access? Enter your Anthropic API key in settings.</li>
+        </ul>
+        <p><em>Your credentials stay local and secure—never transmitted to third parties.</em></p>
 
         <h2>Features:</h2>
         <ul>
@@ -27,10 +35,21 @@
         <p><em>Keywords: Claude, AI Assistant, Code Generation, AI Coding, Productivity, Claude Code, Intelligent Code Assistant</em></p>
     ]]></description>
 
+    <change-notes><![CDATA[
+        <h3>v0.2.0 - Fork Release (January 3, 2026)</h3>
+        <ul>
+            <li><strong>Complete English Localization</strong>: All user-facing UI translated — dialogs, buttons, toasts, tooltips, error messages, MCP settings, and tool blocks</li>
+            <li><strong>Seamless CLI Auth</strong>: Auto-detects existing <code>claude login</code> session — no API key re-entry needed for Claude subscribers</li>
+            <li><strong>New Plugin Identity</strong>: Fresh icon for JetBrains Marketplace recognition</li>
+            <li><strong>Compatibility</strong>: IntelliJ IDEA 2023.3 – 2026.3, Gradle 8.x</li>
+        </ul>
+        <p>Full changelog: <a href="https://github.com/LaCreArthur/idea-claude-gui/blob/main/CHANGELOG.md">GitHub</a></p>
+    ]]></change-notes>
+
     <depends>com.intellij.modules.platform</depends>
 
     <extensions defaultExtensionNs="com.intellij">
-        <!-- Claude Code GUI 工具窗口（包含历史记录功能） -->
+        <!-- Claude Code GUI tool window (includes history) -->
         <toolWindow id="Claude Code GUI"
                     anchor="right"
                     factoryClass="com.github.claudecodegui.ClaudeSDKToolWindow"
@@ -38,13 +57,13 @@
     </extensions>
 
     <actions>
-        <!-- 发送选中代码到终端的Action -->
+        <!-- Send selected code to Claude Code GUI action -->
         <action id="ClaudeCodeGUI.SendSelectionToTerminalAction"
                 class="com.github.claudecodegui.SendSelectionToTerminalAction"
-                text="发送选中代码到GUI插件"
-                description="将当前选中的代码信息和路径发送到终端窗口"
+                text="Send Selection to Claude Code GUI"
+                description="Send the current selection's code and path to Claude Code GUI"
                 icon="/icons/send-to-terminal.svg">
-            <!-- 添加到编辑器右键菜单（显示在最上面） -->
+            <!-- Add to editor right-click menu (at the top) -->
             <add-to-group group-id="EditorPopupMenu" anchor="first"/>
             <keyboard-shortcut keymap="$default" first-keystroke="ctrl alt K"/>
             <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta alt K"/>

@@ -18,7 +18,7 @@ An IntelliJ IDEA plugin providing visual GUI for Claude Code operations within t
 ## 📁 Project Structure
 
 ```
-idea-claude-code-gui/
+idea-claude-gui/
 ├── src/main/java/           # IntelliJ Plugin (Java)
 │   └── com/github/claudecodegui/
 │       ├── handler/         # Message & event handlers
@@ -235,8 +235,8 @@ idea-claude-code-gui/
 
 ```bash
 # Clone repository
-git clone https://github.com/zhukunpenglinyutong/idea-claude-code-gui.git
-cd idea-claude-code-gui
+git clone https://github.com/LaCreArthur/idea-claude-gui.git
+cd idea-claude-gui
 
 # Install frontend dependencies
 cd webview
@@ -265,7 +265,7 @@ cd webview && npm run build && cd ..
 ### 3. Install Plugin
 
 ```bash
-# Build generates: build/distributions/idea-claude-code-gui-*.zip
+# Build generates: build/distributions/idea-claude-gui-*.zip
 # Install via: IDEA → Settings → Plugins → Install from Disk
 ```
 
