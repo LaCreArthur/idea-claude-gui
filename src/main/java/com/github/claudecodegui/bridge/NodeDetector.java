@@ -13,15 +13,15 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Node.js 检测器
- * 负责在各种平台上查找和验证 Node.js 可执行文件
+ * Node.js Detector.
+ * Responsible for finding and validating Node.js executable on various platforms.
  */
 public class NodeDetector {
 
     private static final Logger LOG = Logger.getInstance(NodeDetector.class);
-    // Windows 常见 Node.js 安装路径
+    // Common Windows Node.js installation paths
     private static final String[] WINDOWS_NODE_PATHS = {
-        // 官方安装程序默认路径
+        // Official installer default paths
         "C:\\Program Files\\nodejs\\node.exe",
         "C:\\Program Files (x86)\\nodejs\\node.exe",
         // Chocolatey
@@ -35,7 +35,7 @@ public class NodeDetector {
         "%USERPROFILE%\\.fnm\\node-versions\\default\\installation\\node.exe",
         // volta
         "%USERPROFILE%\\.volta\\bin\\node.exe",
-        // 用户自定义安装
+        // Custom user installation
         "%LOCALAPPDATA%\\Programs\\nodejs\\node.exe"
     };
 
@@ -43,7 +43,7 @@ public class NodeDetector {
     private NodeDetectionResult cachedDetectionResult = null;
 
     /**
-     * 查找 Node.js 可执行文件路径
+     * Find the Node.js executable path.
      */
     public String findNodeExecutable() {
         if (cachedNodeExecutable != null) {
@@ -56,59 +56,59 @@ public class NodeDetector {
             return cachedNodeExecutable;
         }
 
-        // 如果都找不到，最后回退
-        LOG.warn("⚠️ 无法自动检测 Node.js 路径，使用默认值 'node'");
+        // If all attempts fail, fall back to default
+        LOG.warn("⚠️ Unable to auto-detect Node.js path, using default 'node'");
         LOG.warn(result.getUserFriendlyMessage());
         cachedNodeExecutable = "node";
         return cachedNodeExecutable;
     }
 
     /**
-     * 检测 Node.js 并返回详细结果
-     * @return NodeDetectionResult 包含检测详情
+     * Detect Node.js and return detailed results.
+     * @return NodeDetectionResult containing detection details
      */
     public NodeDetectionResult detectNodeWithDetails() {
         List<String> triedPaths = new ArrayList<>();
-        LOG.info("正在查找 Node.js...");
-        LOG.info("  操作系统: " + System.getProperty("os.name"));
-        LOG.info("  平台类型: " + (PlatformUtils.isWindows() ? "Windows" :
+        LOG.info("Searching for Node.js...");
+        LOG.info("  Operating System: " + System.getProperty("os.name"));
+        LOG.info("  Platform Type: " + (PlatformUtils.isWindows() ? "Windows" :
             (PlatformUtils.isMac() ? "macOS" : "Linux/Unix")));
 
-        // 1. 尝试使用系统命令查找 (where/which)
+        // 1. Try system command (where/which)
         NodeDetectionResult cmdResult = detectNodeViaSystemCommand(triedPaths);
         if (cmdResult != null && cmdResult.isFound()) {
             return cmdResult;
         }
 
-        // 2. 尝试已知安装路径
+        // 2. Try known installation paths
         NodeDetectionResult knownPathResult = detectNodeViaKnownPaths(triedPaths);
         if (knownPathResult != null && knownPathResult.isFound()) {
             return knownPathResult;
         }
 
-        // 3. 尝试 PATH 环境变量
+        // 3. Try PATH environment variable
         NodeDetectionResult pathResult = detectNodeViaPath(triedPaths);
         if (pathResult != null && pathResult.isFound()) {
             return pathResult;
         }
 
-        // 4. 最后回退：直接尝试 "node"
+        // 4. Final fallback: try "node" directly
         NodeDetectionResult fallbackResult = detectNodeViaFallback(triedPaths);
         if (fallbackResult != null && fallbackResult.isFound()) {
             return fallbackResult;
         }
 
-        return NodeDetectionResult.failure("在所有已知路径中均未找到 Node.js", triedPaths);
+        return NodeDetectionResult.failure("Node.js not found in any known paths", triedPaths);
     }
 
     /**
-     * 通过系统命令 (where/which) 检测 Node.js
+     * Detect Node.js via system command (where/which).
      */
     private NodeDetectionResult detectNodeViaSystemCommand(List<String> triedPaths) {
         if (PlatformUtils.isWindows()) {
             return detectNodeViaWindowsWhere(triedPaths);
         } else {
-            // macOS/Linux: 先尝试 zsh（macOS 默认），再尝试 bash
+            // macOS/Linux: try zsh first (macOS default), then bash
             NodeDetectionResult result = detectNodeViaShell("/bin/zsh", "zsh", triedPaths);
             if (result != null && result.isFound()) {
                 return result;
@@ -118,14 +118,14 @@ public class NodeDetector {
     }
 
     /**
-     * Windows: 使用 where 命令检测 Node.js
+     * Windows: Detect Node.js using 'where' command.
      */
     private NodeDetectionResult detectNodeViaWindowsWhere(List<String> triedPaths) {
         try {
             ProcessBuilder pb = new ProcessBuilder("where", "node");
-            String methodDesc = "Windows where 命令";
+            String methodDesc = "Windows where command";
 
-            LOG.info("  尝试方法: " + methodDesc);
+            LOG.info("  Trying method: " + methodDesc);
             Process process = pb.start();
 
             try (BufferedReader reader = new BufferedReader(
@@ -137,7 +137,7 @@ public class NodeDetector {
 
                     String version = verifyNodePath(path);
                     if (version != null) {
-                        LOG.info("✓ 通过 " + methodDesc + " 找到 Node.js: " + path + " (" + version + ")");
+                        LOG.info("✓ Found Node.js via " + methodDesc + ": " + path + " (" + version + ")");
                         return NodeDetectionResult.success(
                             path, version,
                             NodeDetectionResult.DetectionMethod.WHERE_COMMAND,
@@ -152,31 +152,31 @@ public class NodeDetector {
                 process.destroyForcibly();
             }
         } catch (Exception e) {
-            LOG.debug("  Windows where 命令查找失败: " + e.getMessage());
+            LOG.debug("  Windows where command failed: " + e.getMessage());
         }
         return null;
     }
 
     /**
-     * Unix/macOS: 通过指定 shell 检测 Node.js
-     * @param shellPath shell 可执行文件路径（如 /bin/zsh 或 /bin/bash）
-     * @param shellName shell 名称（用于日志）
-     * @param triedPaths 已尝试的路径列表
+     * Unix/macOS: Detect Node.js via specified shell.
+     * @param shellPath shell executable path (e.g., /bin/zsh or /bin/bash)
+     * @param shellName shell name (for logging)
+     * @param triedPaths list of tried paths
      */
     private NodeDetectionResult detectNodeViaShell(String shellPath, String shellName, List<String> triedPaths) {
-        // 检查 shell 是否存在
+        // Check if shell exists
         if (!new File(shellPath).exists()) {
-            LOG.debug("  跳过 " + shellName + "（不存在）");
+            LOG.debug("  Skipping " + shellName + " (not found)");
             return null;
         }
 
         try {
-            // 使用 -l（登录 shell）和 -i（交互式）确保加载用户配置
-            // 这样可以获取 nvm、fnm 等版本管理器配置的路径
+            // Use -l (login shell) and -i (interactive) to ensure user config is loaded
+            // This allows detecting paths configured by nvm, fnm, etc.
             ProcessBuilder pb = new ProcessBuilder(shellPath, "-l", "-c", "which node");
-            String methodDesc = shellName + " which 命令";
+            String methodDesc = shellName + " which command";
 
-            LOG.info("  尝试方法: " + methodDesc);
+            LOG.info("  Trying method: " + methodDesc);
             Process process = pb.start();
 
             try (BufferedReader reader = new BufferedReader(
@@ -184,13 +184,13 @@ public class NodeDetector {
                 String path = reader.readLine();
                 if (path != null && !path.isEmpty()) {
                     path = path.trim();
-                    // 排除 "node not found" 类似的错误信息
+                    // Exclude "node not found" type error messages
                     if (path.startsWith("/") && !path.contains("not found")) {
                         triedPaths.add(path);
 
                         String version = verifyNodePath(path);
                         if (version != null) {
-                            LOG.info("✓ 通过 " + methodDesc + " 找到 Node.js: " + path + " (" + version + ")");
+                            LOG.info("✓ Found Node.js via " + methodDesc + ": " + path + " (" + version + ")");
                             return NodeDetectionResult.success(
                                 path, version,
                                 NodeDetectionResult.DetectionMethod.WHICH_COMMAND,
@@ -206,27 +206,27 @@ public class NodeDetector {
                 process.destroyForcibly();
             }
         } catch (Exception e) {
-            LOG.debug("  " + shellName + " 命令查找失败: " + e.getMessage());
+            LOG.debug("  " + shellName + " command failed: " + e.getMessage());
         }
         return null;
     }
 
     /**
-     * 通过已知安装路径检测 Node.js
+     * Detect Node.js via known installation paths.
      */
     private NodeDetectionResult detectNodeViaKnownPaths(List<String> triedPaths) {
         String userHome = System.getProperty("user.home");
         List<String> pathsToCheck = new ArrayList<>();
 
         if (PlatformUtils.isWindows()) {
-            // Windows 路径：展开环境变量并添加
-            LOG.info("  正在检查 Windows 常见安装路径...");
+            // Windows paths: expand environment variables and add
+            LOG.info("  Checking common Windows installation paths...");
             for (String templatePath : WINDOWS_NODE_PATHS) {
                 String expandedPath = expandWindowsEnvVars(templatePath);
                 pathsToCheck.add(expandedPath);
             }
 
-            // 动态查找 nvm-windows 版本
+            // Dynamically find nvm-windows versions
             String nvmHome = PlatformUtils.getEnvIgnoreCase("NVM_HOME");
             if (nvmHome == null) {
                 nvmHome = System.getenv("APPDATA") + "\\nvm";
@@ -240,16 +240,16 @@ public class NodeDetector {
                         if (versionDir.getName().startsWith("v")) {
                             String nodePath = versionDir.getAbsolutePath() + "\\node.exe";
                             pathsToCheck.add(nodePath);
-                            LOG.info("  发现 nvm-windows Node.js: " + nodePath);
+                            LOG.info("  Found nvm-windows Node.js: " + nodePath);
                         }
                     }
                 }
             }
         } else {
-            // macOS/Linux 路径
-            LOG.info("  正在检查 Unix/macOS 常见安装路径...");
+            // macOS/Linux paths
+            LOG.info("  Checking common Unix/macOS installation paths...");
 
-            // 动态查找 NVM 管理的版本
+            // Dynamically find NVM managed versions
             File nvmDir = new File(userHome + "/.nvm/versions/node");
             if (nvmDir.exists() && nvmDir.isDirectory()) {
                 File[] versionDirs = nvmDir.listFiles();
@@ -259,13 +259,13 @@ public class NodeDetector {
                         if (versionDir.isDirectory()) {
                             String nodePath = versionDir.getAbsolutePath() + "/bin/node";
                             pathsToCheck.add(nodePath);
-                            LOG.info("  发现 NVM Node.js: " + nodePath);
+                            LOG.info("  Found NVM Node.js: " + nodePath);
                         }
                     }
                 }
             }
 
-            // 动态查找 Homebrew 版本特定的 Node.js (node@18, node@20, node@22 等)
+            // Dynamically find Homebrew version-specific Node.js (node@18, node@20, node@22, etc.)
             // Apple Silicon: /opt/homebrew/opt/node@XX/bin/node
             // Intel Mac: /usr/local/opt/node@XX/bin/node
             String[] homebrewOptDirs = {"/opt/homebrew/opt", "/usr/local/opt"};
@@ -275,7 +275,7 @@ public class NodeDetector {
                     File[] nodeDirs = optFile.listFiles((dir, name) ->
                         name.equals("node") || name.startsWith("node@"));
                     if (nodeDirs != null) {
-                        // 按版本号降序排序，优先使用较新版本
+                        // Sort by version descending, prefer newer versions
                         java.util.Arrays.sort(nodeDirs, (a, b) -> {
                             // node@22 > node@20 > node@18 > node
                             String aName = a.getName();
@@ -289,39 +289,39 @@ public class NodeDetector {
                         for (File nodeDir : nodeDirs) {
                             String nodePath = nodeDir.getAbsolutePath() + "/bin/node";
                             pathsToCheck.add(nodePath);
-                            LOG.info("  发现 Homebrew Node.js: " + nodePath);
+                            LOG.info("  Found Homebrew Node.js: " + nodePath);
                         }
                     }
                 }
             }
 
-            // 添加常见 Unix/macOS 路径
+            // Add common Unix/macOS paths
             pathsToCheck.add("/usr/local/bin/node");           // Homebrew (macOS Intel)
             pathsToCheck.add("/opt/homebrew/bin/node");        // Homebrew (Apple Silicon)
-            pathsToCheck.add("/usr/bin/node");                 // Linux 系统
+            pathsToCheck.add("/usr/bin/node");                 // Linux system
             pathsToCheck.add(userHome + "/.volta/bin/node");   // Volta
             pathsToCheck.add(userHome + "/.fnm/aliases/default/bin/node"); // fnm
         }
 
-        // 遍历检查每个路径
+        // Check each path
         for (String path : pathsToCheck) {
             triedPaths.add(path);
 
             File nodeFile = new File(path);
             if (!nodeFile.exists()) {
-                LOG.debug("  跳过不存在: " + path);
+                LOG.debug("  Skipping non-existent: " + path);
                 continue;
             }
 
-            // Windows 不检查 canExecute()，因为行为不一致
+            // Windows doesn't check canExecute() as behavior is inconsistent
             if (!PlatformUtils.isWindows() && !nodeFile.canExecute()) {
-                LOG.debug("  跳过无执行权限: " + path);
+                LOG.debug("  Skipping non-executable: " + path);
                 continue;
             }
 
             String version = verifyNodePath(path);
             if (version != null) {
-                LOG.info("✓ 在已知路径找到 Node.js: " + path + " (" + version + ")");
+                LOG.info("✓ Found Node.js at known path: " + path + " (" + version + ")");
                 return NodeDetectionResult.success(path, version,
                     NodeDetectionResult.DetectionMethod.KNOWN_PATH, triedPaths);
             }
@@ -331,18 +331,18 @@ public class NodeDetector {
     }
 
     /**
-     * 通过 PATH 环境变量检测 Node.js
+     * Detect Node.js via PATH environment variable.
      */
     private NodeDetectionResult detectNodeViaPath(List<String> triedPaths) {
-        LOG.info("  正在检查 PATH 环境变量...");
+        LOG.info("  Checking PATH environment variable...");
 
-        // 使用平台兼容的方式获取 PATH
+        // Use platform-compatible way to get PATH
         String pathEnv = PlatformUtils.isWindows() ?
             PlatformUtils.getEnvIgnoreCase("PATH") :
             System.getenv("PATH");
 
         if (pathEnv == null || pathEnv.isEmpty()) {
-            LOG.debug("  PATH 环境变量为空");
+            LOG.debug("  PATH environment variable is empty");
             return null;
         }
 
@@ -360,7 +360,7 @@ public class NodeDetector {
 
             String version = verifyNodePath(nodePath);
             if (version != null) {
-                LOG.info("✓ 在 PATH 中找到 Node.js: " + nodePath + " (" + version + ")");
+                LOG.info("✓ Found Node.js in PATH: " + nodePath + " (" + version + ")");
                 return NodeDetectionResult.success(nodePath, version,
                     NodeDetectionResult.DetectionMethod.PATH_VARIABLE, triedPaths);
             }
@@ -370,10 +370,10 @@ public class NodeDetector {
     }
 
     /**
-     * 回退检测：直接尝试执行 "node"
+     * Fallback detection: try executing "node" directly.
      */
     private NodeDetectionResult detectNodeViaFallback(List<String> triedPaths) {
-        LOG.info("  尝试直接调用 'node'（回退方案）...");
+        LOG.info("  Trying direct 'node' call (fallback)...");
         triedPaths.add("node (direct call)");
 
         try {
@@ -395,21 +395,21 @@ public class NodeDetector {
             int exitCode = process.exitValue();
             if (exitCode == 0 && version != null) {
                 version = version.trim();
-                LOG.info("✓ 直接调用 node 成功 (" + version + ")");
+                LOG.info("✓ Direct node call successful (" + version + ")");
                 return NodeDetectionResult.success("node", version,
                     NodeDetectionResult.DetectionMethod.FALLBACK, triedPaths);
             }
         } catch (Exception e) {
-            LOG.debug("  直接调用 'node' 失败: " + e.getMessage());
+            LOG.debug("  Direct 'node' call failed: " + e.getMessage());
         }
 
         return null;
     }
 
     /**
-     * 验证 Node.js 路径是否可用
-     * @param path Node.js 路径
-     * @return 版本号（如果可用），否则返回 null
+     * Verify if Node.js path is usable.
+     * @param path Node.js path
+     * @return version number if usable, null otherwise
      */
     public String verifyNodePath(String path) {
         try {
@@ -433,21 +433,21 @@ public class NodeDetector {
                 return version.trim();
             }
         } catch (Exception e) {
-            LOG.debug("    验证失败 [" + path + "]: " + e.getMessage());
+            LOG.debug("    Verification failed [" + path + "]: " + e.getMessage());
         }
         return null;
     }
 
     /**
-     * 展开 Windows 环境变量
-     * 例如: %USERPROFILE%\\.nvm -> C:\Users\xxx\.nvm
+     * Expand Windows environment variables.
+     * Example: %USERPROFILE%\\.nvm -> C:\\Users\\xxx\\.nvm
      */
     private String expandWindowsEnvVars(String path) {
         if (path == null) return null;
 
         String result = path;
 
-        // 展开常见环境变量
+        // Expand common environment variables
         result = result.replace("%USERPROFILE%", System.getProperty("user.home", ""));
         result = result.replace("%APPDATA%", System.getenv("APPDATA") != null ?
             System.getenv("APPDATA") : "");
@@ -462,15 +462,15 @@ public class NodeDetector {
     }
 
     /**
-     * 解析 Node.js 版本号
-     * 例如: "20" -> 20, "18" -> 18
+     * Parse Node.js version number.
+     * Example: "20" -> 20, "18" -> 18
      */
     private int parseNodeVersion(String version) {
         if (version == null || version.isEmpty()) {
             return 0;
         }
         try {
-            // 处理可能的小数点版本，如 "20.1" -> 取主版本号 20
+            // Handle possible decimal versions, e.g., "20.1" -> take major version 20
             int dotIndex = version.indexOf('.');
             if (dotIndex > 0) {
                 version = version.substring(0, dotIndex);
@@ -482,18 +482,18 @@ public class NodeDetector {
     }
 
     /**
-     * 手动设置 Node.js 可执行文件路径.
-     * 同时清除缓存的检测结果，以便下次使用时重新验证
+     * Manually set Node.js executable path.
+     * Also clears cached detection result for re-validation on next use.
      */
     public void setNodeExecutable(String path) {
         this.cachedNodeExecutable = path;
-        // 清除检测结果缓存，确保缓存状态一致
-        // 新路径会在下次调用 verifyAndCacheNodePath 时重新验证并缓存
+        // Clear detection result cache to ensure consistent state
+        // New path will be re-validated and cached on next verifyAndCacheNodePath call
         this.cachedDetectionResult = null;
     }
 
     /**
-     * 获取当前使用的 Node.js 路径
+     * Get the currently used Node.js path.
      */
     public String getNodeExecutable() {
         if (cachedNodeExecutable == null) {
@@ -503,7 +503,7 @@ public class NodeDetector {
     }
 
     /**
-     * 清除缓存的 Node.js 路径和检测结果
+     * Clear cached Node.js path and detection result.
      */
     public void clearCache() {
         this.cachedNodeExecutable = null;
@@ -511,7 +511,7 @@ public class NodeDetector {
     }
 
     /**
-     * 获取缓存的检测结果
+     * Get cached detection result.
      */
     public NodeDetectionResult getCachedDetectionResult() {
         return cachedDetectionResult;
@@ -531,14 +531,14 @@ public class NodeDetector {
     public NodeDetectionResult verifyAndCacheNodePath(String path) {
         if (path == null || path.isEmpty()) {
             clearCache();
-            return NodeDetectionResult.failure("未指定 Node.js 路径");
+            return NodeDetectionResult.failure("Node.js path not specified");
         }
         String version = verifyNodePath(path);
         NodeDetectionResult result;
         if (version != null) {
             result = NodeDetectionResult.success(path, version, NodeDetectionResult.DetectionMethod.KNOWN_PATH);
         } else {
-            result = NodeDetectionResult.failure("无法验证指定的 Node.js 路径: " + path);
+            result = NodeDetectionResult.failure("Unable to verify specified Node.js path: " + path);
         }
         cacheDetection(result);
         return result;
@@ -552,14 +552,14 @@ public class NodeDetector {
     }
 
     /**
-     * 最低要求的 Node.js 主版本号.
+     * Minimum required Node.js major version.
      */
     public static final int MIN_NODE_MAJOR_VERSION = 18;
 
     /**
-     * 从版本字符串中解析主版本号.
-     * @param version 版本字符串，如 "v20.10.0" 或 "20.10.0"
-     * @return 主版本号，解析失败返回 0
+     * Parse major version from version string.
+     * @param version version string, e.g., "v20.10.0" or "20.10.0"
+     * @return major version number, returns 0 on parse failure
      */
     public static int parseMajorVersion(String version) {
         if (version == null || version.isEmpty()) {
@@ -578,9 +578,9 @@ public class NodeDetector {
     }
 
     /**
-     * 检查 Node.js 版本是否满足最低要求.
-     * @param version 版本字符串
-     * @return true 如果版本 >= 18，否则 false
+     * Check if Node.js version meets minimum requirement.
+     * @param version version string
+     * @return true if version >= 18, false otherwise
      */
     public static boolean isVersionSupported(String version) {
         int major = parseMajorVersion(version);

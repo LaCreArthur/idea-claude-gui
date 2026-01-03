@@ -16,8 +16,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 进程管理器
- * 负责管理 Claude SDK 相关的子进程
+ * Process Manager.
+ * Responsible for managing Claude SDK related child processes.
  */
 public class ProcessManager {
 
@@ -28,7 +28,7 @@ public class ProcessManager {
     private final Set<String> interruptedChannels = ConcurrentHashMap.newKeySet();
 
     /**
-     * 注册活动进程
+     * Register an active process.
      */
     public void registerProcess(String channelId, Process process) {
         if (channelId != null && process != null) {
@@ -38,7 +38,7 @@ public class ProcessManager {
     }
 
     /**
-     * 注销活动进程
+     * Unregister an active process.
      */
     public void unregisterProcess(String channelId, Process process) {
         if (channelId != null) {
@@ -47,22 +47,23 @@ public class ProcessManager {
     }
 
     /**
-     * 获取活动进程
+     * Get an active process.
      */
     public Process getProcess(String channelId) {
         return activeChannelProcesses.get(channelId);
     }
 
     /**
-     * 检查通道是否被中断
+     * Check if channel was interrupted.
      */
     public boolean wasInterrupted(String channelId) {
         return channelId != null && interruptedChannels.remove(channelId);
     }
 
     /**
-     * 中断通道
-     * 使用平台感知的进程终止方法，确保在 Windows 上正确终止子进程树
+     * Interrupt a channel.
+     * Uses platform-aware process termination method to ensure proper termination
+     * of child process trees on Windows.
      */
     public void interruptChannel(String channelId) {
         if (channelId == null) {
@@ -79,12 +80,12 @@ public class ProcessManager {
         LOG.info("[Interrupt] Attempting to interrupt channel: " + channelId);
         interruptedChannels.add(channelId);
 
-        // 使用平台感知的进程终止方法
-        // Windows: 使用 taskkill /F /T 终止进程树
-        // Unix: 使用标准的 destroy/destroyForcibly
+        // Use platform-aware process termination method
+        // Windows: uses taskkill /F /T to terminate process tree
+        // Unix: uses standard destroy/destroyForcibly
         PlatformUtils.terminateProcess(process);
 
-        // 等待进程完全终止
+        // Wait for process to fully terminate
         try {
             if (process.isAlive()) {
                 boolean terminated = process.waitFor(3, TimeUnit.SECONDS);
@@ -98,7 +99,7 @@ public class ProcessManager {
             Thread.currentThread().interrupt();
         } finally {
             activeChannelProcesses.remove(channelId, process);
-            // 验证进程确实已终止
+            // Verify process is actually terminated
             if (process.isAlive()) {
                 LOG.warn("[Interrupt] Warning: Process may still be alive for channel: " + channelId);
             } else {
@@ -108,8 +109,8 @@ public class ProcessManager {
     }
 
     /**
-     * 清理所有活动的子进程
-     * 应在插件卸载或 IDEA 关闭时调用
+     * Clean up all active child processes.
+     * Should be called when plugin is unloaded or IDEA is closing.
      */
     public void cleanupAllProcesses() {
         LOG.info("[ProcessManager] Cleaning up all active processes...");
@@ -133,7 +134,7 @@ public class ProcessManager {
     }
 
     /**
-     * 获取当前活动进程数量
+     * Get the count of currently active processes.
      */
     public int getActiveProcessCount() {
         int count = 0;
@@ -146,7 +147,7 @@ public class ProcessManager {
     }
 
     /**
-     * 等待进程终止
+     * Wait for process termination.
      */
     public void waitForProcessTermination(Process process) {
         if (process == null) {
@@ -162,7 +163,7 @@ public class ProcessManager {
     }
 
     /**
-     * 准备 Claude 临时目录
+     * Prepare Claude temporary directory.
      */
     public File prepareClaudeTempDir() {
         String baseTemp = System.getProperty("java.io.tmpdir");
@@ -181,7 +182,7 @@ public class ProcessManager {
     }
 
     /**
-     * 快照 Claude cwd 文件
+     * Snapshot Claude cwd files.
      */
     public Set<String> snapshotClaudeCwdFiles(File tempDir) {
         if (tempDir == null || !tempDir.exists()) {
@@ -200,7 +201,7 @@ public class ProcessManager {
     }
 
     /**
-     * 清理 Claude 临时文件
+     * Clean up Claude temporary files.
      */
     public void cleanupClaudeTempFiles(File tempDir, Set<String> preserved) {
         if (tempDir == null || !tempDir.exists()) {
@@ -215,7 +216,7 @@ public class ProcessManager {
             if (preserved != null && preserved.contains(file.getName())) {
                 continue;
             }
-            // 使用带重试机制的删除，处理 Windows 文件锁定问题
+            // Use retry mechanism for deletion, handles Windows file locking issues
             if (!PlatformUtils.deleteWithRetry(file, 3)) {
                 try {
                     Files.deleteIfExists(file.toPath());

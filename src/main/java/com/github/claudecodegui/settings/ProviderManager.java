@@ -430,7 +430,7 @@ public class ProviderManager {
 
         // 检查脚本是否存在
         if (!new File(scriptPath).exists()) {
-            throw new IOException("读取脚本不存在: " + scriptPath);
+            throw new IOException("Read script does not exist: " + scriptPath);
         }
 
         try {
@@ -487,19 +487,19 @@ public class ProviderManager {
             LOG.info("[ProviderManager] Node.js 输出: " + jsonOutput);
 
             if (exitCode != 0) {
-                throw new IOException("Node.js 脚本执行失败 (退出码: " + exitCode + "): " + jsonOutput);
+                throw new IOException("Node.js script execution failed (exit code: " + exitCode + "): " + jsonOutput);
             }
 
             // 解析 JSON 输出
             JsonObject response = gson.fromJson(jsonOutput, JsonObject.class);
 
             if (response == null || !response.has("success")) {
-                throw new IOException("无效的 Node.js 脚本响应: " + jsonOutput);
+                throw new IOException("Invalid Node.js script response: " + jsonOutput);
             }
 
             if (!response.get("success").getAsBoolean()) {
-                String errorMsg = response.has("error") ? response.get("error").getAsString() : "未知错误";
-                throw new IOException("Node.js 脚本执行失败: " + errorMsg);
+                String errorMsg = response.has("error") ? response.get("error").getAsString() : "Unknown error";
+                throw new IOException("Node.js script execution failed: " + errorMsg);
             }
 
             // 提取供应商列表
@@ -517,9 +517,9 @@ public class ProviderManager {
 
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new IOException("Node.js 脚本执行被中断", e);
+            throw new IOException("Node.js script execution interrupted", e);
         } catch (Exception e) {
-            String errorMsg = "通过 Node.js 读取数据库失败: " + e.getMessage();
+            String errorMsg = "Failed to read database via Node.js: " + e.getMessage();
             LOG.warn("[ProviderManager] " + errorMsg);
             LOG.error("Error occurred", e);
             throw new IOException(errorMsg, e);
@@ -538,7 +538,7 @@ public class ProviderManager {
         File aiBridgeDir = resolver.findSdkDir();
 
         if (aiBridgeDir == null || !aiBridgeDir.exists()) {
-            throw new IOException("无法找到 ai-bridge 目录,请检查插件安装");
+            throw new IOException("Cannot find ai-bridge directory, please check plugin installation");
         }
 
         LOG.info("[ProviderManager] ai-bridge 目录: " + aiBridgeDir.getAbsolutePath());

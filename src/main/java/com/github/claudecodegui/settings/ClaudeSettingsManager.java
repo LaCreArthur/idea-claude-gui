@@ -122,12 +122,43 @@ public class ClaudeSettingsManager {
     }
 
     /**
+     * 检查是否存在 CLI 会话认证
+     * CLI 会话凭证存储在 ~/.claude/.credentials.json
+     * @return 是否存在有效的 CLI 会话
+     */
+    public boolean hasCliSessionAuth() {
+        try {
+            Path credentialsPath = Paths.get(System.getProperty("user.home"), ".claude", ".credentials.json");
+            if (!Files.exists(credentialsPath)) {
+                return false;
+            }
+            String content = Files.readString(credentialsPath);
+            JsonObject credentials = JsonParser.parseString(content).getAsJsonObject();
+            if (credentials.has("claudeAiOauth")) {
+                JsonObject oauth = credentials.getAsJsonObject("claudeAiOauth");
+                if (oauth.has("accessToken")) {
+                    String token = oauth.get("accessToken").getAsString();
+                    return token != null && !token.isEmpty();
+                }
+            }
+            return false;
+        } catch (Exception e) {
+            LOG.warn("[ClaudeSettingsManager] Failed to check CLI session auth: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
      * 获取当前 Claude CLI 使用的配置 (~/.claude/settings.json)
      * 用于在设置页面展示当前应用的配置
      */
     public JsonObject getCurrentClaudeConfig() throws IOException {
         JsonObject claudeSettings = readClaudeSettings();
         JsonObject result = new JsonObject();
+
+        // 检查 CLI 会话状态
+        boolean hasCliSession = hasCliSessionAuth();
+        result.addProperty("hasCliSession", hasCliSession);
 
         // 提取 env 中的关键配置
         if (claudeSettings.has("env")) {
@@ -143,6 +174,9 @@ public class ClaudeSettingsManager {
             } else if (env.has("ANTHROPIC_API_KEY") && !env.get("ANTHROPIC_API_KEY").getAsString().isEmpty()) {
                 apiKey = env.get("ANTHROPIC_API_KEY").getAsString();
                 authType = "api_key";  // x-api-key 认证
+            } else if (hasCliSession) {
+                // 没有 API Key 但有 CLI 会话
+                authType = "cli_session";
             }
 
             String baseUrl = env.has("ANTHROPIC_BASE_URL") ? env.get("ANTHROPIC_BASE_URL").getAsString() : "";
@@ -152,7 +186,8 @@ public class ClaudeSettingsManager {
             result.addProperty("baseUrl", baseUrl);
         } else {
             result.addProperty("apiKey", "");
-            result.addProperty("authType", "none");
+            // 没有 env 配置但有 CLI 会话
+            result.addProperty("authType", hasCliSession ? "cli_session" : "none");
             result.addProperty("baseUrl", "");
         }
 

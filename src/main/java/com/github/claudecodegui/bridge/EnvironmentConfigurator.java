@@ -11,8 +11,8 @@ import java.nio.file.Paths;
 import java.util.Map;
 
 /**
- * 环境配置器
- * 负责配置进程环境变量
+ * Environment Configurator.
+ * Responsible for configuring process environment variables.
  */
 public class EnvironmentConfigurator {
 
@@ -22,13 +22,13 @@ public class EnvironmentConfigurator {
     private volatile String cachedPermissionDir = null;
 
     /**
-     * 更新进程的环境变量，确保 PATH 包含 Node.js 所在目录
-     * 支持 Windows (Path) 和 Unix (PATH) 环境变量命名
+     * Update the process environment variables, ensuring PATH includes Node.js directory.
+     * Supports Windows (Path) and Unix (PATH) environment variable naming.
      */
     public void updateProcessEnvironment(ProcessBuilder pb, String nodeExecutable) {
         Map<String, String> env = pb.environment();
 
-        // 使用 PlatformUtils 获取 PATH 环境变量（大小写不敏感）
+        // Use PlatformUtils to get PATH environment variable (case-insensitive)
         String path = PlatformUtils.isWindows() ?
             PlatformUtils.getEnvIgnoreCase("PATH") :
             env.get("PATH");
@@ -40,7 +40,7 @@ public class EnvironmentConfigurator {
         StringBuilder newPath = new StringBuilder(path);
         String separator = File.pathSeparator;
 
-        // 1. 添加 Node.js 所在目录
+        // 1. Add Node.js directory
         if (nodeExecutable != null && !nodeExecutable.equals("node")) {
             File nodeFile = new File(nodeExecutable);
             String nodeDir = nodeFile.getParent();
@@ -49,9 +49,9 @@ public class EnvironmentConfigurator {
             }
         }
 
-        // 2. 根据平台添加常用路径
+        // 2. Add common paths based on platform
         if (PlatformUtils.isWindows()) {
-            // Windows 常用路径
+            // Common Windows paths
             String[] windowsPaths = {
                 System.getenv("ProgramFiles") + "\\nodejs",
                 System.getenv("APPDATA") + "\\npm",
@@ -63,7 +63,7 @@ public class EnvironmentConfigurator {
                 }
             }
         } else {
-            // macOS/Linux 常用路径
+            // Common macOS/Linux paths
             String[] unixPaths = {
                 "/usr/local/bin",
                 "/opt/homebrew/bin",
@@ -80,23 +80,23 @@ public class EnvironmentConfigurator {
             }
         }
 
-        // 3. 设置 PATH 环境变量
-        // Windows 需要同时设置 PATH 和 Path（某些程序只识别其中一个）
+        // 3. Set PATH environment variable
+        // Windows needs both PATH and Path set (some programs only recognize one)
         String newPathStr = newPath.toString();
         if (PlatformUtils.isWindows()) {
-            // 先移除可能存在的旧值，避免重复
+            // Remove possible old values first to avoid duplicates
             env.remove("PATH");
             env.remove("Path");
             env.remove("path");
-            // 同时设置多种大小写形式确保兼容性
+            // Set multiple case variations for compatibility
             env.put("PATH", newPathStr);
             env.put("Path", newPathStr);
         } else {
             env.put("PATH", newPathStr);
         }
 
-        // 4. 确保 HOME 环境变量设置正确
-        // SDK 需要 HOME 环境变量来找到 ~/.claude/commands/ 目录
+        // 4. Ensure HOME environment variable is set correctly
+        // SDK needs HOME to find ~/.claude/commands/ directory
         String home = env.get("HOME");
         if (home == null || home.isEmpty()) {
             home = System.getProperty("user.home");
@@ -109,7 +109,7 @@ public class EnvironmentConfigurator {
     }
 
     /**
-     * 配置权限环境变量
+     * Configure permission environment variables.
      */
     public void configurePermissionEnv(Map<String, String> env) {
         if (env == null) {
@@ -122,7 +122,7 @@ public class EnvironmentConfigurator {
     }
 
     /**
-     * 获取权限目录
+     * Get the permission directory.
      */
     public String getPermissionDirectory() {
         String cached = this.cachedPermissionDir;
@@ -141,8 +141,8 @@ public class EnvironmentConfigurator {
     }
 
     /**
-     * 检查 PATH 中是否已包含指定路径
-     * Windows 下进行大小写不敏感比较
+     * Check if PATH already contains the specified path.
+     * Windows uses case-insensitive comparison.
      */
     private boolean pathContains(String pathEnv, String targetPath) {
         if (pathEnv == null || targetPath == null) {
@@ -155,7 +155,7 @@ public class EnvironmentConfigurator {
     }
 
     /**
-     * 配置临时目录环境变量
+     * Configure temporary directory environment variables.
      */
     public void configureTempDir(Map<String, String> env, File tempDir) {
         if (env == null || tempDir == null) {
@@ -168,7 +168,7 @@ public class EnvironmentConfigurator {
     }
 
     /**
-     * 配置项目路径环境变量
+     * Configure project path environment variables.
      */
     public void configureProjectPath(Map<String, String> env, String cwd) {
         if (env == null || cwd == null || cwd.isEmpty() || "undefined".equals(cwd) || "null".equals(cwd)) {
@@ -179,7 +179,7 @@ public class EnvironmentConfigurator {
     }
 
     /**
-     * 配置附件相关环境变量
+     * Configure attachment-related environment variables.
      */
     public void configureAttachmentEnv(Map<String, String> env, boolean hasAttachments) {
         if (env == null) {
@@ -191,7 +191,7 @@ public class EnvironmentConfigurator {
     }
 
     /**
-     * 清除缓存
+     * Clear the cache.
      */
     public void clearCache() {
         this.cachedPermissionDir = null;
