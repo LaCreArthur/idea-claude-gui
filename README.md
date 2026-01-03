@@ -12,7 +12,7 @@
 
 This is an IDEA plugin project designed to provide visual operation of Claude Code within IntelliJ IDEA.
 
-> **Note**: This is a fork of [idea-claude-code-gui](https://github.com/zhukunpenglinyutong/idea-claude-code-gui), focused on English localization and enhancements.
+> **Note**: This is a fork of [idea-claude-code-gui](https://github.com/zhukunpenglinyutong/idea-claude-code-gui), focused on CLI Session Authentication, English localization and enhancements.
 
 ### Why this Fork?
 
