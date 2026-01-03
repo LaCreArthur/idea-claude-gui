@@ -16,8 +16,8 @@ This is an IDEA plugin project designed to provide visual operation of Claude Co
 
 ### Why this Fork?
 
-*   **🇺🇸 English First**: Fully localized UI, logs, and documentation for international developers.
-*   **🔐 CLI Session Authentication**: Seamlessly uses your existing `claude login` session from the terminal. No need to manually copy/paste API keys if you are already logged in via Claude Code CLI.
+*   **🇺🇸 English First**: Everything was in Chinese, making it impossible to use for non chinese readers. So it's now fully localized: UI, logs, and documentation for international developers.
+*   **🔐 CLI Session Authentication**: I wanted to use my claude subscription, not the API Key. So now, it seamlessly uses your existing `claude login` session from the terminal. No need to manually copy/paste API keys if you are already logged in via Claude Code CLI.
 *   **🚀 Enhanced UX**: Refined dialogs and error messages for a smoother experience.
 
 ---
