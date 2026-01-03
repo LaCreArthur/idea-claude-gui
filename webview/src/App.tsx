@@ -44,10 +44,6 @@ const isTruthy = (value: unknown) => value === true || value === 'true';
 const sendBridgeMessage = (event: string, payload = '') => {
   if (window.sendToJava) {
     const message = `${event}:${payload}`;
-    // 对权限相关消息添加详细日志
-    if (event.includes('permission')) {
-      console.log('[PERM_DEBUG][BRIDGE] Sending to Java:', message);
-    }
     window.sendToJava(message);
   } else {
     console.warn('[Frontend] sendToJava is not ready yet');
@@ -98,6 +94,9 @@ const App = () => {
   const [activeProviderConfig, setActiveProviderConfig] = useState<ProviderConfig | null>(null);
   const [claudeSettingsAlwaysThinkingEnabled, setClaudeSettingsAlwaysThinkingEnabled] = useState(true);
   const [selectedAgent, setSelectedAgent] = useState<SelectedAgent | null>(null);
+
+  // Image preview state (replaces innerHTML-based preview for XSS safety)
+  const [imagePreviewSrc, setImagePreviewSrc] = useState<string | null>(null);
 
   // 使用 useRef 存储最新的 provider 值，避免回调中的闭包问题
   const currentProviderRef = useRef(currentProvider);
@@ -536,20 +535,14 @@ const App = () => {
     };
     setTimeout(requestThinkingEnabled, 200);
 
-    // 权限弹窗回调
+    // Permission dialog callback
     window.showPermissionDialog = (json) => {
-      console.log('[PERM_DEBUG][FRONTEND] showPermissionDialog called');
-      console.log('[PERM_DEBUG][FRONTEND] Raw JSON:', json);
       try {
         const request = JSON.parse(json) as PermissionRequest;
-        console.log('[PERM_DEBUG][FRONTEND] Parsed request:', request);
-        console.log('[PERM_DEBUG][FRONTEND] channelId:', request.channelId);
-        console.log('[PERM_DEBUG][FRONTEND] toolName:', request.toolName);
         setCurrentPermissionRequest(request);
         setPermissionDialogOpen(true);
-        console.log('[PERM_DEBUG][FRONTEND] Dialog state set to open');
       } catch (error) {
-        console.error('[PERM_DEBUG][FRONTEND] ERROR: Failed to parse permission request:', error);
+        console.error('[Frontend] Failed to parse permission request:', error);
       }
     };
 
@@ -979,58 +972,46 @@ const App = () => {
   };
 
   /**
-   * 处理权限批准（允许一次）
+   * Handle permission approval (allow once)
    */
   const handlePermissionApprove = (channelId: string) => {
-    console.log('[PERM_DEBUG][FRONTEND] handlePermissionApprove called');
-    console.log('[PERM_DEBUG][FRONTEND] channelId:', channelId);
     const payload = JSON.stringify({
       channelId,
       allow: true,
       remember: false,
       rejectMessage: null,
     });
-    console.log('[PERM_DEBUG][FRONTEND] Sending decision payload:', payload);
     sendBridgeMessage('permission_decision', payload);
-    console.log('[PERM_DEBUG][FRONTEND] Decision sent, closing dialog');
     setPermissionDialogOpen(false);
     setCurrentPermissionRequest(null);
   };
 
   /**
-   * 处理权限批准（总是允许）
+   * Handle permission approval (always allow)
    */
   const handlePermissionApproveAlways = (channelId: string) => {
-    console.log('[PERM_DEBUG][FRONTEND] handlePermissionApproveAlways called');
-    console.log('[PERM_DEBUG][FRONTEND] channelId:', channelId);
     const payload = JSON.stringify({
       channelId,
       allow: true,
       remember: true,
       rejectMessage: null,
     });
-    console.log('[PERM_DEBUG][FRONTEND] Sending decision payload:', payload);
     sendBridgeMessage('permission_decision', payload);
-    console.log('[PERM_DEBUG][FRONTEND] Decision sent, closing dialog');
     setPermissionDialogOpen(false);
     setCurrentPermissionRequest(null);
   };
 
   /**
-   * 处理权限拒绝
+   * Handle permission denial
    */
   const handlePermissionSkip = (channelId: string) => {
-    console.log('[PERM_DEBUG][FRONTEND] handlePermissionSkip called');
-    console.log('[PERM_DEBUG][FRONTEND] channelId:', channelId);
     const payload = JSON.stringify({
       channelId,
       allow: false,
       remember: false,
       rejectMessage: 'User denied the permission request',
     });
-    console.log('[PERM_DEBUG][FRONTEND] Sending decision payload:', payload);
     sendBridgeMessage('permission_decision', payload);
-    console.log('[PERM_DEBUG][FRONTEND] Decision sent, closing dialog');
     setPermissionDialogOpen(false);
     setCurrentPermissionRequest(null);
   };
@@ -1625,15 +1606,9 @@ const App = () => {
                           <div
                             className={`message-image-block ${message.type === 'user' ? 'user-image' : ''}`}
                             onClick={() => {
-                              // 打开图片预览
-                              const previewRoot = document.getElementById('image-preview-root');
-                              if (previewRoot && block.src) {
-                                previewRoot.innerHTML = `
-                                  <div class="image-preview-overlay" onclick="this.remove()">
-                                    <img src="${block.src}" alt={t('chat.imagePreview')} class="image-preview-content" onclick="event.stopPropagation()" />
-                                    <div class="image-preview-close" onclick="this.parentElement.remove()">×</div>
-                                  </div>
-                                `;
+                              // Open image preview using React state (XSS-safe)
+                              if (block.src) {
+                                setImagePreviewSrc(block.src);
                               }
                             }}
                             style={{ cursor: 'pointer' }}
@@ -1778,7 +1753,26 @@ const App = () => {
         </div>
       )}
 
-      <div id="image-preview-root" />
+      {/* Image Preview Overlay - React-based for XSS safety */}
+      {imagePreviewSrc && (
+        <div
+          className="image-preview-overlay"
+          onClick={() => setImagePreviewSrc(null)}
+        >
+          <img
+            src={imagePreviewSrc}
+            alt={t('chat.imagePreview')}
+            className="image-preview-content"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <div
+            className="image-preview-close"
+            onClick={() => setImagePreviewSrc(null)}
+          >
+            ×
+          </div>
+        </div>
+      )}
 
       <ConfirmDialog
         isOpen={showNewSessionConfirm}

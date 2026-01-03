@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Attachment, ChatInputBoxProps, CommandItem, FileItem, PermissionMode } from './types';
 import { ButtonArea } from './ButtonArea';
 import { AttachmentList } from './AttachmentList';
@@ -45,7 +46,7 @@ export const ChatInputBox = ({
   usageMaxTokens,
   showUsage = true,
   attachments: externalAttachments,
-  placeholder = '@引用文件，/唤起指令，shift + enter 换行',
+  placeholder: placeholderProp,
   disabled = false,
   value,
   onSubmit,
@@ -65,7 +66,10 @@ export const ChatInputBox = ({
   onAgentSelect,
   onOpenAgentSettings,
 }: ChatInputBoxProps) => {
-  // 内部附件状态（如果外部未提供）
+  const { t } = useTranslation();
+  const placeholder = placeholderProp ?? t('chat.inputPlaceholder');
+
+  // Internal attachments state (if not provided externally)
   const [internalAttachments, setInternalAttachments] = useState<Attachment[]>([]);
   const attachments = externalAttachments ?? internalAttachments;
 

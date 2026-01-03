@@ -11,7 +11,12 @@
     "zod": "^3.25.76"
   },
   "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
     "test:claude": "node channel-manager.js claude send",
     "test:codex": "node channel-manager.js codex send"
+  },
+  "devDependencies": {
+    "vitest": "^4.0.16"
   }
 }

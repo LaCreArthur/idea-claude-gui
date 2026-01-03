@@ -119,29 +119,24 @@ export function selectWorkingDirectory(requestedCwd) {
   candidates.push(process.cwd());
   candidates.push(homedir());
 
-  console.log('[DEBUG] selectWorkingDirectory candidates:', JSON.stringify(candidates));
-
   for (const candidate of candidates) {
     const normalized = sanitizePath(candidate);
     if (!normalized) continue;
 
+    // Skip temp directories when project path is available
     if (isTempDirectory(normalized) && envProjectPath) {
-      console.log('[DEBUG] Skipping temp directory candidate:', normalized);
       continue;
     }
 
     try {
       const stats = fs.statSync(normalized);
       if (stats.isDirectory()) {
-        console.log('[DEBUG] selectWorkingDirectory resolved:', normalized);
         return normalized;
       }
     } catch {
       // Ignore invalid candidates
-      console.log('[DEBUG] Candidate is invalid:', normalized);
     }
   }
 
-  console.log('[DEBUG] selectWorkingDirectory fallback triggered');
   return envProjectPath || homedir();
 }

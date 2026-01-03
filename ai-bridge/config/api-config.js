@@ -1,6 +1,6 @@
 /**
- * API 配置模块
- * 负责加载和管理 Claude API 配置
+ * API Configuration Module
+ * Handles loading and managing Claude API configuration
  */
 
 import { readFileSync, existsSync } from 'fs';
@@ -34,7 +34,6 @@ export function hasCliSessionAuth() {
     const credentials = JSON.parse(readFileSync(credentialsPath, 'utf8'));
     return !!(credentials?.claudeAiOauth?.accessToken);
   } catch (error) {
-    console.log('[DEBUG] Failed to check CLI session auth:', error.message);
     return false;
   }
 }
@@ -52,9 +51,8 @@ export function setupApiKey() {
   let apiKeySource = 'default';
   let baseUrlSource = 'default';
 
-  // 🔥 配置优先级：只从 settings.json 读取，忽略系统环境变量
-  // 这样确保配置来源唯一，避免 shell 环境变量干扰
-  console.log('[DEBUG] Loading configuration from settings.json only (ignoring shell environment variables)...');
+  // Configuration priority: Only read from settings.json, ignore shell environment variables
+  // This ensures a single configuration source and avoids shell env interference
 
   // 优先使用 ANTHROPIC_AUTH_TOKEN（Bearer 认证），回退到 ANTHROPIC_API_KEY（x-api-key 认证）
   // 这样可以兼容 Claude Code CLI 的两种认证方式
@@ -78,10 +76,9 @@ export function setupApiKey() {
   }
 
   if (!apiKey) {
-    // 没有配置 API Key，检查是否有 CLI 会话认证
+    // No API Key configured, check for CLI session auth
     if (hasCliSessionAuth()) {
-      console.log('[DEBUG] No API key configured, using CLI session auth (auto-detected by SDK)');
-      // 清除所有认证环境变量，让 SDK 自动检测 CLI 会话
+      // Clear all auth environment variables, let SDK auto-detect CLI session
       delete process.env.ANTHROPIC_API_KEY;
       delete process.env.ANTHROPIC_AUTH_TOKEN;
       return {
@@ -92,7 +89,7 @@ export function setupApiKey() {
         baseUrlSource
       };
     }
-    // 既没有 API Key 也没有 CLI 会话
+    // Neither API Key nor CLI session available
     console.error('[ERROR] No authentication configured. Run `claude login` or set API key in ~/.claude/settings.json');
     throw new Error('No authentication configured. Run `claude login` in terminal or configure API key.');
   }
@@ -114,8 +111,6 @@ export function setupApiKey() {
   if (baseUrl) {
     process.env.ANTHROPIC_BASE_URL = baseUrl;
   }
-
-  console.log('[DEBUG] Auth type:', authType);
 
   return { apiKey, baseUrl, authType, apiKeySource, baseUrlSource };
 }

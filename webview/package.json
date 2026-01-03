@@ -8,16 +8,26 @@
     "prebuild": "node scripts/extract-version.mjs",
     "build": "tsc && vite build",
     "postbuild": "node scripts/copy-dist.mjs",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui"
   },
   "devDependencies": {
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.1",
+    "@testing-library/user-event": "^14.6.1",
     "@types/react": "^19.2.6",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react-swc": "^4.2.2",
+    "@vitest/ui": "^4.0.16",
+    "jsdom": "^27.4.0",
     "less": "^4.4.2",
     "typescript": "~5.9.3",
     "vite": "^7.2.4",
-    "vite-plugin-singlefile": "^2.3.0"
+    "vite-plugin-singlefile": "^2.3.0",
+    "vitest": "^4.0.16"
   },
   "dependencies": {
     "@lobehub/icons": "^2.43.1",

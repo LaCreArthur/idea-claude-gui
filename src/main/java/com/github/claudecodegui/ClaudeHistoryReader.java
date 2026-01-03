@@ -936,7 +936,9 @@ public class ClaudeHistoryReader {
                         }
                     }
                 } catch (Exception e) {
-                    // ignore
+                    // Log parsing errors for debugging but continue processing other lines
+                    LOG.debug("[ClaudeHistoryReader] Failed to parse session line: " + e.getMessage()
+                        + " - content: " + (line.length() > 100 ? line.substring(0, 100) + "..." : line));
                 }
             }
 
