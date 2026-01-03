@@ -92,15 +92,13 @@ const UsageStatisticsSection = () => {
     if (diffDays === 1) return t('usage.yesterday');
     if (diffDays < 7) return `${diffDays}${t('usage.daysAgo')}`;
 
-    return date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
-  // 中文日期格式化
-  const formatChineseDate = (dateStr: string): string => {
+  // Short date formatting
+  const formatShortDate = (dateStr: string): string => {
     const date = new Date(dateStr);
-    const month = date.getMonth() + 1;
-    const day = date.getDate();
-    return `${month}月${day}日`;
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
   // 相对时间格式化（用于最后更新时间）
@@ -604,7 +602,7 @@ const UsageStatisticsSection = () => {
                                     onMouseLeave={() => setTooltip(prev => ({ ...prev, visible: false }))}
                                   />
                                 </div>
-                                <div className="chart-label">{formatChineseDate(day.date)}</div>
+                                <div className="chart-label">{formatShortDate(day.date)}</div>
                               </div>
                             );
                           })}
@@ -630,7 +628,7 @@ const UsageStatisticsSection = () => {
           className="chart-tooltip"
           style={{ left: tooltip.x, top: tooltip.y }}
         >
-          <div className="tooltip-date">{formatChineseDate(tooltip.content.date)}</div>
+          <div className="tooltip-date">{formatShortDate(tooltip.content.date)}</div>
           <div className="tooltip-cost">{formatCost(tooltip.content.cost)}</div>
           <div className="tooltip-sessions">{tooltip.content.sessions} {t('usage.sessionsCount')}</div>
         </div>

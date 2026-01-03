@@ -128,7 +128,7 @@ const HistoryView = ({ historyData, onLoadSession, onDeleteSession, onExportSess
           <div style={{ textAlign: 'center', color: '#858585' }}>
             <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔍</div>
             <div>{t('history.noSearchResults')}</div>
-            <div style={{ fontSize: '12px', marginTop: '8px' }}>尝试其他搜索关键词</div>
+            <div style={{ fontSize: '12px', marginTop: '8px' }}>Try different search keywords</div>
           </div>
         </div>
       );

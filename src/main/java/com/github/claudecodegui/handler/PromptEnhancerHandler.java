@@ -119,13 +119,13 @@ public class PromptEnhancerHandler extends BaseMessageHandler {
                 String model = payload.has("model") ? payload.get("model").getAsString() : null;
 
                 if (originalPrompt.isEmpty()) {
-                    sendEnhanceResult(false, "", "提示词为空");
+                    sendEnhanceResult(false, "", "Prompt is empty");
                     return;
                 }
 
-                LOG.info("[PromptEnhancer] 开始增强提示词: " + originalPrompt.substring(0, Math.min(50, originalPrompt.length())) + "...");
+                LOG.info("[PromptEnhancer] Starting to enhance prompt: " + originalPrompt.substring(0, Math.min(50, originalPrompt.length())) + "...");
                 if (model != null) {
-                    LOG.info("[PromptEnhancer] 使用模型: " + model);
+                    LOG.info("[PromptEnhancer] Using model: " + model);
                 }
 
                 // 自动从编辑器获取上下文信息
@@ -133,48 +133,48 @@ public class PromptEnhancerHandler extends BaseMessageHandler {
 
                 // 记录上下文信息
                 if (contextObj != null) {
-                    LOG.info("[PromptEnhancer] 已收集编辑器上下文信息:");
+                    LOG.info("[PromptEnhancer] Collected editor context info:");
                     if (contextObj.has("selectedCode")) {
                         String selectedCode = contextObj.get("selectedCode").getAsString();
-                        LOG.info("  - 选中代码: " + selectedCode.length() + " 字符");
+                        LOG.info("  - Selected code: " + selectedCode.length() + " chars");
                     }
                     if (contextObj.has("currentFile")) {
                         JsonObject currentFile = contextObj.getAsJsonObject("currentFile");
                         if (currentFile.has("path")) {
-                            LOG.info("  - 当前文件: " + currentFile.get("path").getAsString());
+                            LOG.info("  - Current file: " + currentFile.get("path").getAsString());
                         }
                         if (currentFile.has("language")) {
-                            LOG.info("  - 语言类型: " + currentFile.get("language").getAsString());
+                            LOG.info("  - Language: " + currentFile.get("language").getAsString());
                         }
                     }
                     if (contextObj.has("cursorPosition")) {
                         JsonObject cursorPos = contextObj.getAsJsonObject("cursorPosition");
                         if (cursorPos.has("line")) {
-                            LOG.info("  - 光标位置: 第 " + cursorPos.get("line").getAsInt() + " 行");
+                            LOG.info("  - Cursor position: line " + cursorPos.get("line").getAsInt());
                         }
                     }
                     if (contextObj.has("cursorContext")) {
                         String cursorContext = contextObj.get("cursorContext").getAsString();
-                        LOG.info("  - 光标上下文: " + cursorContext.length() + " 字符");
+                        LOG.info("  - Cursor context: " + cursorContext.length() + " chars");
                     }
                 } else {
-                    LOG.info("[PromptEnhancer] 未能获取编辑器上下文信息");
+                    LOG.info("[PromptEnhancer] Failed to get editor context info");
                 }
 
                 // 调用 AI 服务进行增强（传递上下文信息）
                 String enhancedPrompt = callAIForEnhancement(originalPrompt, model, contextObj);
 
                 if (enhancedPrompt != null && !enhancedPrompt.isEmpty()) {
-                    LOG.info("[PromptEnhancer] 增强成功");
+                    LOG.info("[PromptEnhancer] Enhancement successful");
                     sendEnhanceResult(true, enhancedPrompt, null);
                 } else {
-                    LOG.warn("[PromptEnhancer] 增强失败：返回结果为空");
-                    sendEnhanceResult(false, "", "增强失败：返回结果为空");
+                    LOG.warn("[PromptEnhancer] Enhancement failed: empty result");
+                    sendEnhanceResult(false, "", "Enhancement failed: empty result");
                 }
 
             } catch (Exception e) {
-                LOG.error("[PromptEnhancer] 增强提示词失败: " + e.getMessage(), e);
-                sendEnhanceResult(false, "", "增强失败: " + e.getMessage());
+                LOG.error("[PromptEnhancer] Failed to enhance prompt: " + e.getMessage(), e);
+                sendEnhanceResult(false, "", "Enhancement failed: " + e.getMessage());
             }
         });
     }
@@ -254,12 +254,12 @@ public class PromptEnhancerHandler extends BaseMessageHandler {
                             contextRef.set(contextObj);
                         }
                     } catch (Exception e) {
-                        LOG.warn("[PromptEnhancer] 获取编辑器上下文失败: " + e.getMessage());
+                        LOG.warn("[PromptEnhancer] Failed to get editor context: " + e.getMessage());
                     }
                 });
             });
         } catch (Exception e) {
-            LOG.warn("[PromptEnhancer] 调用 ReadAction 失败: " + e.getMessage());
+            LOG.warn("[PromptEnhancer] Failed to call ReadAction: " + e.getMessage());
         }
 
         return contextRef.get();
@@ -283,7 +283,7 @@ public class PromptEnhancerHandler extends BaseMessageHandler {
 
             return document.getText().substring(startOffset, endOffset);
         } catch (Exception e) {
-            LOG.warn("[PromptEnhancer] 获取光标上下文失败: " + e.getMessage());
+            LOG.warn("[PromptEnhancer] Failed to get cursor context: " + e.getMessage());
             return null;
         }
     }
@@ -334,31 +334,31 @@ public class PromptEnhancerHandler extends BaseMessageHandler {
      * @param contextObj 上下文信息（可选）
      */
     private String callAIForEnhancement(String originalPrompt, String model, JsonObject contextObj) {
-        LOG.info("[PromptEnhancer] 开始调用 AI 服务进行提示词增强");
-        LOG.info("[PromptEnhancer] 原始提示词: " + originalPrompt);
-        LOG.info("[PromptEnhancer] 使用模型: " + (model != null ? model : "默认"));
+        LOG.info("[PromptEnhancer] Starting AI service call for prompt enhancement");
+        LOG.info("[PromptEnhancer] Original prompt: " + originalPrompt);
+        LOG.info("[PromptEnhancer] Using model: " + (model != null ? model : "default"));
 
         try {
             // 使用 Node.js 脚本调用 AI 服务
             String nodeExecutable = context.getClaudeSDKBridge().getNodeExecutable();
             if (nodeExecutable == null) {
-                LOG.error("[PromptEnhancer] Node.js 未配置");
+                LOG.error("[PromptEnhancer] Node.js not configured");
                 return null;
             }
-            LOG.info("[PromptEnhancer] Node.js 路径: " + nodeExecutable);
+            LOG.info("[PromptEnhancer] Node.js path: " + nodeExecutable);
 
             File bridgeDir = context.getClaudeSDKBridge().getSdkTestDir();
             if (bridgeDir == null || !bridgeDir.exists()) {
-                LOG.error("[PromptEnhancer] AI Bridge 目录不存在");
+                LOG.error("[PromptEnhancer] AI Bridge directory does not exist");
                 return null;
             }
-            LOG.info("[PromptEnhancer] AI Bridge 目录: " + bridgeDir.getAbsolutePath());
+            LOG.info("[PromptEnhancer] AI Bridge directory: " + bridgeDir.getAbsolutePath());
 
             // 构建命令
             List<String> command = new ArrayList<>();
             command.add(nodeExecutable);
             command.add(new File(bridgeDir, "services/prompt-enhancer.js").getAbsolutePath());
-            LOG.info("[PromptEnhancer] 执行命令: " + String.join(" ", command));
+            LOG.info("[PromptEnhancer] Executing command: " + String.join(" ", command));
 
             ProcessBuilder pb = new ProcessBuilder(command);
             pb.directory(bridgeDir);
@@ -368,7 +368,7 @@ public class PromptEnhancerHandler extends BaseMessageHandler {
             envConfigurator.updateProcessEnvironment(pb, nodeExecutable);
 
             Process process = pb.start();
-            LOG.info("[PromptEnhancer] Node.js 进程已启动");
+            LOG.info("[PromptEnhancer] Node.js process started");
 
             // 发送请求数据到 stdin（包含上下文信息）
             JsonObject stdinInput = new JsonObject();
@@ -406,16 +406,16 @@ public class PromptEnhancerHandler extends BaseMessageHandler {
             }
 
             int exitCode = process.waitFor();
-            LOG.info("[PromptEnhancer] Node.js 进程退出码: " + exitCode);
+            LOG.info("[PromptEnhancer] Node.js process exit code: " + exitCode);
 
             if (response.length() == 0 && allOutput.length() > 0) {
-                LOG.warn("[PromptEnhancer] 未找到 [ENHANCED] 标记，完整输出:\n" + allOutput);
+                LOG.warn("[PromptEnhancer] [ENHANCED] marker not found, full output:\n" + allOutput);
             }
 
             return response.toString();
 
         } catch (Exception e) {
-            LOG.error("[PromptEnhancer] 调用 AI 服务失败: " + e.getMessage(), e);
+            LOG.error("[PromptEnhancer] Failed to call AI service: " + e.getMessage(), e);
             return null;
         }
     }

@@ -133,7 +133,7 @@ function processContentBlock(block: ClaudeContentBlock | ToolResultBlock): any {
 function limitContentLength(content: any, maxLength: number): any {
   if (typeof content === 'string') {
     if (content.length > maxLength) {
-      return content.substring(0, maxLength) + '\n... (内容过长，已截断)';
+      return content.substring(0, maxLength) + '\n... (content too long, truncated)';
     }
     return content;
   } else if (Array.isArray(content)) {
@@ -141,7 +141,7 @@ function limitContentLength(content: any, maxLength: number): any {
       if (item.text && item.text.length > maxLength) {
         return {
           ...item,
-          text: item.text.substring(0, maxLength) + '\n... (内容过长，已截断)'
+          text: item.text.substring(0, maxLength) + '\n... (content too long, truncated)'
         };
       }
       return item;

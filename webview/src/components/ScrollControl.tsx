@@ -192,8 +192,8 @@ export const ScrollControl = ({ containerRef, inputAreaRef }: ScrollControlProps
       className="scroll-control-button"
       style={{ bottom: `${bottomOffset}px` }}
       onClick={handleClick}
-      aria-label={direction === 'up' ? '回到顶部' : '回到底部'}
-      title={direction === 'up' ? '回到顶部' : '回到底部'}
+      aria-label={direction === 'up' ? 'Back to top' : 'Back to bottom'}
+      title={direction === 'up' ? 'Back to top' : 'Back to bottom'}
     >
       <svg
         width="24"

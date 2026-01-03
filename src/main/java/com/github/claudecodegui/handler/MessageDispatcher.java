@@ -4,25 +4,25 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 消息分发器
- * 负责将消息分发到合适的 Handler 处理
+ * Message Dispatcher.
+ * Responsible for dispatching messages to the appropriate Handler for processing.
  */
 public class MessageDispatcher {
 
     private final List<MessageHandler> handlers = new ArrayList<>();
 
     /**
-     * 注册消息处理器
+     * Register a message handler.
      */
     public void registerHandler(MessageHandler handler) {
         handlers.add(handler);
     }
 
     /**
-     * 分发消息到合适的处理器
-     * @param type 消息类型
-     * @param content 消息内容
-     * @return true 如果消息被处理，false 如果没有处理器能处理此消息
+     * Dispatch message to the appropriate handler.
+     * @param type message type
+     * @param content message content
+     * @return true if message was handled, false if no handler could process this message
      */
     public boolean dispatch(String type, String content) {
         for (MessageHandler handler : handlers) {
@@ -34,7 +34,7 @@ public class MessageDispatcher {
     }
 
     /**
-     * 检查是否有处理器支持指定的消息类型
+     * Check if any handler supports the specified message type.
      */
     public boolean hasHandlerFor(String type) {
         for (MessageHandler handler : handlers) {
@@ -48,14 +48,14 @@ public class MessageDispatcher {
     }
 
     /**
-     * 获取所有已注册的处理器数量
+     * Get the count of all registered handlers.
      */
     public int getHandlerCount() {
         return handlers.size();
     }
 
     /**
-     * 清除所有处理器
+     * Clear all handlers.
      */
     public void clear() {
         handlers.clear();

@@ -625,15 +625,15 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
         }
 
         private void showErrorPanel() {
-            String message = "无法找到 Node.js\n\n" +
-                "请确保:\n" +
-                "• Node.js 已安装 (可以在终端运行: node --version)\n\n" +
-                "如果自动检测 Node.js 失败，可以在终端运行以下命令获取 Node.js 路径:\n" +
+            String message = "Node.js not found\n\n" +
+                "Please ensure:\n" +
+                "• Node.js is installed (run: node --version in terminal)\n\n" +
+                "If automatic Node.js detection fails, run this command to get the path:\n" +
                 "    node -p \"process.execPath\"\n\n" +
-                "当前检测到的 Node.js 路径: " + claudeSDKBridge.getNodeExecutable();
+                "Currently detected Node.js path: " + claudeSDKBridge.getNodeExecutable();
 
             JPanel errorPanel = ErrorPanelBuilder.build(
-                "环境检查失败",
+                "Environment Check Failed",
                 message,
                 claudeSDKBridge.getNodeExecutable(),
                 this::handleNodePathSave
@@ -643,14 +643,14 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
 
         private void showVersionErrorPanel(String currentVersion) {
             int minVersion = NodeDetector.MIN_NODE_MAJOR_VERSION;
-            String message = "Node.js 版本过低\n\n" +
-                "当前版本: " + currentVersion + "\n" +
-                "最低要求: v" + minVersion + "\n\n" +
-                "请升级 Node.js 到 v" + minVersion + " 或更高版本后重试。\n\n" +
-                "当前检测到的 Node.js 路径: " + claudeSDKBridge.getNodeExecutable();
+            String message = "Node.js version too low\n\n" +
+                "Current version: " + currentVersion + "\n" +
+                "Minimum required: v" + minVersion + "\n\n" +
+                "Please upgrade Node.js to v" + minVersion + " or higher.\n\n" +
+                "Currently detected Node.js path: " + claudeSDKBridge.getNodeExecutable();
 
             JPanel errorPanel = ErrorPanelBuilder.build(
-                "Node.js 版本不满足要求",
+                "Node.js Version Requirements Not Met",
                 message,
                 claudeSDKBridge.getNodeExecutable(),
                 this::handleNodePathSave
@@ -659,12 +659,12 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
         }
 
         private void showInvalidNodePathPanel(String path, String errMsg) {
-            String message = "保存的 Node.js 路径不可用: " + path + "\n\n" +
+            String message = "Saved Node.js path is unavailable: " + path + "\n\n" +
                 (errMsg != null ? errMsg + "\n\n" : "") +
-                "请在下方重新保存正确的 Node.js 路径。";
+                "Please save the correct Node.js path below.";
 
             JPanel errorPanel = ErrorPanelBuilder.build(
-                "Node.js 路径不可用",
+                "Node.js Path Unavailable",
                 message,
                 path,
                 this::handleNodePathSave
@@ -700,8 +700,8 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
 
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(mainPanel,
-                    "保存或应用 Node.js 路径时出错: " + ex.getMessage(),
-                    "错误", JOptionPane.ERROR_MESSAGE);
+                    "Error saving or applying Node.js path: " + ex.getMessage(),
+                    "Error", JOptionPane.ERROR_MESSAGE);
             }
         }
 
@@ -862,7 +862,7 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
             session.loadFromServer().thenRun(() -> ApplicationManager.getApplication().invokeLater(() -> {}))
                 .exceptionally(ex -> {
                     ApplicationManager.getApplication().invokeLater(() ->
-                        callJavaScript("addErrorMessage", JsUtils.escapeJs("加载会话失败: " + ex.getMessage())));
+                        callJavaScript("addErrorMessage", JsUtils.escapeJs("Failed to load session: " + ex.getMessage())));
                     return null;
                 });
         }
@@ -897,7 +897,7 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
 
                         callJavaScript("showLoading", String.valueOf(loading));
                         if (error != null) {
-                            callJavaScript("updateStatus", JsUtils.escapeJs("错误: " + error));
+                            callJavaScript("updateStatus", JsUtils.escapeJs("Error: " + error));
                         }
                         if (!busy && !loading) {
                             VirtualFileManager.getInstance().asyncRefresh(null);
@@ -1170,7 +1170,7 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
 
                 // 更新前端状态
                 ApplicationManager.getApplication().invokeLater(() -> {
-                    callJavaScript("updateStatus", JsUtils.escapeJs("新会话已创建，可以开始提问"));
+                    callJavaScript("updateStatus", JsUtils.escapeJs("New session created, you can start asking questions"));
 
                     // 重置 Token 使用统计
                     int maxTokens = SettingsHandler.getModelContextLimit(handlerContext.getCurrentModel());
@@ -1199,7 +1199,7 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
             }).exceptionally(ex -> {
                 LOG.error("Failed to create new session: " + ex.getMessage(), ex);
                 ApplicationManager.getApplication().invokeLater(() -> {
-                    callJavaScript("updateStatus", JsUtils.escapeJs("创建新会话失败: " + ex.getMessage()));
+                    callJavaScript("updateStatus", JsUtils.escapeJs("Failed to create new session: " + ex.getMessage()));
                 });
                 return null;
             });

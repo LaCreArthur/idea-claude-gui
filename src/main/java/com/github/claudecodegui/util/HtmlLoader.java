@@ -112,7 +112,7 @@ public class HtmlLoader {
     private String loadResourceAsString(String resourcePath) throws Exception {
         InputStream is = resourceClass.getResourceAsStream(resourcePath);
         if (is == null) {
-            throw new Exception("无法找到资源: " + resourcePath);
+            throw new Exception("Cannot find resource: " + resourcePath);
         }
         String content = new String(is.readAllBytes(), StandardCharsets.UTF_8);
         is.close();
@@ -125,7 +125,7 @@ public class HtmlLoader {
     private String loadResourceAsBase64(String resourcePath) throws Exception {
         InputStream is = resourceClass.getResourceAsStream(resourcePath);
         if (is == null) {
-            throw new Exception("无法找到资源: " + resourcePath);
+            throw new Exception("Cannot find resource: " + resourcePath);
         }
         byte[] bytes = is.readAllBytes();
         is.close();

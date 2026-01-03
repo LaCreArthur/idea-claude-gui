@@ -153,7 +153,7 @@ export function SkillsSettingsSection() {
           addToast(t('skills.deleteSuccess'), 'success');
           loadSkills();
         } else {
-          addToast(result.error || '删除 Skill 失败', 'error');
+          addToast(result.error || 'Failed to delete Skill', 'error');
         }
       } catch (error) {
         console.error('[SkillsSettings] Failed to parse delete result:', error);
@@ -179,14 +179,14 @@ export function SkillsSettingsSection() {
         });
 
         if (result.success) {
-          const action = result.enabled ? '启用' : '停用';
-          addToast(`已成功${action} Skill: ${result.name}`, 'success');
+          const action = result.enabled ? 'enabled' : 'disabled';
+          addToast(`Successfully ${action} Skill: ${result.name}`, 'success');
           loadSkills();
         } else {
           if (result.conflict) {
-            addToast(`操作失败: ${result.error}`, 'warning');
+            addToast(`Operation failed: ${result.error}`, 'warning');
           } else {
-            addToast(result.error || '操作 Skill 失败', 'error');
+            addToast(result.error || 'Failed to perform Skill operation', 'error');
           }
         }
       } catch (error) {
@@ -232,7 +232,7 @@ export function SkillsSettingsSection() {
   // 刷新
   const handleRefresh = () => {
     loadSkills();
-    addToast('已刷新 Skills 列表', 'success');
+    addToast('Skills list refreshed', 'success');
   };
 
   // 导入 Skill
@@ -370,11 +370,11 @@ export function SkillsSettingsSection() {
               <div className="dropdown-menu">
                 <div className="dropdown-item" onClick={() => handleImport('global')}>
                   <span className="codicon codicon-globe"></span>
-                  导入到全局
+                  Import to Global
                 </div>
                 <div className="dropdown-item" onClick={() => handleImport('local')}>
                   <span className="codicon codicon-desktop-download"></span>
-                  导入到本项目
+                  Import to Project
                 </div>
               </div>
             )}
@@ -385,7 +385,7 @@ export function SkillsSettingsSection() {
             className="icon-btn"
             onClick={handleRefresh}
             disabled={loading}
-            title="刷新"
+            title="Refresh"
           >
             <span className={`codicon codicon-refresh ${loading ? 'spinning' : ''}`}></span>
           </button>
@@ -406,7 +406,7 @@ export function SkillsSettingsSection() {
                 className={`toggle-switch ${skill.enabled ? 'enabled' : 'disabled'} ${togglingSkills.has(skill.id) ? 'loading' : ''}`}
                 onClick={(e) => handleToggle(skill, e)}
                 disabled={togglingSkills.has(skill.id)}
-                title={skill.enabled ? '点击停用' : '点击启用'}
+                title={skill.enabled ? 'Click to disable' : 'Click to enable'}
               >
                 {togglingSkills.has(skill.id) ? (
                   <span className="codicon codicon-loading codicon-modifier-spin"></span>
@@ -426,11 +426,11 @@ export function SkillsSettingsSection() {
                   <span className={`skill-name ${!skill.enabled ? 'muted' : ''}`}>{skill.name}</span>
                   <span className={`scope-badge ${skill.scope}`}>
                     <span className={`codicon ${skill.scope === 'global' ? 'codicon-globe' : 'codicon-desktop-download'}`}></span>
-                    {skill.scope === 'global' ? '全局' : '本项目'}
+                    {skill.scope === 'global' ? 'Global' : 'Project'}
                   </span>
                   {!skill.enabled && (
                     <span className="status-badge disabled">
-                      已停用
+                      Disabled
                     </span>
                   )}
                 </div>
@@ -473,7 +473,7 @@ export function SkillsSettingsSection() {
         {filteredSkills.length === 0 && !loading && (
           <div className="empty-state">
             <span className="codicon codicon-extensions"></span>
-            <p>未找到匹配的 Skills</p>
+            <p>No matching Skills found</p>
             <p className="hint">{t('skills.importHint')}</p>
           </div>
         )}
@@ -496,8 +496,8 @@ export function SkillsSettingsSection() {
         <SkillConfirmDialog
           title={t('skills.deleteTitle')}
           message={t('skills.deleteMessage', { scope: deletingSkill.scope === 'global' ? t('skills.deleteMessageGlobal') : t('skills.deleteMessageLocal'), name: deletingSkill.name })}
-          confirmText="删除"
-          cancelText="取消"
+          confirmText="Delete"
+          cancelText="Cancel"
           onConfirm={confirmDelete}
           onCancel={cancelDelete}
         />

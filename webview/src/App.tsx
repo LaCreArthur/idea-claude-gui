@@ -778,7 +778,7 @@ const App = () => {
           // 非图片附件显示文件名
           userContentBlocks.push({
             type: 'text',
-            text: `[附件: ${att.fileName}]`,
+            text: `[Attachment: ${att.fileName}]`,
           });
         }
       }
@@ -795,7 +795,7 @@ const App = () => {
     // 立即在前端添加用户消息（包含图片预览）
     const userMessage: ClaudeMessage = {
       type: 'user',
-      content: text || (hasAttachments ? '[已上传附件]' : ''),
+      content: text || (hasAttachments ? '[Attachment uploaded]' : ''),
       timestamp: new Date().toISOString(),
       raw: {
         message: {
@@ -1081,7 +1081,7 @@ const App = () => {
       }
 
       // 显示成功提示
-      addToast('会话已删除', 'success');
+      addToast('Session deleted', 'success');
     }
   };
 
@@ -1157,7 +1157,7 @@ const App = () => {
   // 文案本地化映射
   const localizeMessage = (text: string): string => {
     const messageMap: Record<string, string> = {
-      'Request interrupted by user': '请求已被用户中断',
+      'Request interrupted by user': 'Request interrupted by user',
     };
 
     // 检查是否有完全匹配的映射
@@ -1183,7 +1183,7 @@ const App = () => {
     } else {
       const raw = message.raw;
       if (!raw) {
-        return '(空消息)';
+        return '(empty message)';
       }
       if (typeof raw === 'string') {
         text = raw;
@@ -1200,7 +1200,7 @@ const App = () => {
           .map((block) => block.text ?? '')
           .join('\n');
       } else {
-        return '(空消息)';
+        return '(empty message)';
       }
     }
 
@@ -1236,7 +1236,7 @@ const App = () => {
     }
     if (message.type === 'user' || message.type === 'error') {
       // 检查是否有有效的文本内容
-      if (text && text.trim() && text !== '(空消息)' && text !== '(无法解析内容)') {
+      if (text && text.trim() && text !== '(empty message)' && text !== '(unable to parse content)') {
         return true;
       }
       // 检查是否有有效的内容块（如图片等）
@@ -1302,7 +1302,7 @@ const App = () => {
           blocks.push({
             type: 'tool_use',
             id: typeof candidate.id === 'string' ? (candidate.id as string) : undefined,
-            name: typeof candidate.name === 'string' ? (candidate.name as string) : '未知工具',
+            name: typeof candidate.name === 'string' ? (candidate.name as string) : 'Unknown tool',
             input: (candidate.input as Record<string, unknown>) ?? {},
           });
         } else if (type === 'image') {
@@ -1637,11 +1637,11 @@ const App = () => {
                               }
                             }}
                             style={{ cursor: 'pointer' }}
-                            title="点击预览大图"
+                            title="Click to preview full image"
                           >
                             <img
                               src={block.src}
-                              alt="用户上传的图片"
+                              alt="User uploaded image"
                               style={{
                                 maxWidth: message.type === 'user' ? '200px' : '100%',
                                 maxHeight: message.type === 'user' ? '150px' : 'auto',
@@ -1669,7 +1669,7 @@ const App = () => {
                             </div>
                             {isThinkingExpanded(messageIndex, blockIndex) && (
                               <div className="thinking-content">
-                                {block.thinking ?? block.text ?? '(无思考内容)'}
+                                {block.thinking ?? block.text ?? '(no thinking content)'}
                               </div>
                             )}
                           </div>

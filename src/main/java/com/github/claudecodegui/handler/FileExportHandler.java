@@ -39,7 +39,7 @@ public class FileExportHandler extends BaseMessageHandler {
     @Override
     public boolean handle(String type, String content) {
         if ("save_markdown".equals(type)) {
-            LOG.info("[FileExportHandler] 处理: save_markdown");
+            LOG.info("[FileExportHandler] Processing: save_markdown");
             handleSaveFile(content, ".md", "保存 Markdown 文件");
             return true;
         } else if ("save_json".equals(type)) {
@@ -111,47 +111,47 @@ public class FileExportHandler extends BaseMessageHandler {
                                 // 通知前端成功
                                 ApplicationManager.getApplication().invokeLater(() -> {
                                     String jsCode = "if (window.addToast) { " +
-                                        "  window.addToast('文件已保存', 'success'); " +
+                                        "  window.addToast('File saved', 'success'); " +
                                         "}";
                                     context.executeJavaScriptOnEDT(jsCode);
                                 });
 
                             } catch (IOException e) {
-                                LOG.error("[FileExportHandler] ❌ 保存文件失败: " + e.getMessage(), e);
+                                LOG.error("[FileExportHandler] ❌ Failed to save file: " + e.getMessage(), e);
 
-                                // 通知前端失败
+                                // Notify frontend of failure
                                 ApplicationManager.getApplication().invokeLater(() -> {
-                                    String errorMsg = escapeJs(e.getMessage() != null ? e.getMessage() : "保存失败");
+                                    String errorMsg = escapeJs(e.getMessage() != null ? e.getMessage() : "Save failed");
                                     String jsCode = "if (window.addToast) { " +
-                                        "  window.addToast('保存失败: " + errorMsg + "', 'error'); " +
+                                        "  window.addToast('Save failed: " + errorMsg + "', 'error'); " +
                                         "}";
                                     context.executeJavaScriptOnEDT(jsCode);
                                 });
                             }
                         });
                     } else {
-                        LOG.info("[FileExportHandler] 用户取消了保存");
+                        LOG.info("[FileExportHandler] User cancelled save");
                     }
                 } catch (Exception e) {
-                    LOG.error("[FileExportHandler] ❌ 显示对话框失败: " + e.getMessage(), e);
+                    LOG.error("[FileExportHandler] ❌ Failed to show dialog: " + e.getMessage(), e);
 
-                    String errorMsg = escapeJs(e.getMessage() != null ? e.getMessage() : "显示对话框失败");
+                    String errorMsg = escapeJs(e.getMessage() != null ? e.getMessage() : "Failed to show dialog");
                     String jsCode = "if (window.addToast) { " +
-                        "  window.addToast('保存失败: " + errorMsg + "', 'error'); " +
+                        "  window.addToast('Save failed: " + errorMsg + "', 'error'); " +
                         "}";
                     context.executeJavaScriptOnEDT(jsCode);
                 }
 
-                LOG.info("[FileExportHandler] ========== 保存文件完成 ==========");
+                LOG.info("[FileExportHandler] ========== File save completed ==========");
             });
 
         } catch (Exception e) {
-            LOG.error("[FileExportHandler] ❌ 处理保存请求失败: " + e.getMessage(), e);
+            LOG.error("[FileExportHandler] ❌ Failed to process save request: " + e.getMessage(), e);
 
             ApplicationManager.getApplication().invokeLater(() -> {
-                String errorMsg = escapeJs(e.getMessage() != null ? e.getMessage() : "未知错误");
+                String errorMsg = escapeJs(e.getMessage() != null ? e.getMessage() : "Unknown error");
                 String jsCode = "if (window.addToast) { " +
-                    "  window.addToast('保存失败: " + errorMsg + "', 'error'); " +
+                    "  window.addToast('Save failed: " + errorMsg + "', 'error'); " +
                     "}";
                 context.executeJavaScriptOnEDT(jsCode);
             });

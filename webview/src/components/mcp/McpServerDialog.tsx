@@ -17,8 +17,8 @@ export function McpServerDialog({ server, existingIds = [], onClose, onSave }: M
   const [parseError, setParseError] = useState('');
   const editorRef = useRef<HTMLTextAreaElement>(null);
 
-  // 示例占位符
-  const placeholder = `// 示例:
+  // Example placeholder
+  const placeholder = `// Example:
 // {
 //   "mcpServers": {
 //     "example-server": {
@@ -104,7 +104,7 @@ export function McpServerDialog({ server, existingIds = [], onClose, onSave }: M
         for (const [id, config] of Object.entries(parsed.mcpServers)) {
           // 检查 ID 是否已存在（编辑模式除外）
           if (!server && existingIds.includes(id)) {
-            setParseError(`服务器 ID "${id}" 已存在`);
+            setParseError(`Server ID "${id}" already exists`);
             return null;
           }
 
@@ -155,13 +155,13 @@ export function McpServerDialog({ server, existingIds = [], onClose, onSave }: M
       }
 
       if (servers.length === 0) {
-        setParseError('无法识别的配置格式');
+        setParseError('Unrecognized configuration format');
         return null;
       }
 
       return servers;
     } catch (e) {
-      setParseError(`JSON 解析错误: ${(e as Error).message}`);
+      setParseError(`JSON parse error: ${(e as Error).message}`);
       return null;
     }
   };
@@ -209,10 +209,10 @@ export function McpServerDialog({ server, existingIds = [], onClose, onSave }: M
     <div className="dialog-overlay" onClick={handleOverlayClick}>
       <div className="dialog mcp-server-dialog">
         <div className="dialog-header">
-          <h3>{server ? '编辑服务器' : '手动配置'}</h3>
+          <h3>{server ? 'Edit Server' : 'Manual Configuration'}</h3>
           <div className="header-actions">
             <button className="mode-btn active">
-              原始配置（JSON）
+              Raw Config (JSON)
             </button>
             <button className="close-btn" onClick={onClose}>
               <span className="codicon codicon-close"></span>
@@ -222,7 +222,7 @@ export function McpServerDialog({ server, existingIds = [], onClose, onSave }: M
 
         <div className="dialog-body">
           <p className="dialog-desc">
-            请输入 MCP Servers 配置 JSON（优先使用 NPX 或 UVX 配置）
+            Enter MCP Servers configuration JSON (NPX or UVX config preferred)
           </p>
 
           <div className="json-editor">
@@ -253,17 +253,17 @@ export function McpServerDialog({ server, existingIds = [], onClose, onSave }: M
         <div className="dialog-footer">
           <div className="footer-hint">
             <span className="codicon codicon-info"></span>
-            配置前请自行确认来源，甄别风险
+            Please verify the source and assess risks before configuring
           </div>
           <div className="footer-actions">
-            <button className="btn btn-secondary" onClick={onClose}>取消</button>
+            <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
             <button
               className="btn btn-primary"
               onClick={handleConfirm}
               disabled={!isValid() || saving}
             >
               {saving && <span className="codicon codicon-loading codicon-modifier-spin"></span>}
-              {saving ? '保存中...' : '确认'}
+              {saving ? 'Saving...' : 'Confirm'}
             </button>
           </div>
         </div>

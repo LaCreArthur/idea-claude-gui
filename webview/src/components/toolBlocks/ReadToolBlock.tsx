@@ -27,12 +27,12 @@ const ReadToolBlock = ({ input }: ReadToolBlockProps) => {
   if (typeof input.offset === 'number' && typeof input.limit === 'number') {
     const startLine = Number(input.offset) + 1;
     const endLine = Number(input.offset) + Number(input.limit);
-    lineInfo = `第 ${startLine}-${endLine} 行`;
+    lineInfo = `Lines ${startLine}-${endLine}`;
   }
 
   const isDirectory = filePath === '.' || filePath?.endsWith('/');
   const iconClass = isDirectory ? 'codicon-folder' : 'codicon-file-code';
-  const actionText = isDirectory ? '读取目录' : '读取文件';
+  const actionText = isDirectory ? 'Read directory' : 'Read file';
 
   const handleFileClick = (e: React.MouseEvent) => {
     e.stopPropagation(); // 阻止冒泡，避免触发展开/折叠
@@ -69,7 +69,7 @@ const ReadToolBlock = ({ input }: ReadToolBlockProps) => {
           <span
             className={`tool-title-summary ${!isDirectory ? 'clickable-file' : ''}`}
             onClick={!isDirectory ? handleFileClick : undefined}
-            title={!isDirectory ? `点击打开 ${filePath}` : undefined}
+            title={!isDirectory ? `Click to open ${filePath}` : undefined}
             style={{ display: 'flex', alignItems: 'center' }}
           >
             {isDirectory ? (
@@ -114,12 +114,12 @@ const ReadToolBlock = ({ input }: ReadToolBlockProps) => {
             }}
           >
             <div style={{ color: '#858585' }}>
-              <span style={{ color: '#90caf9', fontWeight: 600 }}>文件路径：</span>
+              <span style={{ color: '#90caf9', fontWeight: 600 }}>File path: </span>
               <span style={{ color: '#a5d6a7' }}>{filePath}</span>
             </div>
             {params.map(([key, value]) => (
               <div key={key} style={{ color: '#858585' }}>
-                <span style={{ color: '#90caf9', fontWeight: 600 }}>{key}：</span>
+                <span style={{ color: '#90caf9', fontWeight: 600 }}>{key}: </span>
                 <span>{String(value)}</span>
               </div>
             ))}

@@ -489,7 +489,7 @@ export function McpSettingsSection() {
                       <button
                         className="action-btn"
                         onClick={() => handleCopyUrl(server.homepage!)}
-                        title="复制主页链接"
+                        title="Copy homepage link"
                       >
                         <span className="codicon codicon-home"></span>
                         {t('mcp.homepage')}
@@ -499,7 +499,7 @@ export function McpSettingsSection() {
                       <button
                         className="action-btn"
                         onClick={() => handleCopyUrl(server.docs!)}
-                        title="复制文档链接"
+                        title="Copy docs link"
                       >
                         <span className="codicon codicon-book"></span>
                         {t('mcp.docs')}
@@ -508,7 +508,7 @@ export function McpSettingsSection() {
                     <button
                       className="action-btn edit-btn"
                       onClick={() => handleEdit(server)}
-                      title="编辑配置"
+                      title="Edit configuration"
                     >
                       <span className="codicon codicon-edit"></span>
                       {t('mcp.edit')}
@@ -516,7 +516,7 @@ export function McpSettingsSection() {
                     <button
                       className="action-btn delete-btn"
                       onClick={() => handleDelete(server)}
-                      title="删除服务器"
+                      title="Delete server"
                     >
                       <span className="codicon codicon-trash"></span>
                       {t('mcp.delete')}

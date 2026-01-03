@@ -16,7 +16,7 @@ const AlertDialog = ({
   type = 'info',
   title,
   message,
-  confirmText = '确定',
+  confirmText = 'OK',
   onClose,
 }: AlertDialogProps) => {
   useEffect(() => {

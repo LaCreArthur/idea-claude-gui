@@ -13,8 +13,8 @@ interface McpConfirmDialogProps {
 export function McpConfirmDialog({
   title,
   message,
-  confirmText = '确定',
-  cancelText = '取消',
+  confirmText = 'Confirm',
+  cancelText = 'Cancel',
   onConfirm,
   onCancel,
 }: McpConfirmDialogProps) {

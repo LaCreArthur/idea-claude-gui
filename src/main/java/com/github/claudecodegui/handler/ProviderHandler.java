@@ -199,7 +199,7 @@ public class ProviderHandler extends BaseMessageHandler {
         } catch (Exception e) {
             LOG.error("[ProviderHandler] Failed to add provider: " + e.getMessage(), e);
             ApplicationManager.getApplication().invokeLater(() -> {
-                callJavaScript("window.showError", escapeJs("添加供应商失败: " + e.getMessage()));
+                callJavaScript("window.showError", escapeJs("Failed to add provider: " + e.getMessage()));
             });
         }
     }
@@ -235,7 +235,7 @@ public class ProviderHandler extends BaseMessageHandler {
         } catch (Exception e) {
             LOG.error("[ProviderHandler] Failed to update provider: " + e.getMessage(), e);
             ApplicationManager.getApplication().invokeLater(() -> {
-                callJavaScript("window.showError", escapeJs("更新供应商失败: " + e.getMessage()));
+                callJavaScript("window.showError", escapeJs("Failed to update provider: " + e.getMessage()));
             });
         }
     }
@@ -255,7 +255,7 @@ public class ProviderHandler extends BaseMessageHandler {
             if (!data.has("id")) {
                 LOG.error("[ProviderHandler] ERROR: Missing 'id' field in request");
                 ApplicationManager.getApplication().invokeLater(() -> {
-                    callJavaScript("window.showError", escapeJs("删除失败: 请求中缺少供应商 ID"));
+                    callJavaScript("window.showError", escapeJs("Delete failed: missing provider ID in request"));
                 });
                 return;
             }
@@ -284,7 +284,7 @@ public class ProviderHandler extends BaseMessageHandler {
         } catch (Exception e) {
             LOG.error("[ProviderHandler] Exception in handleDeleteProvider: " + e.getMessage(), e);
             ApplicationManager.getApplication().invokeLater(() -> {
-                callJavaScript("window.showError", escapeJs("删除供应商失败: " + e.getMessage()));
+                callJavaScript("window.showError", escapeJs("Failed to delete provider: " + e.getMessage()));
             });
         }
 
@@ -304,7 +304,7 @@ public class ProviderHandler extends BaseMessageHandler {
             context.getSettingsService().applyActiveProviderToClaudeSettings();
 
             ApplicationManager.getApplication().invokeLater(() -> {
-                callJavaScript("window.showSwitchSuccess", escapeJs("供应商切换成功！\n\n已自动同步到 ~/.claude/settings.json，下一次提问将使用新的配置。"));
+                callJavaScript("window.showSwitchSuccess", escapeJs("Provider switched successfully!\n\nSettings synced to ~/.claude/settings.json. Next request will use the new configuration."));
                 handleGetProviders(); // 刷新供应商列表
                 handleGetCurrentClaudeConfig(); // 刷新 Claude CLI 配置显示
                 handleGetActiveProvider(); // 刷新当前激活的供应商配置
@@ -312,7 +312,7 @@ public class ProviderHandler extends BaseMessageHandler {
         } catch (Exception e) {
             LOG.error("[ProviderHandler] Failed to switch provider: " + e.getMessage(), e);
             ApplicationManager.getApplication().invokeLater(() -> {
-                callJavaScript("window.showError", escapeJs("切换供应商失败: " + e.getMessage()));
+                callJavaScript("window.showError", escapeJs("Failed to switch provider: " + e.getMessage()));
             });
         }
     }
@@ -345,32 +345,32 @@ public class ProviderHandler extends BaseMessageHandler {
             File ccSwitchDir = new File(userHome, ".cc-switch");
             File dbFile = new File(ccSwitchDir, "cc-switch.db");
 
-            LOG.info("[ProviderHandler] 操作系统: " + osName);
-            LOG.info("[ProviderHandler] 用户目录: " + userHome);
-            LOG.info("[ProviderHandler] cc-switch 目录: " + ccSwitchDir.getAbsolutePath());
-            LOG.info("[ProviderHandler] 数据库文件路径: " + dbFile.getAbsolutePath());
-            LOG.info("[ProviderHandler] 数据库文件是否存在: " + dbFile.exists());
+            LOG.info("[ProviderHandler] Operating system: " + osName);
+            LOG.info("[ProviderHandler] User home: " + userHome);
+            LOG.info("[ProviderHandler] cc-switch directory: " + ccSwitchDir.getAbsolutePath());
+            LOG.info("[ProviderHandler] Database file path: " + dbFile.getAbsolutePath());
+            LOG.info("[ProviderHandler] Database file exists: " + dbFile.exists());
 
             if (!dbFile.exists()) {
-                String errorMsg = "未找到 cc-switch 数据库文件\n" +
-                                 "路径: " + dbFile.getAbsolutePath() + "\n" +
-                                 "您可以主动选择cc-switch.db文件进行导入，或者检查：:\n" +
-                                 "1. 已安装 cc-switch 3.8.2 及以上版本\n" +
-                                 "2. 至少配置过一个 Claude 供应商";
+                String errorMsg = "cc-switch database file not found\n" +
+                                 "Path: " + dbFile.getAbsolutePath() + "\n" +
+                                 "You can manually select a cc-switch.db file to import, or check:\n" +
+                                 "1. cc-switch 3.8.2 or higher is installed\n" +
+                                 "2. At least one Claude provider has been configured";
                 LOG.error("[ProviderHandler] " + errorMsg);
-                sendErrorToFrontend("文件未找到", errorMsg);
+                sendErrorToFrontend("File not found", errorMsg);
                 return;
             }
 
             CompletableFuture.runAsync(() -> {
                 try {
-                    LOG.info("[ProviderHandler] 开始读取数据库文件...");
+                    LOG.info("[ProviderHandler] Starting to read database file...");
                     Gson gson = new Gson();
                     List<JsonObject> providers = context.getSettingsService().parseProvidersFromCcSwitchDb(dbFile.getPath());
 
                     if (providers.isEmpty()) {
-                        LOG.info("[ProviderHandler] 数据库中没有找到 Claude 供应商配置");
-                        sendInfoToFrontend("无数据", "未在数据库中找到有效的 Claude 供应商配置。");
+                        LOG.info("[ProviderHandler] No Claude provider config found in database");
+                        sendInfoToFrontend("No data", "No valid Claude provider configuration found in the database.");
                         return;
                     }
 
@@ -383,13 +383,13 @@ public class ProviderHandler extends BaseMessageHandler {
                     response.add("providers", providersArray);
 
                     String jsonStr = gson.toJson(response);
-                    LOG.info("[ProviderHandler] 成功读取 " + providers.size() + " 个供应商配置，准备发送到前端");
+                    LOG.info("[ProviderHandler] Successfully read " + providers.size() + " provider configs, sending to frontend");
                     callJavaScript("import_preview_result", escapeJs(jsonStr));
 
                 } catch (Exception e) {
-                    String errorDetails = "读取数据库失败: " + e.getMessage();
+                    String errorDetails = "Failed to read database: " + e.getMessage();
                     LOG.error("[ProviderHandler] " + errorDetails, e);
-                    sendErrorToFrontend("读取数据库失败", errorDetails);
+                    sendErrorToFrontend("Database read failed", errorDetails);
                 }
             });
         });
@@ -411,8 +411,8 @@ public class ProviderHandler extends BaseMessageHandler {
                     false   // chooseMultiple - 不允许多选
                 );
 
-                descriptor.setTitle("选择 cc-switch 数据库文件");
-                descriptor.setDescription("请选择 cc-switch.db 或其副本文件");
+                descriptor.setTitle("Select cc-switch database file");
+                descriptor.setDescription("Please select cc-switch.db or a copy of it");
                 descriptor.withFileFilter(file -> {
                     String name = file.getName().toLowerCase();
                     return name.endsWith(".db");
@@ -427,7 +427,7 @@ public class ProviderHandler extends BaseMessageHandler {
                         .findFileByPath(defaultDir.getAbsolutePath());
                 }
 
-                LOG.info("[ProviderHandler] 打开文件选择器，默认目录: " +
+                LOG.info("[ProviderHandler] Opening file selector, default directory: " +
                     (defaultVirtualFile != null ? defaultVirtualFile.getPath() : "用户主目录"));
 
                 // 打开文件选择器
@@ -438,8 +438,8 @@ public class ProviderHandler extends BaseMessageHandler {
                 );
 
                 if (selectedFiles.length == 0) {
-                    LOG.info("[ProviderHandler] 用户取消了文件选择");
-                    sendInfoToFrontend("已取消", "未选择文件");
+                    LOG.info("[ProviderHandler] User cancelled file selection");
+                    sendInfoToFrontend("Cancelled", "No file selected");
                     return;
                 }
 
@@ -447,36 +447,36 @@ public class ProviderHandler extends BaseMessageHandler {
                 String dbPath = selectedFile.getPath();
                 File dbFile = new File(dbPath);
 
-                LOG.info("[ProviderHandler] 用户选择的数据库文件路径: " + dbFile.getAbsolutePath());
-                LOG.info("[ProviderHandler] 数据库文件是否存在: " + dbFile.exists());
+                LOG.info("[ProviderHandler] User selected database file path: " + dbFile.getAbsolutePath());
+                LOG.info("[ProviderHandler] Database file exists: " + dbFile.exists());
 
                 if (!dbFile.exists()) {
-                    String errorMsg = "未找到数据库文件\n" +
-                                     "路径: " + dbFile.getAbsolutePath();
+                    String errorMsg = "Database file not found\n" +
+                                     "Path: " + dbFile.getAbsolutePath();
                     LOG.error("[ProviderHandler] " + errorMsg);
-                    sendErrorToFrontend("文件未找到", errorMsg);
+                    sendErrorToFrontend("File not found", errorMsg);
                     return;
                 }
 
                 if (!dbFile.canRead()) {
-                    String errorMsg = "无法读取文件\n" +
-                                     "路径: " + dbFile.getAbsolutePath() + "\n" +
-                                     "请检查文件权限";
+                    String errorMsg = "Unable to read file\n" +
+                                     "Path: " + dbFile.getAbsolutePath() + "\n" +
+                                     "Please check file permissions";
                     LOG.error("[ProviderHandler] " + errorMsg);
-                    sendErrorToFrontend("权限错误", errorMsg);
+                    sendErrorToFrontend("Permission error", errorMsg);
                     return;
                 }
 
                 // 异步读取数据库
                 CompletableFuture.runAsync(() -> {
                     try {
-                        LOG.info("[ProviderHandler] 开始读取用户选择的数据库文件...");
+                        LOG.info("[ProviderHandler] Starting to read user-selected database file...");
                         Gson gson = new Gson();
                         List<JsonObject> providers = context.getSettingsService().parseProvidersFromCcSwitchDb(dbFile.getPath());
 
                         if (providers.isEmpty()) {
-                            LOG.info("[ProviderHandler] 数据库中没有找到 Claude 供应商配置");
-                            sendInfoToFrontend("无数据", "未在数据库中找到有效的 Claude 供应商配置。");
+                            LOG.info("[ProviderHandler] No Claude provider config found in database");
+                            sendInfoToFrontend("No data", "No valid Claude provider configuration found in the database.");
                             return;
                         }
 
@@ -489,20 +489,20 @@ public class ProviderHandler extends BaseMessageHandler {
                         response.add("providers", providersArray);
 
                         String jsonStr = gson.toJson(response);
-                        LOG.info("[ProviderHandler] 成功读取 " + providers.size() + " 个供应商配置，准备发送到前端");
+                        LOG.info("[ProviderHandler] Successfully read " + providers.size() + " provider configs, sending to frontend");
                         callJavaScript("import_preview_result", escapeJs(jsonStr));
 
                     } catch (Exception e) {
-                        String errorDetails = "读取数据库失败: " + e.getMessage();
+                        String errorDetails = "Failed to read database: " + e.getMessage();
                         LOG.error("[ProviderHandler] " + errorDetails, e);
-                        sendErrorToFrontend("读取数据库失败", errorDetails);
+                        sendErrorToFrontend("Database read failed", errorDetails);
                     }
                 });
 
             } catch (Exception e) {
-                String errorDetails = "打开文件选择器失败: " + e.getMessage();
+                String errorDetails = "Failed to open file chooser: " + e.getMessage();
                 LOG.error("[ProviderHandler] " + errorDetails, e);
-                sendErrorToFrontend("文件选择失败", errorDetails);
+                sendErrorToFrontend("File selection failed", errorDetails);
             }
         });
     }
@@ -532,12 +532,12 @@ public class ProviderHandler extends BaseMessageHandler {
 
                 ApplicationManager.getApplication().invokeLater(() -> {
                     handleGetProviders(); // 刷新界面
-                    sendInfoToFrontend("导入成功", "成功导入 " + count + " 个配置。");
+                    sendInfoToFrontend("Import successful", "Successfully imported " + count + " configuration(s).");
                 });
 
             } catch (Exception e) {
                 LOG.error("Failed to save imported providers", e);
-                sendErrorToFrontend("保存失败", e.getMessage());
+                sendErrorToFrontend("Save failed", e.getMessage());
             }
         });
     }

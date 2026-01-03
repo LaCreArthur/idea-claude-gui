@@ -3,10 +3,10 @@ interface McpHelpDialogProps {
 }
 
 /**
- * MCP 帮助信息对话框
+ * MCP Help Dialog
  */
 export function McpHelpDialog({ onClose }: McpHelpDialogProps) {
-  // 点击遮罩关闭
+  // Click overlay to close
   const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) {
       onClose();
@@ -17,7 +17,7 @@ export function McpHelpDialog({ onClose }: McpHelpDialogProps) {
     <div className="dialog-overlay" onClick={handleOverlayClick}>
       <div className="dialog mcp-help-dialog">
         <div className="dialog-header">
-          <h3>什么是 MCP?</h3>
+          <h3>What is MCP?</h3>
           <button className="close-btn" onClick={onClose}>
             <span className="codicon codicon-close"></span>
           </button>
@@ -31,38 +31,38 @@ export function McpHelpDialog({ onClose }: McpHelpDialogProps) {
                 Model Context Protocol
               </h4>
               <p>
-                MCP (Model Context Protocol) 是 Anthropic 开发的开放协议，
-                让 AI 模型能够安全地访问外部工具和数据源。
+                MCP (Model Context Protocol) is an open protocol developed by Anthropic
+                that enables AI models to securely access external tools and data sources.
               </p>
             </section>
 
             <section className="help-section">
               <h4>
                 <span className="codicon codicon-rocket"></span>
-                主要特性
+                Key Features
               </h4>
               <ul>
-                <li><strong>工具扩展</strong>：为 Claude 添加文件系统、网络访问等能力</li>
-                <li><strong>数据连接</strong>：连接数据库、API 等外部数据源</li>
-                <li><strong>安全可控</strong>：严格的权限控制和数据隔离</li>
-                <li><strong>易于集成</strong>：支持多种编程语言和运行环境</li>
+                <li><strong>Tool Extensions</strong>: Add file system, network access, and other capabilities to Claude</li>
+                <li><strong>Data Connections</strong>: Connect to databases, APIs, and other external data sources</li>
+                <li><strong>Secure & Controlled</strong>: Strict permission controls and data isolation</li>
+                <li><strong>Easy Integration</strong>: Supports multiple programming languages and runtime environments</li>
               </ul>
             </section>
 
             <section className="help-section">
               <h4>
                 <span className="codicon codicon-book"></span>
-                配置方式
+                Configuration Types
               </h4>
-              <p>支持两种配置类型：</p>
+              <p>Two configuration types are supported:</p>
               <ul>
                 <li>
-                  <strong>STDIO</strong>：通过标准输入输出与本地进程通信
-                  <code className="inline-code">npx/uvx 命令启动</code>
+                  <strong>STDIO</strong>: Communicate with local processes via standard I/O
+                  <code className="inline-code">npx/uvx command startup</code>
                 </li>
                 <li>
-                  <strong>HTTP/SSE</strong>：通过网络与远程服务器通信
-                  <code className="inline-code">URL 地址</code>
+                  <strong>HTTP/SSE</strong>: Communicate with remote servers via network
+                  <code className="inline-code">URL address</code>
                 </li>
               </ul>
             </section>
@@ -70,10 +70,10 @@ export function McpHelpDialog({ onClose }: McpHelpDialogProps) {
             <section className="help-section">
               <h4>
                 <span className="codicon codicon-link-external"></span>
-                了解更多
+                Learn More
               </h4>
               <p>
-                访问官方文档：
+                Visit the official documentation:
                 <a
                   href="https://modelcontextprotocol.io"
                   target="_blank"
@@ -89,7 +89,7 @@ export function McpHelpDialog({ onClose }: McpHelpDialogProps) {
         </div>
 
         <div className="dialog-footer">
-          <button className="btn btn-primary" onClick={onClose}>知道了</button>
+          <button className="btn btn-primary" onClick={onClose}>Got it</button>
         </div>
       </div>
     </div>

@@ -58,7 +58,7 @@ const SettingsSidebar = ({
       <div
         className={styles.sidebarToggle}
         onClick={onToggleCollapse}
-        title={isCollapsed ? '展开侧边栏' : '折叠侧边栏'}
+        title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
       >
         <span className={`codicon ${isCollapsed ? 'codicon-chevron-right' : 'codicon-chevron-left'}`} />
       </div>

@@ -16,8 +16,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 权限处理器
- * 处理权限对话框显示和决策
+ * Permission Handler.
+ * Handles permission dialog display and decision processing.
  */
 public class PermissionHandler extends BaseMessageHandler {
 
@@ -27,10 +27,10 @@ public class PermissionHandler extends BaseMessageHandler {
         "permission_decision"
     };
 
-    // 权限请求映射
+    // Permission request mapping
     private final Map<String, CompletableFuture<Integer>> pendingPermissionRequests = new ConcurrentHashMap<>();
 
-    // 权限拒绝回调
+    // Permission denied callback
     public interface PermissionDeniedCallback {
         void onPermissionDenied();
     }
@@ -62,7 +62,7 @@ public class PermissionHandler extends BaseMessageHandler {
     }
 
     /**
-     * 显示前端权限对话框
+     * Show frontend permission dialog.
      */
     public CompletableFuture<Integer> showFrontendPermissionDialog(String toolName, JsonObject inputs) {
         String channelId = UUID.randomUUID().toString();
@@ -97,7 +97,7 @@ public class PermissionHandler extends BaseMessageHandler {
                 context.executeJavaScriptOnEDT(jsCode);
             });
 
-            // 超时处理
+            // Timeout handling
             CompletableFuture.delayedExecutor(35, TimeUnit.SECONDS).execute(() -> {
                 if (!future.isDone()) {
                     pendingPermissionRequests.remove(channelId);
@@ -115,10 +115,10 @@ public class PermissionHandler extends BaseMessageHandler {
     }
 
     /**
-     * 显示权限请求对话框（来自 PermissionRequest）
+     * Show permission request dialog (from PermissionRequest).
      */
     public void showPermissionDialog(PermissionRequest request) {
-        LOG.info("[PermissionHandler] 显示权限请求对话框: " + request.getToolName());
+        LOG.info("[PermissionHandler] Showing permission request dialog: " + request.getToolName());
 
         try {
             Gson gson = new Gson();
@@ -136,20 +136,20 @@ public class PermissionHandler extends BaseMessageHandler {
             String requestJson = gson.toJson(requestData);
             String escapedJson = escapeJs(requestJson);
 
-            // 获取权限请求所属的项目
+            // Get the project associated with the permission request
             Project targetProject = request.getProject();
             if (targetProject == null) {
-                LOG.warn("[PermissionHandler] 警告: PermissionRequest 没有关联的 Project，使用当前 context 的窗口");
+                LOG.warn("[PermissionHandler] Warning: PermissionRequest has no associated Project, using current context window");
                 targetProject = this.context.getProject();
             }
 
-            // 获取目标项目的窗口实例
+            // Get the window instance for the target project
             com.github.claudecodegui.ClaudeSDKToolWindow.ClaudeChatWindow targetWindow =
                 com.github.claudecodegui.ClaudeSDKToolWindow.getChatWindow(targetProject);
 
             if (targetWindow == null) {
-                LOG.error("[PermissionHandler] 错误: 找不到项目 " + targetProject.getName() + " 的窗口实例");
-                // 如果找不到目标窗口，拒绝权限请求
+                LOG.error("[PermissionHandler] Error: Cannot find window instance for project " + targetProject.getName());
+                // If target window not found, deny the permission request
                 this.context.getSession().handlePermissionDecision(
                     request.getChannelId(),
                     false,
@@ -160,7 +160,7 @@ public class PermissionHandler extends BaseMessageHandler {
                 return;
             }
 
-            // 在目标窗口中执行 JavaScript 显示弹窗
+            // Execute JavaScript in target window to show the dialog
             String jsCode = "if (window.showPermissionDialog) { " +
                 "  window.showPermissionDialog('" + escapedJson + "'); " +
                 "}";
@@ -168,7 +168,7 @@ public class PermissionHandler extends BaseMessageHandler {
             targetWindow.executeJavaScriptCode(jsCode);
 
         } catch (Exception e) {
-            LOG.error("[PermissionHandler] 显示权限弹窗失败: " + e.getMessage(), e);
+            LOG.error("[PermissionHandler] Failed to show permission dialog: " + e.getMessage(), e);
             this.context.getSession().handlePermissionDecision(
                 request.getChannelId(),
                 false,
@@ -180,7 +180,7 @@ public class PermissionHandler extends BaseMessageHandler {
     }
 
     /**
-     * 处理来自 JavaScript 的权限决策消息
+     * Handle permission decision message from JavaScript.
      */
     private void handlePermissionDecision(String jsonContent) {
         LOG.debug("[PERM_DEBUG][HANDLE_DECISION] Received decision from JS: " + jsonContent);
@@ -213,7 +213,7 @@ public class PermissionHandler extends BaseMessageHandler {
                     notifyPermissionDenied();
                 }
             } else {
-                // 处理来自 Session 的权限请求
+                // Handle permission request from Session
                 if (remember) {
                     context.getSession().handlePermissionDecisionAlways(channelId, allow);
                 } else {
@@ -229,7 +229,7 @@ public class PermissionHandler extends BaseMessageHandler {
     }
 
     /**
-     * 通知权限被拒绝
+     * Notify that permission was denied.
      */
     private void notifyPermissionDenied() {
         if (deniedCallback != null) {

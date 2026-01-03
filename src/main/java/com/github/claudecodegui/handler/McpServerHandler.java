@@ -126,7 +126,7 @@ public class McpServerHandler extends BaseMessageHandler {
         } catch (Exception e) {
             LOG.error("[McpServerHandler] Failed to add MCP server: " + e.getMessage(), e);
             ApplicationManager.getApplication().invokeLater(() -> {
-                callJavaScript("window.showError", escapeJs("添加 MCP 服务器失败: " + e.getMessage()));
+                callJavaScript("window.showError", escapeJs("Failed to add MCP server: " + e.getMessage()));
             });
         }
     }
@@ -148,7 +148,7 @@ public class McpServerHandler extends BaseMessageHandler {
         } catch (Exception e) {
             LOG.error("[McpServerHandler] Failed to update MCP server: " + e.getMessage(), e);
             ApplicationManager.getApplication().invokeLater(() -> {
-                callJavaScript("window.showError", escapeJs("更新 MCP 服务器失败: " + e.getMessage()));
+                callJavaScript("window.showError", escapeJs("Failed to update MCP server: " + e.getMessage()));
             });
         }
     }
@@ -171,13 +171,13 @@ public class McpServerHandler extends BaseMessageHandler {
                 });
             } else {
                 ApplicationManager.getApplication().invokeLater(() -> {
-                    callJavaScript("window.showError", escapeJs("删除 MCP 服务器失败: 服务器不存在"));
+                    callJavaScript("window.showError", escapeJs("Failed to delete MCP server: server does not exist"));
                 });
             }
         } catch (Exception e) {
             LOG.error("[McpServerHandler] Failed to delete MCP server: " + e.getMessage(), e);
             ApplicationManager.getApplication().invokeLater(() -> {
-                callJavaScript("window.showError", escapeJs("删除 MCP 服务器失败: " + e.getMessage()));
+                callJavaScript("window.showError", escapeJs("Failed to delete MCP server: " + e.getMessage()));
             });
         }
     }

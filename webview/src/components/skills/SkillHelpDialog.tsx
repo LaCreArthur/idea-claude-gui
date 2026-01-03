@@ -21,7 +21,7 @@ export function SkillHelpDialog({ onClose }: SkillHelpDialogProps) {
     e.preventDefault();
     const success = await copyToClipboard(url);
     if (success) {
-      alert('链接已复制，请在浏览器中打开');
+      alert('Link copied, please open in your browser');
     }
   };
 
@@ -30,7 +30,7 @@ export function SkillHelpDialog({ onClose }: SkillHelpDialogProps) {
       <div className="skill-dialog help-dialog">
         {/* 标题栏 */}
         <div className="dialog-header">
-          <h3>什么是 Skills?</h3>
+          <h3>What are Skills?</h3>
           <button className="close-btn" onClick={onClose}>
             <span className="codicon codicon-close"></span>
           </button>
@@ -41,26 +41,26 @@ export function SkillHelpDialog({ onClose }: SkillHelpDialogProps) {
           <section className="help-section">
             <h4>
               <span className="codicon codicon-extensions"></span>
-              概述
+              Overview
             </h4>
             <p>
-              Skills 是 Claude 动态加载的指令、脚本和资源文件夹，用于提升特定任务的表现。
-              Skills 可以教会 Claude 以可重复的方式完成特定任务，比如使用公司品牌指南创建文档、
-              按照组织特定的工作流分析数据，或自动化个人任务。
+              Skills are dynamically loaded folders of instructions, scripts, and resources that Claude uses to enhance performance on specific tasks.
+              Skills can teach Claude to complete specific tasks in a repeatable way, such as creating documents using company brand guidelines,
+              analyzing data according to organization-specific workflows, or automating personal tasks.
             </p>
           </section>
 
           <section className="help-section">
             <h4>
               <span className="codicon codicon-folder"></span>
-              Skill 结构
+              Skill Structure
             </h4>
-            <p>一个 Skill 是包含 <code>SKILL.md</code> 文件的文件夹：</p>
+            <p>A Skill is a folder containing a <code>SKILL.md</code> file:</p>
             <pre className="code-block">
 {`my-skill/
-├── SKILL.md          # 必须：技能定义文件
-├── templates/        # 可选：模板文件
-└── references/       # 可选：参考资料`}
+├── SKILL.md          # Required: skill definition file
+├── templates/        # Optional: template files
+└── references/       # Optional: reference materials`}
             </pre>
           </section>
 
@@ -69,16 +69,16 @@ export function SkillHelpDialog({ onClose }: SkillHelpDialogProps) {
               <span className="codicon codicon-file-code"></span>
               SKILL.md 格式
             </h4>
-            <p>SKILL.md 文件使用 YAML frontmatter + Markdown 格式：</p>
+            <p>The SKILL.md file uses YAML frontmatter + Markdown format:</p>
             <pre className="code-block">
 {`---
 name: my-skill-name
-description: 技能描述和使用时机
+description: Skill description and when to use it
 ---
 
-# 技能指令
+# Skill Instructions
 
-详细的指令内容...`}
+Detailed instruction content...`}
             </pre>
             <p className="hint-text">
               <code>name</code> 和 <code>description</code> 是必填字段，
@@ -89,18 +89,18 @@ description: 技能描述和使用时机
           <section className="help-section">
             <h4>
               <span className="codicon codicon-gear"></span>
-              配置方式
+              Configuration
             </h4>
-            <p>添加 Skill 的方式：</p>
+            <p>Ways to add a Skill:</p>
             <ul>
               <li>
-                <strong>本地路径</strong>：指定包含 <code>SKILL.md</code> 的文件夹路径
+                <strong>Local path</strong>: Specify the folder path containing <code>SKILL.md</code>
               </li>
               <li>
-                <strong>相对路径</strong>：相对于项目根目录，如 <code>./skills/my-skill</code>
+                <strong>Relative path</strong>: Relative to project root, e.g. <code>./skills/my-skill</code>
               </li>
               <li>
-                <strong>绝对路径</strong>：完整的文件系统路径
+                <strong>Absolute path</strong>: Full file system path
               </li>
             </ul>
           </section>
@@ -108,30 +108,30 @@ description: 技能描述和使用时机
           <section className="help-section">
             <h4>
               <span className="codicon codicon-lightbulb"></span>
-              使用提示
+              Usage Tips
             </h4>
             <ul>
-              <li>确保 Skill 目录包含有效的 <code>SKILL.md</code> 文件</li>
-              <li>Skill 名称必须使用小写字母、数字和连字符（hyphen-case）</li>
-              <li>Skill 加载后会在 Claude 会话中自动生效</li>
-              <li>可以通过启用/禁用开关控制单个 Skill 的状态</li>
-              <li>在聊天中提及 Skill 名称即可使用，如："使用 pdf skill 提取表单字段"</li>
+              <li>Ensure the Skill directory contains a valid <code>SKILL.md</code> file</li>
+              <li>Skill names must use lowercase letters, numbers, and hyphens (hyphen-case)</li>
+              <li>Once loaded, Skills automatically take effect in Claude sessions</li>
+              <li>You can control individual Skill status via the enable/disable toggle</li>
+              <li>Mention the Skill name in chat to use it, e.g.: "use pdf skill to extract form fields"</li>
             </ul>
           </section>
 
           <section className="help-section">
             <h4>
               <span className="codicon codicon-link-external"></span>
-              了解更多
+              Learn More
             </h4>
-            <p>更多关于 Skills 的信息：</p>
+            <p>More information about Skills:</p>
             <ul>
               <li>
                 <a
                   href="https://support.claude.com/en/articles/12512176-what-are-skills"
                   onClick={(e) => handleLinkClick(e, 'https://support.claude.com/en/articles/12512176-what-are-skills')}
                 >
-                  什么是 Skills?
+                  What are Skills?
                 </a>
               </li>
               <li>
@@ -139,7 +139,7 @@ description: 技能描述和使用时机
                   href="https://support.claude.com/en/articles/12512198-creating-custom-skills"
                   onClick={(e) => handleLinkClick(e, 'https://support.claude.com/en/articles/12512198-creating-custom-skills')}
                 >
-                  如何创建自定义 Skills
+                  How to Create Custom Skills
                 </a>
               </li>
               <li>
@@ -147,7 +147,7 @@ description: 技能描述和使用时机
                   href="https://github.com/anthropics/skills"
                   onClick={(e) => handleLinkClick(e, 'https://github.com/anthropics/skills')}
                 >
-                  Anthropic Skills 示例仓库
+                  Anthropic Skills Example Repository
                 </a>
               </li>
             </ul>
@@ -157,7 +157,7 @@ description: 技能描述和使用时机
         {/* 底部按钮 */}
         <div className="dialog-footer">
           <button className="btn-primary" onClick={onClose}>
-            知道了
+            Got it
           </button>
         </div>
       </div>

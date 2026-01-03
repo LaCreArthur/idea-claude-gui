@@ -140,7 +140,7 @@ function buildFullPrompt(originalPrompt, context) {
     const truncatedCode = truncateText(context.selectedCode, MAX_SELECTED_CODE_LENGTH);
     const language = context.currentFile?.language || getLanguageFromPath(context.currentFile?.path) || 'text';
     contextParts.push(`【用户选中的代码】\n\`\`\`${language}\n${truncatedCode}\n\`\`\``);
-    console.log(`[PromptEnhancer] 添加选中代码上下文，长度: ${context.selectedCode.length}`);
+    console.log(`[PromptEnhancer] Adding selected code context, length: ${context.selectedCode.length}`);
   }
 
   // 2. 次高优先级：光标位置上下文（仅当没有选中代码时使用）
@@ -149,7 +149,7 @@ function buildFullPrompt(originalPrompt, context) {
     const language = context.currentFile?.language || getLanguageFromPath(context.currentFile?.path) || 'text';
     const lineInfo = context.cursorPosition ? `（第 ${context.cursorPosition.line} 行）` : '';
     contextParts.push(`【光标位置${lineInfo}周围的代码】\n\`\`\`${language}\n${truncatedContext}\n\`\`\``);
-    console.log(`[PromptEnhancer] 添加光标上下文，长度: ${context.cursorContext.length}`);
+    console.log(`[PromptEnhancer] Adding cursor context, length: ${context.cursorContext.length}`);
   }
 
   // 3. 当前文件基本信息（始终包含，如果有的话）
@@ -165,11 +165,11 @@ function buildFullPrompt(originalPrompt, context) {
       if (!context.selectedCode && !context.cursorContext && content && content.trim()) {
         const truncatedContent = truncateText(content, MAX_CURRENT_FILE_LENGTH);
         fileInfo += `\n【文件内容预览】\n\`\`\`${lang}\n${truncatedContent}\n\`\`\``;
-        console.log(`[PromptEnhancer] 添加文件内容预览，长度: ${content.length}`);
+        console.log(`[PromptEnhancer] Adding file content preview, length: ${content.length}`);
       }
 
       contextParts.push(fileInfo);
-      console.log(`[PromptEnhancer] 添加当前文件信息: ${path}`);
+      console.log(`[PromptEnhancer] Adding current file info: ${path}`);
     }
   }
 
@@ -180,7 +180,7 @@ function buildFullPrompt(originalPrompt, context) {
 
     for (const file of context.relatedFiles) {
       if (totalLength >= MAX_RELATED_FILES_LENGTH) {
-        console.log(`[PromptEnhancer] 相关文件总长度已达上限，跳过剩余文件`);
+        console.log(`[PromptEnhancer] Related files total length limit reached, skipping remaining files`);
         break;
       }
 
@@ -200,14 +200,14 @@ function buildFullPrompt(originalPrompt, context) {
 
     if (relatedFilesInfo.length > 0) {
       contextParts.push(`【相关文件】\n${relatedFilesInfo.join('\n')}`);
-      console.log(`[PromptEnhancer] 添加 ${relatedFilesInfo.length} 个相关文件`);
+      console.log(`[PromptEnhancer] Adding ${relatedFilesInfo.length} related files`);
     }
   }
 
   // 5. 项目类型信息
   if (context.projectType) {
     contextParts.push(`【项目类型】${context.projectType}`);
-    console.log(`[PromptEnhancer] 添加项目类型: ${context.projectType}`);
+    console.log(`[PromptEnhancer] Adding project type: ${context.projectType}`);
   }
 
   // 组合所有上下文信息
@@ -234,19 +234,19 @@ async function enhancePrompt(originalPrompt, systemPrompt, model, context) {
     // 设置 API Key（这会设置正确的环境变量）
     const config = setupApiKey();
 
-    console.log(`[PromptEnhancer] 认证类型: ${config.authType}`);
+    console.log(`[PromptEnhancer] Auth type: ${config.authType}`);
     console.log(`[PromptEnhancer] Base URL: ${config.baseUrl || 'https://api.anthropic.com'}`);
 
     // 将模型 ID 映射为 SDK 期望的名称
     const sdkModelName = mapModelIdToSdkName(model);
-    console.log(`[PromptEnhancer] 模型映射: ${model} -> ${sdkModelName}`);
+    console.log(`[PromptEnhancer] Model mapping: ${model} -> ${sdkModelName}`);
 
     // 使用用户主目录作为工作目录
     const workingDirectory = homedir();
 
     // 构建包含上下文信息的完整提示词
     const fullPrompt = buildFullPrompt(originalPrompt, context);
-    console.log(`[PromptEnhancer] 完整提示词长度: ${fullPrompt.length}`);
+    console.log(`[PromptEnhancer] Full prompt length: ${fullPrompt.length}`);
 
     // 准备选项
     // 注意：提示词优化是简单任务，不需要工具调用
@@ -260,7 +260,7 @@ async function enhancePrompt(originalPrompt, systemPrompt, model, context) {
       settingSources: ['user', 'project', 'local'],
     };
 
-    console.log(`[PromptEnhancer] 开始调用 Claude Agent SDK...`);
+    console.log(`[PromptEnhancer] Starting Claude Agent SDK call...`);
 
     // 调用 query 函数
     const result = query({
@@ -274,7 +274,7 @@ async function enhancePrompt(originalPrompt, systemPrompt, model, context) {
 
     for await (const msg of result) {
       messageCount++;
-      console.log(`[PromptEnhancer] 收到消息 #${messageCount}, type: ${msg.type}`);
+      console.log(`[PromptEnhancer] Received message #${messageCount}, type: ${msg.type}`);
 
       // 处理助手消息
       if (msg.type === 'assistant') {
@@ -283,7 +283,7 @@ async function enhancePrompt(originalPrompt, systemPrompt, model, context) {
           for (const block of content) {
             if (block.type === 'text') {
               responseText += block.text;
-              console.log(`[PromptEnhancer] 收到文本: ${block.text.substring(0, 100)}...`);
+              console.log(`[PromptEnhancer] Received text: ${block.text.substring(0, 100)}...`);
             }
           }
         } else if (typeof content === 'string') {
@@ -292,16 +292,16 @@ async function enhancePrompt(originalPrompt, systemPrompt, model, context) {
       }
     }
 
-    console.log(`[PromptEnhancer] 总共收到 ${messageCount} 条消息`);
-    console.log(`[PromptEnhancer] 响应文本长度: ${responseText.length}`);
+    console.log(`[PromptEnhancer] Total received ${messageCount} messages`);
+    console.log(`[PromptEnhancer] Response text length: ${responseText.length}`);
 
     if (responseText.trim()) {
       return responseText.trim();
     }
 
-    throw new Error('AI 响应为空');
+    throw new Error('AI response is empty');
   } catch (error) {
-    console.error('[PromptEnhancer] 增强失败:', error.message);
+    console.error('[PromptEnhancer] Enhancement failed:', error.message);
     throw error;
   }
 }
@@ -324,21 +324,21 @@ async function main() {
 
     // 记录上下文信息
     if (context) {
-      console.log(`[PromptEnhancer] 收到上下文信息:`);
+      console.log(`[PromptEnhancer] Received context info:`);
       if (context.selectedCode) {
-        console.log(`  - 选中代码: ${context.selectedCode.length} 字符`);
+        console.log(`  - Selected code: ${context.selectedCode.length} chars`);
       }
       if (context.currentFile) {
-        console.log(`  - 当前文件: ${context.currentFile.path}`);
+        console.log(`  - Current file: ${context.currentFile.path}`);
       }
       if (context.cursorPosition) {
-        console.log(`  - 光标位置: 第 ${context.cursorPosition.line} 行`);
+        console.log(`  - Cursor position: line ${context.cursorPosition.line}`);
       }
       if (context.relatedFiles) {
-        console.log(`  - 相关文件: ${context.relatedFiles.length} 个`);
+        console.log(`  - Related files: ${context.relatedFiles.length}`);
       }
     } else {
-      console.log(`[PromptEnhancer] 未收到上下文信息`);
+      console.log(`[PromptEnhancer] No context info received`);
     }
 
     // 增强提示词（传递上下文信息）
@@ -350,8 +350,8 @@ async function main() {
     console.log(`[ENHANCED]${encodedPrompt}`);
     process.exit(0);
   } catch (error) {
-    console.error('[PromptEnhancer] 错误:', error.message);
-    console.log(`[ENHANCED]增强失败: ${error.message}`);
+    console.error('[PromptEnhancer] Error:', error.message);
+    console.log(`[ENHANCED]Enhancement failed: ${error.message}`);
     process.exit(1);
   }
 }

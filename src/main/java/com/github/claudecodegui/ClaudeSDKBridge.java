@@ -252,7 +252,7 @@ public class ClaudeSDKBridge {
             if (!finished) {
                 process.destroyForcibly();
                 result.success = false;
-                result.error = "进程超时";
+                result.error = "Process timeout";
                 return result;
             }
 
@@ -273,12 +273,12 @@ public class ClaudeSDKBridge {
                     }
                 } catch (Exception e) {
                     result.success = false;
-                    result.error = "JSON 解析失败: " + e.getMessage();
+                    result.error = "JSON parse failed: " + e.getMessage();
                 }
             } else {
                 result.success = exitCode == 0;
                 if (!result.success) {
-                    result.error = "进程退出码: " + exitCode;
+                    result.error = "Process exit code: " + exitCode;
                 }
             }
 
@@ -368,7 +368,7 @@ public class ClaudeSDKBridge {
                             }
 
                             if (line.contains("[Result]")) {
-                                callback.onMessage("status", "完成");
+                                callback.onMessage("status", "Complete");
                             }
 
                             if (line.contains("[JSON_START]")) {
@@ -405,7 +405,7 @@ public class ClaudeSDKBridge {
                             }
                         } catch (Exception e) {
                             result.success = false;
-                            result.error = "JSON 解析失败: " + e.getMessage();
+                            result.error = "JSON parse failed: " + e.getMessage();
                             callback.onError(result.error);
                         }
                     } else {
@@ -413,7 +413,7 @@ public class ClaudeSDKBridge {
                         if (result.success) {
                             callback.onComplete(result);
                         } else {
-                            result.error = "进程退出码: " + exitCode;
+                            result.error = "Process exit code: " + exitCode;
                             callback.onError(result.error);
                         }
                     }
@@ -447,7 +447,7 @@ public class ClaudeSDKBridge {
             try (BufferedReader reader = new BufferedReader(
                 new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
                 String version = reader.readLine();
-                LOG.debug("Node.js 版本: " + version);
+                LOG.debug("Node.js version: " + version);
             }
 
             int exitCode = process.waitFor();
@@ -557,18 +557,18 @@ public class ClaudeSDKBridge {
                 File workDir = directoryResolver.findSdkDir();
 
                 // 诊断：打印关键环境信息（始终启用，帮助排查 exit code 1 问题）
-                LOG.info("[ClaudeSDKBridge] 环境诊断:");
-                LOG.info("[ClaudeSDKBridge]   Node.js 路径: " + node);
+                LOG.info("[ClaudeSDKBridge] Environment diagnostics:");
+                LOG.info("[ClaudeSDKBridge]   Node.js path: " + node);
                 String nodeVersion = nodeDetector.verifyNodePath(node);
-                LOG.info("[ClaudeSDKBridge]   Node.js 版本: " + (nodeVersion != null ? nodeVersion : "未知"));
-                LOG.info("[ClaudeSDKBridge]   SDK 目录: " + workDir.getAbsolutePath());
-                LOG.info("[ClaudeSDKBridge]   SDK 目录存在: " + workDir.exists());
+                LOG.info("[ClaudeSDKBridge]   Node.js version: " + (nodeVersion != null ? nodeVersion : "unknown"));
+                LOG.info("[ClaudeSDKBridge]   SDK directory: " + workDir.getAbsolutePath());
+                LOG.info("[ClaudeSDKBridge]   SDK directory exists: " + workDir.exists());
                 File channelScript = new File(workDir, CHANNEL_SCRIPT);
-                LOG.info("[ClaudeSDKBridge]   channel-manager.js 存在: " + channelScript.exists());
+                LOG.info("[ClaudeSDKBridge]   channel-manager.js exists: " + channelScript.exists());
                 File nodeModules = new File(workDir, "node_modules");
-                LOG.info("[ClaudeSDKBridge]   node_modules 存在: " + nodeModules.exists());
+                LOG.info("[ClaudeSDKBridge]   node_modules exists: " + nodeModules.exists());
                 String settingsPath = System.getProperty("user.home") + File.separator + ".claude" + File.separator + "settings.json";
-                LOG.info("[ClaudeSDKBridge]   settings.json 存在: " + new File(settingsPath).exists());
+                LOG.info("[ClaudeSDKBridge]   settings.json exists: " + new File(settingsPath).exists());
 
                 // 构建 stdin 输入 JSON，避免命令行参数中特殊字符导致解析错误
                 JsonObject stdinInput = new JsonObject();
@@ -633,7 +633,7 @@ public class ClaudeSDKBridge {
                     // LOG.info("[PERF][" + perfTimestamps[2] + "] 准备启动 Node.js 进程，准备耗时: " + (perfTimestamps[2] - perfTimestamps[1]) + "ms");
 
                     process = pb.start();
-                    LOG.info("[ClaudeSDKBridge] Node.js 进程已启动，PID: " + process.pid());
+                    LOG.info("[ClaudeSDKBridge] Node.js process started, PID: " + process.pid());
 
                     // 短暂等待检查进程是否立即退出（通常表示启动失败）
                     // 增加等待时间到 500ms，确保能捕获模块加载阶段的错误
@@ -641,7 +641,7 @@ public class ClaudeSDKBridge {
                         Thread.sleep(500);
                         if (!process.isAlive()) {
                             int earlyExitCode = process.exitValue();
-                            LOG.error("[ClaudeSDKBridge] 进程启动后立即退出，exitCode: " + earlyExitCode);
+                            LOG.error("[ClaudeSDKBridge] Process exited immediately after start, exitCode: " + earlyExitCode);
                             // 尝试读取进程输出的错误信息
                             try (BufferedReader earlyReader = new BufferedReader(
                                 new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
@@ -650,7 +650,7 @@ public class ClaudeSDKBridge {
                                 String line;
                                 while ((line = earlyReader.readLine()) != null) {
                                     earlyOutput.append(line).append("\n");
-                                    LOG.error("[ClaudeSDKBridge] 进程输出: " + line);
+                                    LOG.error("[ClaudeSDKBridge] Process output: " + line);
                                     // 特别关注错误标记行
                                     if (line.startsWith("[STARTUP_ERROR]")
                                             || line.startsWith("[UNCAUGHT_ERROR]")

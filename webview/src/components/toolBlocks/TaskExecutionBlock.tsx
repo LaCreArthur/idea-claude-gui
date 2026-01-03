@@ -21,7 +21,7 @@ const TaskExecutionBlock = ({ input }: TaskExecutionBlockProps) => {
           <span className="codicon codicon-tools tool-title-icon" />
 
           <span className="tool-title-text">
-            任务
+            Task
           </span>
           {typeof subagentType === 'string' && subagentType && (
             <span className="tool-title-summary">{subagentType}</span>
@@ -50,7 +50,7 @@ const TaskExecutionBlock = ({ input }: TaskExecutionBlockProps) => {
               <div className="task-field">
                 <div className="task-field-label">
                   <span className="codicon codicon-comment" />
-                  提示词 (Prompt)
+                  Prompt
                 </div>
                 <div className="task-field-content">{prompt}</div>
               </div>

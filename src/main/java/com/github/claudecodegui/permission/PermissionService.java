@@ -46,9 +46,9 @@ public class PermissionService {
     }
 
     public enum PermissionResponse {
-        ALLOW(1, "允许"),
-        ALLOW_ALWAYS(2, "允许且不再询问"),
-        DENY(3, "拒绝");
+        ALLOW(1, "Allow"),
+        ALLOW_ALWAYS(2, "Allow and don't ask again"),
+        DENY(3, "Deny");
 
         private final int value;
         private final String description;
@@ -618,30 +618,30 @@ public class PermissionService {
     private int showSystemPermissionDialog(String toolName, JsonObject inputs) {
         // 构建消息内容
         StringBuilder message = new StringBuilder();
-        message.append("Claude 请求执行以下操作：\n\n");
-        message.append("工具：").append(toolName).append("\n");
+        message.append("Claude requests to perform the following action:\n\n");
+        message.append("Tool: ").append(toolName).append("\n");
 
-        // 显示重要参数
+        // Show important parameters
         if (inputs.has("file_path")) {
-            message.append("文件：").append(inputs.get("file_path").getAsString()).append("\n");
+            message.append("File: ").append(inputs.get("file_path").getAsString()).append("\n");
         }
         if (inputs.has("command")) {
-            message.append("命令：").append(inputs.get("command").getAsString()).append("\n");
+            message.append("Command: ").append(inputs.get("command").getAsString()).append("\n");
         }
 
-        message.append("\n是否允许执行？");
+        message.append("\nAllow execution?");
 
-        // 创建选项
+        // Create options
         Object[] options = {
-            "允许",
-            "拒绝"
+            "Allow",
+            "Deny"
         };
 
-        // 显示对话框
+        // Show dialog
         int result = JOptionPane.showOptionDialog(
             null,
             message.toString(),
-            "权限请求 - " + toolName,
+            "Permission Request - " + toolName,
             JOptionPane.DEFAULT_OPTION,
             JOptionPane.QUESTION_MESSAGE,
             null,

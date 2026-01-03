@@ -180,13 +180,13 @@ public class FileHandler extends BaseMessageHandler {
                             // 如果 SDK 没有返回命令，使用本地默认命令作为回退
                             if (commands.isEmpty() && sdkCommands.isEmpty()) {
                                 LOG.info("[FileHandler] SDK returned no commands, using local fallback");
-                                addCommand(commands, "/help", "显示帮助信息", finalQuery);
-                                addCommand(commands, "/clear", "清空对话历史", finalQuery);
-                                addCommand(commands, "/history", "查看历史记录", finalQuery);
-                                addCommand(commands, "/model", "切换模型", finalQuery);
-                                addCommand(commands, "/compact", "压缩对话上下文", finalQuery);
-                                addCommand(commands, "/init", "初始化项目配置", finalQuery);
-                                addCommand(commands, "/review", "代码审查", finalQuery);
+                                addCommand(commands, "/help", "Show help information", finalQuery);
+                                addCommand(commands, "/clear", "Clear chat history", finalQuery);
+                                addCommand(commands, "/history", "View history", finalQuery);
+                                addCommand(commands, "/model", "Switch model", finalQuery);
+                                addCommand(commands, "/compact", "Compact conversation context", finalQuery);
+                                addCommand(commands, "/init", "Initialize project configuration", finalQuery);
+                                addCommand(commands, "/review", "Code review", finalQuery);
                             }
 
                             JsonObject result = new JsonObject();
@@ -207,13 +207,13 @@ public class FileHandler extends BaseMessageHandler {
                         try {
                             Gson gson = new Gson();
                             List<JsonObject> commands = new ArrayList<>();
-                            addCommand(commands, "/help", "显示帮助信息", finalQuery);
-                            addCommand(commands, "/clear", "清空对话历史", finalQuery);
-                            addCommand(commands, "/history", "查看历史记录", finalQuery);
-                            addCommand(commands, "/model", "切换模型", finalQuery);
-                            addCommand(commands, "/compact", "压缩对话上下文", finalQuery);
-                            addCommand(commands, "/init", "初始化项目配置", finalQuery);
-                            addCommand(commands, "/review", "代码审查", finalQuery);
+                            addCommand(commands, "/help", "Show help information", finalQuery);
+                            addCommand(commands, "/clear", "Clear chat history", finalQuery);
+                            addCommand(commands, "/history", "View history", finalQuery);
+                            addCommand(commands, "/model", "Switch model", finalQuery);
+                            addCommand(commands, "/compact", "Compact conversation context", finalQuery);
+                            addCommand(commands, "/init", "Initialize project configuration", finalQuery);
+                            addCommand(commands, "/review", "Code review", finalQuery);
 
                             JsonObject result = new JsonObject();
                             result.add("commands", gson.toJsonTree(commands));
@@ -239,7 +239,7 @@ public class FileHandler extends BaseMessageHandler {
      * 在编辑器中打开文件
      */
     private void handleOpenFile(String filePath) {
-        LOG.info("请求打开文件: " + filePath);
+        LOG.info("Requesting to open file: " + filePath);
 
         // 先在普通线程中处理文件路径解析（不涉及 VFS 操作）
         CompletableFuture.runAsync(() -> {
@@ -249,16 +249,16 @@ public class FileHandler extends BaseMessageHandler {
                 // 如果文件不存在且是相对路径，尝试相对于项目根目录解析
                 if (!file.exists() && !file.isAbsolute() && context.getProject().getBasePath() != null) {
                     File projectFile = new File(context.getProject().getBasePath(), filePath);
-                    LOG.info("尝试相对于项目根目录解析: " + projectFile.getAbsolutePath());
+                    LOG.info("Trying to resolve relative to project root: " + projectFile.getAbsolutePath());
                     if (projectFile.exists()) {
                         file = projectFile;
                     }
                 }
 
                 if (!file.exists()) {
-                    LOG.error("文件不存在: " + filePath);
+                    LOG.error("File does not exist: " + filePath);
                     ApplicationManager.getApplication().invokeLater(() -> {
-                        callJavaScript("addErrorMessage", escapeJs("无法打开文件: 文件不存在 (" + filePath + ")"));
+                        callJavaScript("addErrorMessage", escapeJs("Cannot open file: file does not exist (" + filePath + ")"));
                     }, ModalityState.nonModal());
                     return;
                 }
@@ -271,17 +271,17 @@ public class FileHandler extends BaseMessageHandler {
                         virtualFile -> {
                             // 成功找到文件，在编辑器中打开
                             FileEditorManager.getInstance(context.getProject()).openFile(virtualFile, true);
-                            LOG.info("成功打开文件: " + filePath);
+                            LOG.info("Successfully opened file: " + filePath);
                         },
                         () -> {
                             // 失败回调
-                            LOG.error("最终无法获取 VirtualFile: " + filePath);
-                        callJavaScript("addErrorMessage", escapeJs("无法打开文件: " + filePath));
+                            LOG.error("Failed to get VirtualFile: " + filePath);
+                        callJavaScript("addErrorMessage", escapeJs("Cannot open file: " + filePath));
                     }
                 );
 
             } catch (Exception e) {
-                LOG.error("打开文件失败: " + e.getMessage(), e);
+                LOG.error("Failed to open file: " + e.getMessage(), e);
             }
         });
     }
@@ -294,7 +294,7 @@ public class FileHandler extends BaseMessageHandler {
             try {
                 BrowserUtil.browse(url);
             } catch (Exception e) {
-                LOG.error("无法打开浏览器: " + e.getMessage(), e);
+                LOG.error("Failed to open browser: " + e.getMessage(), e);
             }
         });
     }

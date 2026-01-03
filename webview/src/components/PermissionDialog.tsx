@@ -117,19 +117,9 @@ const PermissionDialog = ({
     return '~';
   };
 
-  // 工具名称映射到标题
+  // Get tool display title
   const getToolTitle = (toolName: string): string => {
-    const toolTitleMap: Record<string, string> = {
-      'Write': '写入文件',
-      'Edit': '编辑文件',
-      'Read': '读取文件',
-      'Bash': '执行命令',
-      'TodoWrite': '写入待办',
-      'TodoRead': '读取待办',
-      'WebSearch': '网页搜索',
-      'WebFetch': '获取网页',
-    };
-    return toolTitleMap[toolName] || `执行 ${toolName}`;
+    return toolName;
   };
 
   const commandContent = getCommandContent();
@@ -140,7 +130,7 @@ const PermissionDialog = ({
       <div className="permission-dialog-v3">
         {/* 标题区域 */}
         <h3 className="permission-dialog-v3-title">{getToolTitle(request.toolName)}</h3>
-        <p className="permission-dialog-v3-subtitle">来自外部进程的请求</p>
+        <p className="permission-dialog-v3-subtitle">Request from external process</p>
 
         {/* 命令/内容区域 */}
         <div className="permission-dialog-v3-command-box">
@@ -151,7 +141,7 @@ const PermissionDialog = ({
             <button
               className="command-toggle"
               onClick={() => setShowCommand(!showCommand)}
-              title={showCommand ? '收起' : '展开'}
+              title={showCommand ? 'Collapse' : 'Expand'}
             >
               <span className={`codicon codicon-chevron-${showCommand ? 'up' : 'down'}`} />
             </button>
@@ -171,7 +161,7 @@ const PermissionDialog = ({
             onClick={handleApprove}
             onMouseEnter={() => setSelectedIndex(0)}
           >
-            <span className="option-text">允许</span>
+            <span className="option-text">Allow</span>
             <span className="option-key">1</span>
           </button>
           <button
@@ -179,7 +169,7 @@ const PermissionDialog = ({
             onClick={handleApproveAlways}
             onMouseEnter={() => setSelectedIndex(1)}
           >
-            <span className="option-text">总是允许</span>
+            <span className="option-text">Always allow</span>
             <span className="option-key">2</span>
           </button>
           <button
@@ -187,7 +177,7 @@ const PermissionDialog = ({
             onClick={handleSkip}
             onMouseEnter={() => setSelectedIndex(2)}
           >
-            <span className="option-text">拒绝</span>
+            <span className="option-text">Deny</span>
             <span className="option-key">3</span>
           </button>
         </div>

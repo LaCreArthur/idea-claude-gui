@@ -443,7 +443,7 @@ public class SettingsHandler extends BaseMessageHandler {
                     versionToSend = result.getNodeVersion();
                     verifySuccess = true;
                 } else {
-                    failureMsg = result != null ? result.getErrorMessage() : "无法验证指定的 Node.js 路径";
+                    failureMsg = result != null ? result.getErrorMessage() : "Unable to verify specified Node.js path";
                 }
             }
 
@@ -460,16 +460,16 @@ public class SettingsHandler extends BaseMessageHandler {
                 callJavaScript("window.updateNodePath", escapeJs(gson.toJson(response)));
 
                 if (successFlag) {
-                    callJavaScript("window.showSwitchSuccess", escapeJs("Node.js 路径已保存。\n\n如果环境检查仍然失败，请关闭并重新打开工具窗口后重试。"));
+                    callJavaScript("window.showSwitchSuccess", escapeJs("Node.js path saved.\n\nIf environment check still fails, please close and reopen the tool window."));
                 } else {
-                    String msg = failureMsgFinal != null ? failureMsgFinal : "无法验证指定的 Node.js 路径";
-                    callJavaScript("window.showError", escapeJs("保存的 Node.js 路径无效: " + msg));
+                    String msg = failureMsgFinal != null ? failureMsgFinal : "Cannot verify specified Node.js path";
+                    callJavaScript("window.showError", escapeJs("Saved Node.js path is invalid: " + msg));
                 }
             });
         } catch (Exception e) {
             LOG.error("[SettingsHandler] Failed to set Node.js path: " + e.getMessage(), e);
             ApplicationManager.getApplication().invokeLater(() -> {
-                callJavaScript("window.showError", escapeJs("保存 Node.js 路径失败: " + e.getMessage()));
+                callJavaScript("window.showError", escapeJs("Failed to save Node.js path: " + e.getMessage()));
             });
         }
         LOG.debug("[SettingsHandler] ========== handleSetNodePath END ==========");
@@ -534,7 +534,7 @@ public class SettingsHandler extends BaseMessageHandler {
             } catch (Exception e) {
                 LOG.error("[SettingsHandler] Failed to get usage statistics: " + e.getMessage(), e);
                 ApplicationManager.getApplication().invokeLater(() -> {
-                    callJavaScript("window.showError", escapeJs("获取统计数据失败: " + e.getMessage()));
+                    callJavaScript("window.showError", escapeJs("Failed to get statistics: " + e.getMessage()));
                 });
             }
         });
@@ -569,7 +569,7 @@ public class SettingsHandler extends BaseMessageHandler {
         } catch (Exception e) {
             LOG.error("[SettingsHandler] Failed to get working directory: " + e.getMessage(), e);
             ApplicationManager.getApplication().invokeLater(() -> {
-                callJavaScript("window.showError", escapeJs("获取工作目录配置失败: " + e.getMessage()));
+                callJavaScript("window.showError", escapeJs("Failed to get working directory config: " + e.getMessage()));
             });
         }
     }
@@ -582,7 +582,7 @@ public class SettingsHandler extends BaseMessageHandler {
             String projectPath = context.getProject().getBasePath();
             if (projectPath == null) {
                 ApplicationManager.getApplication().invokeLater(() -> {
-                    callJavaScript("window.showError", escapeJs("无法获取项目路径"));
+                    callJavaScript("window.showError", escapeJs("Cannot get project path"));
                 });
                 return;
             }
@@ -605,7 +605,7 @@ public class SettingsHandler extends BaseMessageHandler {
                 if (!workingDirFile.exists() || !workingDirFile.isDirectory()) {
                     final String errorPath = workingDirFile.getAbsolutePath();
                     ApplicationManager.getApplication().invokeLater(() -> {
-                        callJavaScript("window.showError", escapeJs("工作目录不存在: " + errorPath));
+                        callJavaScript("window.showError", escapeJs("Working directory does not exist: " + errorPath));
                     });
                     return;
                 }
@@ -616,14 +616,14 @@ public class SettingsHandler extends BaseMessageHandler {
             settingsService.setCustomWorkingDirectory(projectPath, customWorkingDir);
 
             ApplicationManager.getApplication().invokeLater(() -> {
-                callJavaScript("window.showSuccess", escapeJs("工作目录配置已保存"));
+                callJavaScript("window.showSuccess", escapeJs("Working directory configuration saved"));
             });
 
             LOG.info("[SettingsHandler] Set custom working directory: " + customWorkingDir);
         } catch (Exception e) {
             LOG.error("[SettingsHandler] Failed to set working directory: " + e.getMessage(), e);
             ApplicationManager.getApplication().invokeLater(() -> {
-                callJavaScript("window.showError", escapeJs("保存工作目录配置失败: " + e.getMessage()));
+                callJavaScript("window.showError", escapeJs("Failed to save working directory config: " + e.getMessage()));
             });
         }
     }

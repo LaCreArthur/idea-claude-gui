@@ -10,6 +10,8 @@ export interface ClaudeConfig {
   baseUrl: string;
   providerId?: string;
   providerName?: string;
+  hasCliSession?: boolean;
+  authType?: 'api_key' | 'auth_token' | 'cli_session' | 'none';
 }
 
 /**
@@ -62,7 +64,8 @@ const ConfigInfoDisplay = ({ config, loading = false, providers = [], onSwitchPr
     );
   }
 
-  if (!config || (!config.apiKey && !config.baseUrl)) {
+  // No API key configured - check for CLI session or show login instructions
+  if (!config || (!config.apiKey && !config.hasCliSession && !config.baseUrl)) {
     return (
       <div className={styles.container}>
         <div className={styles.header}>
@@ -70,9 +73,14 @@ const ConfigInfoDisplay = ({ config, loading = false, providers = [], onSwitchPr
             {t('settings.provider.currentConfig')}
           </span>
         </div>
-        <div className={styles.empty}>
+        <div className={styles.noAuth}>
           <span className="codicon codicon-warning" />
-          <span>{t('settings.provider.noConfig')}</span>
+          <div className={styles.noAuthContent}>
+            <span>{t('settings.provider.noAuth')}</span>
+            <span className={styles.loginHint}>
+              {t('settings.provider.loginHint')} <code>claude login</code>
+            </span>
+          </div>
         </div>
       </div>
     );
@@ -164,29 +172,38 @@ const ConfigInfoDisplay = ({ config, loading = false, providers = [], onSwitchPr
         )}
       </div>
 
-      {/* 第二行：API Key 和 Base URL 并排 */}
+      {/* 第二行：API Key / CLI Session 和 Base URL 并排 */}
       <div className={styles.content}>
-        {/* API Key 预览 */}
-        <div className={styles.field}>
-          <span className={`codicon codicon-key ${styles.icon}`} />
-          <code
-            className={`${styles.value} ${styles.clickable}`}
-            onClick={() => handleCopy(apiKey, t('settings.provider.apiKey'))}
-            title={t('config.clickToCopy')}
-          >
-            {getApiKeyPreview()}
-          </code>
-          {apiKey && (
-            <button
-              type="button"
-              className={styles.toggleBtn}
-              onClick={() => setShowApiKey(!showApiKey)}
-              title={showApiKey ? t('settings.provider.hide') : t('settings.provider.show')}
+        {/* API Key 预览 或 CLI Session 状态 */}
+        {config.authType === 'cli_session' ? (
+          <div className={styles.field}>
+            <span className={`codicon codicon-account ${styles.icon}`} />
+            <span className={styles.cliSessionLabel}>
+              {t('settings.provider.cliSession')}
+            </span>
+          </div>
+        ) : (
+          <div className={styles.field}>
+            <span className={`codicon codicon-key ${styles.icon}`} />
+            <code
+              className={`${styles.value} ${styles.clickable}`}
+              onClick={() => handleCopy(apiKey, t('settings.provider.apiKey'))}
+              title={t('config.clickToCopy')}
             >
-              <span className={`codicon ${showApiKey ? 'codicon-eye-closed' : 'codicon-eye'}`} style={{ fontSize: '14px' }} />
-            </button>
-          )}
-        </div>
+              {getApiKeyPreview()}
+            </code>
+            {apiKey && (
+              <button
+                type="button"
+                className={styles.toggleBtn}
+                onClick={() => setShowApiKey(!showApiKey)}
+                title={showApiKey ? t('settings.provider.hide') : t('settings.provider.show')}
+              >
+                <span className={`codicon ${showApiKey ? 'codicon-eye-closed' : 'codicon-eye'}`} style={{ fontSize: '14px' }} />
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Base URL */}
         <div className={styles.field}>

@@ -73,11 +73,11 @@ public class ToolInterceptor {
         ApplicationManager.getApplication().invokeLater(() -> {
             int result = JOptionPane.showConfirmDialog(
                 null,
-                "Claude 需要执行以下操作：\n\n" +
+                "Claude needs to perform the following action:\n\n" +
                 message + "\n\n" +
-                "这可能涉及文件写入或系统命令执行。\n" +
-                "是否允许执行？",
-                "权限请求",
+                "This may involve file writes or system command execution.\n" +
+                "Allow execution?",
+                "Permission Request",
                 JOptionPane.YES_NO_OPTION,
                 JOptionPane.QUESTION_MESSAGE
             );
@@ -87,11 +87,11 @@ public class ToolInterceptor {
         });
 
         try {
-            // 设置30秒超时，防止无限等待
+            // Set 30 second timeout to prevent infinite wait
             boolean responded = latch.await(30, TimeUnit.SECONDS);
             if (!responded) {
-                LOG.warn("权限请求超时，自动拒绝");
-                return null; // 超时视为拒绝
+                LOG.warn("Permission request timeout, automatically denied");
+                return null; // Timeout treated as denial
             }
         } catch (InterruptedException e) {
             LOG.error("Error occurred", e);

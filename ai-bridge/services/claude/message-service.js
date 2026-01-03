@@ -8,7 +8,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { AnthropicBedrock } from '@anthropic-ai/bedrock-sdk';
 import { randomUUID } from 'crypto';
 
-import { setupApiKey, isCustomBaseUrl, loadClaudeSettings } from '../../config/api-config.js';
+import { setupApiKey, isCustomBaseUrl, loadClaudeSettings, hasCliSessionAuth } from '../../config/api-config.js';
 import { selectWorkingDirectory } from '../../utils/path-utils.js';
 import { mapModelIdToSdkName } from '../../utils/model-utils.js';
 import { AsyncStream } from '../../utils/async-stream.js';
@@ -54,6 +54,8 @@ import { buildIDEContextPrompt } from '../system-prompts.js';
         : null;
 
     // 注意：配置只从 settings.json 读取，不再检查 shell 环境变量
+    // 同时检查 CLI 会话认证状态
+    const hasCliSession = hasCliSessionAuth();
     let keySource = '未配置';
     let rawKey = null;
 
@@ -66,11 +68,15 @@ import { buildIDEContextPrompt } from '../system-prompts.js';
       } else {
         keySource = '~/.claude/settings.json';
       }
+    } else if (hasCliSession) {
+      keySource = 'CLI session (~/.claude/.credentials.json)';
     }
 
     const keyPreview = rawKey && rawKey.length > 0
       ? `${rawKey.substring(0, 10)}...（长度 ${rawKey.length} 字符）`
-      : '未配置（值为空或缺失）';
+      : hasCliSession
+        ? 'CLI 会话认证（自动检测）'
+        : '未配置（值为空或缺失）';
 
 		    let baseUrl = settingsBaseUrl || 'https://api.anthropic.com';
 		    let baseUrlSource;
@@ -90,7 +96,7 @@ import { buildIDEContextPrompt } from '../system-prompts.js';
 	      `- 当前 API Key 来源: ${keySource}`,
 	      `- 当前 API Key 预览: ${keyPreview}`,
 	      `- 当前 Base URL: ${baseUrl}（来源: ${baseUrlSource}）`,
-	      `- tip：cli可以读取 环境变量 或者 setting.json 两种方式；本插件为了避免产生问题，只支持读取setting.json 内容，您可以在 本插件右上角设置 - 供应商管理配置下即可使用`,
+	      `- tip：您可以通过以下方式认证：1) 在终端运行 \`claude login\` 使用 CLI 会话认证；2) 在本插件右上角设置 - 供应商管理中配置 API Key`,
 	      ''
 	    ].join('\n');
 
@@ -105,7 +111,8 @@ import { buildIDEContextPrompt } from '../system-prompts.js';
 	        keySource,
 	        keyPreview,
 	        baseUrl,
-	        baseUrlSource
+	        baseUrlSource,
+	        hasCliSession
 	      }
 	    };
   } catch (innerError) {

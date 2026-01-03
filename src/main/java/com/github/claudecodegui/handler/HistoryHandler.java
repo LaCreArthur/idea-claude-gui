@@ -49,27 +49,27 @@ public class HistoryHandler extends BaseMessageHandler {
     public boolean handle(String type, String content) {
         switch (type) {
             case "load_history_data":
-                LOG.debug("[HistoryHandler] 处理: load_history_data");
+                LOG.debug("[HistoryHandler] Processing: load_history_data");
                 handleLoadHistoryData();
                 return true;
             case "load_session":
-                LOG.debug("[HistoryHandler] 处理: load_session");
+                LOG.debug("[HistoryHandler] Processing: load_session");
                 handleLoadSession(content);
                 return true;
             case "delete_session":
-                LOG.info("[HistoryHandler] 处理: delete_session, sessionId=" + content);
+                LOG.info("[HistoryHandler] Processing: delete_session, sessionId=" + content);
                 handleDeleteSession(content);
                 return true;
             case "export_session":
-                LOG.info("[HistoryHandler] 处理: export_session, sessionId=" + content);
+                LOG.info("[HistoryHandler] Processing: export_session, sessionId=" + content);
                 handleExportSession(content);
                 return true;
             case "toggle_favorite":
-                LOG.info("[HistoryHandler] 处理: toggle_favorite, sessionId=" + content);
+                LOG.info("[HistoryHandler] Processing: toggle_favorite, sessionId=" + content);
                 handleToggleFavorite(content);
                 return true;
             case "update_title":
-                LOG.info("[HistoryHandler] 处理: update_title");
+                LOG.info("[HistoryHandler] Processing: update_title");
                 handleUpdateTitle(content);
                 return true;
             default:
@@ -82,7 +82,7 @@ public class HistoryHandler extends BaseMessageHandler {
      */
     private void handleLoadHistoryData() {
         CompletableFuture.runAsync(() -> {
-            LOG.info("[HistoryHandler] ========== 开始加载历史数据 ==========");
+            LOG.info("[HistoryHandler] ========== Starting to load history data ==========");
 
             try {
                 String projectPath = context.getProject().getBasePath();
@@ -116,7 +116,7 @@ public class HistoryHandler extends BaseMessageHandler {
                 });
 
             } catch (Exception e) {
-                LOG.error("[HistoryHandler] ❌ 加载历史数据失败: " + e.getMessage(), e);
+                LOG.error("[HistoryHandler] ❌ Failed to load history data: " + e.getMessage(), e);
 
                 ApplicationManager.getApplication().invokeLater(() -> {
                     String errorMsg = escapeJs(e.getMessage() != null ? e.getMessage() : "未知错误");
@@ -151,7 +151,7 @@ public class HistoryHandler extends BaseMessageHandler {
         CompletableFuture.runAsync(() -> {
             try {
                 String projectPath = context.getProject().getBasePath();
-                LOG.info("[HistoryHandler] ========== 开始删除会话 ==========");
+                LOG.info("[HistoryHandler] ========== Starting to delete session ==========");
                 LOG.info("[HistoryHandler] SessionId: " + sessionId);
                 LOG.info("[HistoryHandler] ProjectPath: " + projectPath);
 
@@ -164,10 +164,10 @@ public class HistoryHandler extends BaseMessageHandler {
                 String sanitizedPath = com.github.claudecodegui.util.PathUtils.sanitizePath(projectPath);
                 java.nio.file.Path projectDir = projectsDir.resolve(sanitizedPath);
 
-                LOG.info("[HistoryHandler] 会话目录: " + projectDir);
+                LOG.info("[HistoryHandler] Session directory: " + projectDir);
 
                 if (!java.nio.file.Files.exists(projectDir)) {
-                    LOG.error("[HistoryHandler] ❌ 项目目录不存在: " + projectDir);
+                    LOG.error("[HistoryHandler] ❌ Project directory does not exist: " + projectDir);
                     return;
                 }
 
@@ -177,10 +177,10 @@ public class HistoryHandler extends BaseMessageHandler {
 
                 if (java.nio.file.Files.exists(mainSessionFile)) {
                     java.nio.file.Files.delete(mainSessionFile);
-                    LOG.info("[HistoryHandler] ✅ 已删除主会话文件: " + mainSessionFile.getFileName());
+                    LOG.info("[HistoryHandler] ✅ Deleted main session file: " + mainSessionFile.getFileName());
                     mainDeleted = true;
                 } else {
-                    LOG.warn("[HistoryHandler] ⚠️ 主会话文件不存在: " + mainSessionFile.getFileName());
+                    LOG.warn("[HistoryHandler] ⚠️ Main session file does not exist: " + mainSessionFile.getFileName());
                 }
 
                 // 删除相关的 agent 文件
@@ -206,24 +206,24 @@ public class HistoryHandler extends BaseMessageHandler {
                     for (java.nio.file.Path agentFile : agentFiles) {
                         try {
                             java.nio.file.Files.delete(agentFile);
-                            LOG.info("[HistoryHandler] ✅ 已删除关联 agent 文件: " + agentFile.getFileName());
+                            LOG.info("[HistoryHandler] ✅ Deleted associated agent file: " + agentFile.getFileName());
                             agentFilesDeleted++;
                         } catch (Exception e) {
-                            LOG.error("[HistoryHandler] ❌ 删除 agent 文件失败: " + agentFile.getFileName() + " - " + e.getMessage(), e);
+                            LOG.error("[HistoryHandler] ❌ Failed to delete agent file: " + agentFile.getFileName() + " - " + e.getMessage(), e);
                         }
                     }
                 }
 
-                LOG.info("[HistoryHandler] ========== 删除会话完成 ==========");
-                LOG.info("[HistoryHandler] 主会话文件: " + (mainDeleted ? "已删除" : "未找到"));
-                LOG.info("[HistoryHandler] Agent 文件: 删除了 " + agentFilesDeleted + " 个");
+                LOG.info("[HistoryHandler] ========== Session deletion complete ==========");
+                LOG.info("[HistoryHandler] Main session file: " + (mainDeleted ? "deleted" : "not found"));
+                LOG.info("[HistoryHandler] Agent files: deleted " + agentFilesDeleted);
 
                 // 删除完成后，重新加载历史数据并推送给前端
-                LOG.info("[HistoryHandler] 重新加载历史数据...");
+                LOG.info("[HistoryHandler] Reloading history data...");
                 handleLoadHistoryData();
 
             } catch (Exception e) {
-                LOG.error("[HistoryHandler] ❌ 删除会话失败: " + e.getMessage(), e);
+                LOG.error("[HistoryHandler] ❌ Failed to delete session: " + e.getMessage(), e);
             }
         });
     }
@@ -234,7 +234,7 @@ public class HistoryHandler extends BaseMessageHandler {
      */
     private void handleExportSession(String content) {
         CompletableFuture.runAsync(() -> {
-            LOG.info("[HistoryHandler] ========== 开始导出会话 ==========");
+            LOG.info("[HistoryHandler] ========== Starting to export session ==========");
 
             try {
                 // 解析前端传来的JSON，获取 sessionId 和 title
@@ -258,7 +258,7 @@ public class HistoryHandler extends BaseMessageHandler {
 
                 String wrappedJson = new com.google.gson.Gson().toJson(exportData);
 
-                LOG.info("[HistoryHandler] 读取到会话消息，准备注入到前端");
+                LOG.info("[HistoryHandler] Read session messages, injecting to frontend");
 
                 String escapedJson = escapeJs(wrappedJson);
 
@@ -279,14 +279,14 @@ public class HistoryHandler extends BaseMessageHandler {
                     context.executeJavaScriptOnEDT(jsCode);
                 });
 
-                LOG.info("[HistoryHandler] ========== 导出会话完成 ==========");
+                LOG.info("[HistoryHandler] ========== Export session complete ==========");
 
             } catch (Exception e) {
-                LOG.error("[HistoryHandler] ❌ 导出会话失败: " + e.getMessage(), e);
+                LOG.error("[HistoryHandler] ❌ Failed to export session: " + e.getMessage(), e);
 
                 ApplicationManager.getApplication().invokeLater(() -> {
                     String jsCode = "if (window.addToast) { " +
-                        "  window.addToast('导出失败: " + escapeJs(e.getMessage() != null ? e.getMessage() : "未知错误") + "', 'error'); " +
+                        "  window.addToast('Export failed: " + escapeJs(e.getMessage() != null ? e.getMessage() : "Unknown error") + "', 'error'); " +
                         "}";
                     context.executeJavaScriptOnEDT(jsCode);
                 });
@@ -300,15 +300,15 @@ public class HistoryHandler extends BaseMessageHandler {
     private void handleToggleFavorite(String sessionId) {
         CompletableFuture.runAsync(() -> {
             try {
-                LOG.info("[HistoryHandler] ========== 切换收藏状态 ==========");
+                LOG.info("[HistoryHandler] ========== Toggling favorite status ==========");
                 LOG.info("[HistoryHandler] SessionId: " + sessionId);
 
                 // 调用 Node.js favorites-service 切换收藏状态
                 String result = callNodeJsFavoritesService("toggleFavorite", sessionId);
-                LOG.info("[HistoryHandler] 收藏状态切换结果: " + result);
+                LOG.info("[HistoryHandler] Favorite toggle result: " + result);
 
             } catch (Exception e) {
-                LOG.error("[HistoryHandler] ❌ 切换收藏状态失败: " + e.getMessage(), e);
+                LOG.error("[HistoryHandler] ❌ Failed to toggle favorite: " + e.getMessage(), e);
             }
         });
     }
@@ -319,7 +319,7 @@ public class HistoryHandler extends BaseMessageHandler {
     private void handleUpdateTitle(String content) {
         CompletableFuture.runAsync(() -> {
             try {
-                LOG.info("[HistoryHandler] ========== 更新会话标题 ==========");
+                LOG.info("[HistoryHandler] ========== Updating session title ==========");
 
                 // 解析前端传来的JSON，获取 sessionId 和 customTitle
                 com.google.gson.JsonObject request = new com.google.gson.Gson().fromJson(content, com.google.gson.JsonObject.class);
@@ -331,7 +331,7 @@ public class HistoryHandler extends BaseMessageHandler {
 
                 // 调用 Node.js session-titles-service 更新标题
                 String result = callNodeJsTitlesServiceWithParams("updateTitle", sessionId, customTitle);
-                LOG.info("[HistoryHandler] 标题更新结果: " + result);
+                LOG.info("[HistoryHandler] Title update result: " + result);
 
                 // 解析结果
                 com.google.gson.JsonObject resultObj = new com.google.gson.Gson().fromJson(result, com.google.gson.JsonObject.class);
@@ -341,17 +341,17 @@ public class HistoryHandler extends BaseMessageHandler {
                     String error = resultObj.get("error").getAsString();
                     ApplicationManager.getApplication().invokeLater(() -> {
                         String jsCode = "if (window.addToast) { " +
-                            "  window.addToast('更新标题失败: " + escapeJs(error) + "', 'error'); " +
+                            "  window.addToast('Failed to update title: " + escapeJs(error) + "', 'error'); " +
                             "}";
                         context.executeJavaScriptOnEDT(jsCode);
                     });
                 }
 
             } catch (Exception e) {
-                LOG.error("[HistoryHandler] ❌ 更新标题失败: " + e.getMessage(), e);
+                LOG.error("[HistoryHandler] ❌ Failed to update title: " + e.getMessage(), e);
                 ApplicationManager.getApplication().invokeLater(() -> {
                     String jsCode = "if (window.addToast) { " +
-                        "  window.addToast('更新标题失败: " + escapeJs(e.getMessage() != null ? e.getMessage() : "未知错误") + "', 'error'); " +
+                        "  window.addToast('Failed to update title: " + escapeJs(e.getMessage() != null ? e.getMessage() : "Unknown error") + "', 'error'); " +
                         "}";
                     context.executeJavaScriptOnEDT(jsCode);
                 });
@@ -394,7 +394,7 @@ public class HistoryHandler extends BaseMessageHandler {
             return new com.google.gson.Gson().toJson(history);
 
         } catch (Exception e) {
-            LOG.warn("[HistoryHandler] ⚠️ 增强历史数据失败，返回原始数据: " + e.getMessage());
+            LOG.warn("[HistoryHandler] ⚠️ Failed to enhance history data, returning original: " + e.getMessage());
             return historyJson;
         }
     }
@@ -433,7 +433,7 @@ public class HistoryHandler extends BaseMessageHandler {
             return new com.google.gson.Gson().toJson(history);
 
         } catch (Exception e) {
-            LOG.warn("[HistoryHandler] ⚠️ 增强标题数据失败，返回原始数据: " + e.getMessage());
+            LOG.warn("[HistoryHandler] ⚠️ Failed to enhance title data, returning original: " + e.getMessage());
             return historyJson;
         }
     }
@@ -586,17 +586,17 @@ public class HistoryHandler extends BaseMessageHandler {
                 // 检查这一行是否包含sessionId
                 if (line.contains("\"sessionId\":\"" + sessionId + "\"") ||
                     line.contains("\"parentSessionId\":\"" + sessionId + "\"")) {
-                    LOG.debug("[HistoryHandler] Agent文件 " + agentFilePath.getFileName() + " 属于会话 " + sessionId);
+                    LOG.debug("[HistoryHandler] Agent file " + agentFilePath.getFileName() + " belongs to session " + sessionId);
                     return true;
                 }
                 lineCount++;
             }
             // 如果前20行都没找到，说明这个agent文件不属于当前会话
-            LOG.debug("[HistoryHandler] Agent文件 " + agentFilePath.getFileName() + " 不属于会话 " + sessionId);
+            LOG.debug("[HistoryHandler] Agent file " + agentFilePath.getFileName() + " does not belong to session " + sessionId);
             return false;
         } catch (Exception e) {
             // 如果读取失败，为了安全起见，不删除这个文件
-            LOG.warn("[HistoryHandler] ⚠️ 无法读取agent文件 " + agentFilePath.getFileName() + ": " + e.getMessage());
+            LOG.warn("[HistoryHandler] ⚠️ Cannot read agent file " + agentFilePath.getFileName() + ": " + e.getMessage());
             return false;
         }
     }

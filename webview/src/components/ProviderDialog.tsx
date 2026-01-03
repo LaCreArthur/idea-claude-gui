@@ -280,7 +280,6 @@ export default function ProviderDialog({
           <div className="form-group">
             <label htmlFor="apiKey">
               {t('settings.provider.dialog.apiKey')}
-              <span className="required">{t('settings.provider.dialog.required')}</span>
             </label>
             <div className="input-with-visibility">
               <input
@@ -300,7 +299,9 @@ export default function ProviderDialog({
                 <span className={`codicon ${showApiKey ? 'codicon-eye-closed' : 'codicon-eye'}`} />
               </button>
             </div>
-            <small className="form-hint">{t('settings.provider.dialog.apiKeyHint')}</small>
+            <small className="form-hint">
+              {t('settings.provider.dialog.apiKeyHint')} {t('settings.provider.dialog.apiKeyOptionalHint')}
+            </small>
           </div>
 
           <div className="form-group">
@@ -389,10 +390,10 @@ export default function ProviderDialog({
                   type="button"
                   className="format-btn"
                   onClick={handleFormatJson}
-                  title={t('settings.provider.dialog.formatJson') || '格式化 JSON'}
+                  title={t('settings.provider.dialog.formatJson') || 'Format JSON'}
                 >
                   <span className="codicon codicon-symbol-keyword" />
-                  {t('settings.provider.dialog.formatJson') || '格式化'}
+                  {t('settings.provider.dialog.formatJson') || 'Format'}
                 </button>
               </div>
 

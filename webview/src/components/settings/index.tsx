@@ -174,7 +174,7 @@ const SettingsView = ({ onClose, initialTab }: SettingsViewProps) => {
   // 显示切换成功弹窗
   const showSwitchSuccess = (message: string) => {
     console.log('[SettingsView] showSwitchSuccess called:', message);
-    showAlert('success', '切换成功', message);
+    showAlert('success', 'Switch Successful', message);
   };
 
   useEffect(() => {
@@ -223,7 +223,7 @@ const SettingsView = ({ onClose, initialTab }: SettingsViewProps) => {
 
     window.showError = (message: string) => {
       console.log('[SettingsView] window.showError called:', message);
-      showAlert('error', '操作失败', message);
+      showAlert('error', 'Operation Failed', message);
       setLoading(false);
       setSavingNodePath(false);
       setSavingWorkingDirectory(false);
@@ -265,7 +265,7 @@ const SettingsView = ({ onClose, initialTab }: SettingsViewProps) => {
 
     window.showSuccess = (message: string) => {
       console.log('[SettingsView] window.showSuccess called:', message);
-      showAlert('success', '操作成功', message);
+      showAlert('success', 'Operation Successful', message);
       setSavingNodePath(false);
       setSavingWorkingDirectory(false);
     };
@@ -481,7 +481,7 @@ const SettingsView = ({ onClose, initialTab }: SettingsViewProps) => {
     jsonConfig: string;
   }) => {
     if (!data.providerName) {
-      showAlert('warning', '提示', '请输入供应商名称');
+      showAlert('warning', 'Notice', 'Please enter a provider name');
       return;
     }
 
@@ -490,7 +490,7 @@ const SettingsView = ({ onClose, initialTab }: SettingsViewProps) => {
     try {
       parsedConfig = JSON.parse(data.jsonConfig || '{}');
     } catch (e) {
-      showAlert('error', '错误', '配置 JSON 格式错误，请修正后再保存');
+      showAlert('error', 'Error', 'Invalid JSON configuration format. Please fix and save again.');
       return;
     }
 
@@ -510,7 +510,7 @@ const SettingsView = ({ onClose, initialTab }: SettingsViewProps) => {
         ...updates
       };
       sendToJava(`add_provider:${JSON.stringify(newProvider)}`);
-      addToast('供应商添加成功', 'success');
+      addToast('Provider added successfully', 'success');
     } else {
       // 更新现有供应商
       if (!providerDialog.provider) return;
@@ -526,7 +526,7 @@ const SettingsView = ({ onClose, initialTab }: SettingsViewProps) => {
         updates,
       };
       sendToJava(`update_provider:${JSON.stringify(updateData)}`);
-      addToast('供应商更新成功', 'success');
+      addToast('Provider updated successfully', 'success');
 
       // 如果是当前正在使用的供应商，更新后立即重新应用配置
       if (isActive) {
@@ -571,7 +571,7 @@ const SettingsView = ({ onClose, initialTab }: SettingsViewProps) => {
     console.log('[SettingsView] confirmDeleteProvider - sending delete_provider:', provider.id);
     const data = { id: provider.id };
     sendToJava(`delete_provider:${JSON.stringify(data)}`);
-    addToast('供应商删除成功', 'success');
+    addToast('Provider deleted successfully', 'success');
     setLoading(true);
     setDeleteConfirm({ isOpen: false, provider: null });
   };
@@ -733,10 +733,10 @@ const SettingsView = ({ onClose, initialTab }: SettingsViewProps) => {
       {/* 删除确认弹窗 */}
       <ConfirmDialog
         isOpen={deleteConfirm.isOpen}
-        title="确认删除"
+        title="Confirm Delete"
         message={t('settings.provider.deleteProviderMessage', { name: deleteConfirm.provider?.name || '' })}
-        confirmText="删除"
-        cancelText="取消"
+        confirmText="Delete"
+        cancelText="Cancel"
         onConfirm={confirmDeleteProvider}
         onCancel={cancelDeleteProvider}
       />

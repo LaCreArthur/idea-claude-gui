@@ -42,19 +42,19 @@ public class SessionHandler extends BaseMessageHandler {
     public boolean handle(String type, String content) {
         switch (type) {
             case "send_message":
-                LOG.debug("[SessionHandler] 处理: send_message");
+                LOG.debug("[SessionHandler] Processing: send_message");
                 handleSendMessage(content);
                 return true;
             case "send_message_with_attachments":
-                LOG.debug("[SessionHandler] 处理: send_message_with_attachments");
+                LOG.debug("[SessionHandler] Processing: send_message_with_attachments");
                 handleSendMessageWithAttachments(content);
                 return true;
             case "interrupt_session":
-                LOG.debug("[SessionHandler] 处理: interrupt_session");
+                LOG.debug("[SessionHandler] Processing: interrupt_session");
                 handleInterruptSession();
                 return true;
             case "restart_session":
-                LOG.debug("[SessionHandler] 处理: restart_session");
+                LOG.debug("[SessionHandler] Processing: restart_session");
                 handleRestartSession();
                 return true;
             default:
@@ -69,7 +69,7 @@ public class SessionHandler extends BaseMessageHandler {
         String nodeVersion = context.getClaudeSDKBridge().getCachedNodeVersion();
         if (nodeVersion == null) {
             ApplicationManager.getApplication().invokeLater(() -> {
-                callJavaScript("addErrorMessage", escapeJs("未检测到有效的 Node.js 版本，请在设置中配置或重新打开工具窗口。"));
+                callJavaScript("addErrorMessage", escapeJs("No valid Node.js version detected. Please configure it in settings or reopen the tool window."));
             });
             return;
         }
@@ -77,7 +77,7 @@ public class SessionHandler extends BaseMessageHandler {
             int minVersion = NodeDetector.MIN_NODE_MAJOR_VERSION;
             ApplicationManager.getApplication().invokeLater(() -> {
                 callJavaScript("addErrorMessage", escapeJs(
-                    "Node.js 版本过低 (" + nodeVersion + ")，插件需要 v" + minVersion + " 或更高版本才能正常运行。请在设置中配置正确的 Node.js 路径。"));
+                    "Node.js version too low (" + nodeVersion + "). Plugin requires v" + minVersion + " or higher. Please configure the correct Node.js path in settings."));
             });
             return;
         }
@@ -94,7 +94,7 @@ public class SessionHandler extends BaseMessageHandler {
 
             context.getSession().send(prompt).exceptionally(ex -> {
                 ApplicationManager.getApplication().invokeLater(() -> {
-                    callJavaScript("addErrorMessage", escapeJs("发送失败: " + ex.getMessage()));
+                    callJavaScript("addErrorMessage", escapeJs("Failed to send: " + ex.getMessage()));
                 });
                 return null;
             });
@@ -131,7 +131,7 @@ public class SessionHandler extends BaseMessageHandler {
             }
             sendMessageWithAttachments(text, atts);
         } catch (Exception e) {
-            LOG.error("[SessionHandler] 解析附件负载失败: " + e.getMessage(), e);
+            LOG.error("[SessionHandler] Failed to parse attachment payload: " + e.getMessage(), e);
             handleSendMessage(content);
         }
     }
@@ -144,7 +144,7 @@ public class SessionHandler extends BaseMessageHandler {
         String nodeVersion = context.getClaudeSDKBridge().getCachedNodeVersion();
         if (nodeVersion == null) {
             ApplicationManager.getApplication().invokeLater(() -> {
-                callJavaScript("addErrorMessage", escapeJs("未检测到有效的 Node.js 版本，请在设置中配置或重新打开工具窗口。"));
+                callJavaScript("addErrorMessage", escapeJs("No valid Node.js version detected. Please configure it in settings or reopen the tool window."));
             });
             return;
         }
@@ -152,7 +152,7 @@ public class SessionHandler extends BaseMessageHandler {
             int minVersion = NodeDetector.MIN_NODE_MAJOR_VERSION;
             ApplicationManager.getApplication().invokeLater(() -> {
                 callJavaScript("addErrorMessage", escapeJs(
-                    "Node.js 版本过低 (" + nodeVersion + ")，插件需要 v" + minVersion + " 或更高版本才能正常运行。请在设置中配置正确的 Node.js 路径。"));
+                    "Node.js version too low (" + nodeVersion + "). Plugin requires v" + minVersion + " or higher. Please configure the correct Node.js path in settings."));
             });
             return;
         }
@@ -167,7 +167,7 @@ public class SessionHandler extends BaseMessageHandler {
 
             context.getSession().send(prompt, attachments).exceptionally(ex -> {
                 ApplicationManager.getApplication().invokeLater(() -> {
-                    callJavaScript("addErrorMessage", escapeJs("发送失败: " + ex.getMessage()));
+                    callJavaScript("addErrorMessage", escapeJs("Failed to send: " + ex.getMessage()));
                 });
                 return null;
             });

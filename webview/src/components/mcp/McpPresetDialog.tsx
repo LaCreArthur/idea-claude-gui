@@ -129,7 +129,7 @@ export function McpPresetDialog({ onClose, onSelect }: McpPresetDialogProps) {
     <div className="dialog-overlay" onClick={handleOverlayClick}>
       <div className="dialog mcp-preset-dialog">
         <div className="dialog-header">
-          <h3>选择预设服务器</h3>
+          <h3>Select Preset Server</h3>
           <button className="close-btn" onClick={onClose}>
             <span className="codicon codicon-close"></span>
           </button>
@@ -137,7 +137,7 @@ export function McpPresetDialog({ onClose, onSelect }: McpPresetDialogProps) {
 
         <div className="dialog-body">
           <p className="dialog-desc">
-            选择一个预设的 MCP 服务器快速添加。这些是官方推荐的常用工具。
+            Select a preset MCP server to quickly add. These are commonly used official tools.
           </p>
 
           <div className="preset-list">
@@ -175,9 +175,9 @@ export function McpPresetDialog({ onClose, onSelect }: McpPresetDialogProps) {
         <div className="dialog-footer">
           <div className="footer-hint">
             <span className="codicon codicon-info"></span>
-            点击预设项即可添加
+            Click a preset to add
           </div>
-          <button className="btn btn-secondary" onClick={onClose}>取消</button>
+          <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
         </div>
       </div>
     </div>
