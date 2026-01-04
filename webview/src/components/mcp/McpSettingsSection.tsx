@@ -21,6 +21,7 @@ export function McpSettingsSection() {
   const [expandedServers, setExpandedServers] = useState<Set<string>>(new Set());
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const refreshTimersRef = useRef<number[]>([]);
 
   // 弹窗状态
   const [showServerDialog, setShowServerDialog] = useState(false);
@@ -55,9 +56,31 @@ export function McpSettingsSection() {
     '#6366F1', // indigo
   ];
 
-  // 初始化
+  // Initialize
   useEffect(() => {
-    // 注册回调
+    // Clear all pending refresh timers
+    const clearRefreshTimers = () => {
+      refreshTimersRef.current.forEach((timerId) => window.clearTimeout(timerId));
+      refreshTimersRef.current = [];
+    };
+
+    // Schedule smart refresh after toggle (with multiple delays for connection status)
+    const scheduleRefresh = (enabled: boolean) => {
+      clearRefreshTimers();
+
+      // Different refresh schedules based on enable/disable
+      const serverRefreshDelays = enabled ? [200, 1000] : [200];
+      const statusRefreshDelays = enabled ? [400, 1500, 3500, 7000, 12000] : [400];
+
+      serverRefreshDelays.forEach((delay) => {
+        refreshTimersRef.current.push(window.setTimeout(() => loadServers(), delay));
+      });
+      statusRefreshDelays.forEach((delay) => {
+        refreshTimersRef.current.push(window.setTimeout(() => loadServerStatus(), delay));
+      });
+    };
+
+    // Register callbacks
     window.updateMcpServers = (jsonStr: string) => {
       try {
         const serverList: McpServer[] = JSON.parse(jsonStr);
@@ -70,7 +93,7 @@ export function McpSettingsSection() {
       }
     };
 
-    // 注册状态回调
+    // Register status callback
     window.updateMcpServerStatus = (jsonStr: string) => {
       try {
         const statusList: McpServerStatusInfo[] = JSON.parse(jsonStr);
@@ -87,11 +110,21 @@ export function McpSettingsSection() {
       }
     };
 
-    // 加载服务器
+    // Register toggle callback for smart refresh
+    window.mcpServerToggled = (jsonStr: string) => {
+      try {
+        const toggledServer: McpServer = JSON.parse(jsonStr);
+        scheduleRefresh(isServerEnabled(toggledServer));
+      } catch (error) {
+        console.error('[McpSettings] Failed to parse toggled server:', error);
+      }
+    };
+
+    // Load servers
     loadServers();
     loadServerStatus();
 
-    // 点击外部关闭下拉菜单
+    // Close dropdown on outside click
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setShowDropdown(false);
@@ -100,8 +133,10 @@ export function McpSettingsSection() {
     document.addEventListener('click', handleClickOutside);
 
     return () => {
+      clearRefreshTimers();
       window.updateMcpServers = undefined;
       window.updateMcpServerStatus = undefined;
+      window.mcpServerToggled = undefined;
       document.removeEventListener('click', handleClickOutside);
     };
   }, []);
@@ -117,10 +152,34 @@ export function McpSettingsSection() {
   };
 
   const getServerStatusInfo = (server: McpServer): McpServerStatusInfo | undefined => {
-    return serverStatus.get(server.id) || serverStatus.get(server.name || '');
+    // Try multiple matching strategies
+    // 1. Try by id
+    let statusInfo = serverStatus.get(server.id);
+    if (statusInfo) return statusInfo;
+
+    // 2. Try by name
+    if (server.name) {
+      statusInfo = serverStatus.get(server.name);
+      if (statusInfo) return statusInfo;
+    }
+
+    // 3. Try case-insensitive fuzzy matching
+    for (const [key, value] of serverStatus.entries()) {
+      if (key.toLowerCase() === server.id.toLowerCase() ||
+          (server.name && key.toLowerCase() === server.name.toLowerCase())) {
+        return value;
+      }
+    }
+
+    return undefined;
   };
 
-  const getStatusIcon = (status: McpServerStatusInfo['status'] | undefined): string => {
+  const getStatusIcon = (server: McpServer, status: McpServerStatusInfo['status'] | undefined): string => {
+    // Show disabled icon if server is disabled
+    if (!isServerEnabled(server)) {
+      return 'codicon-circle-slash';
+    }
+
     switch (status) {
       case 'connected':
         return 'codicon-check';
@@ -135,7 +194,12 @@ export function McpSettingsSection() {
     }
   };
 
-  const getStatusColor = (status: McpServerStatusInfo['status'] | undefined): string => {
+  const getStatusColor = (server: McpServer, status: McpServerStatusInfo['status'] | undefined): string => {
+    // Show gray if server is disabled
+    if (!isServerEnabled(server)) {
+      return '#9CA3AF';
+    }
+
     switch (status) {
       case 'connected':
         return '#10B981';
@@ -150,7 +214,12 @@ export function McpSettingsSection() {
     }
   };
 
-  const getStatusText = (status: McpServerStatusInfo['status'] | undefined): string => {
+  const getStatusText = (server: McpServer, status: McpServerStatusInfo['status'] | undefined): string => {
+    // Show disabled text if server is disabled
+    if (!isServerEnabled(server)) {
+      return t('mcp.disabled');
+    }
+
     switch (status) {
       case 'connected':
         return t('mcp.statusConnected');
@@ -200,28 +269,27 @@ export function McpSettingsSection() {
     loadServerStatus();
   };
 
-  // TODO: 启用/禁用开关功能 - 暂时注释掉，后续再加回
-  // const handleToggleServer = (server: McpServer, enabled: boolean) => {
-  //   const updatedServer: McpServer = {
-  //     ...server,
-  //     enabled,
-  //     apps: {
-  //       claude: enabled,
-  //       codex: server.apps?.codex ?? false,
-  //       gemini: server.apps?.gemini ?? false,
-  //     }
-  //   };
-  //
-  //   sendToJava('update_mcp_server', updatedServer);
-  //
-  //   // 显示Toast提示
-  //   addToast(enabled ? `已启用 ${server.name || server.id}` : `已禁用 ${server.name || server.id}`, 'success');
-  //
-  //   // 刷新服务器列表以显示最新状态
-  //   setTimeout(() => {
-  //     loadServers();
-  //   }, 100);
-  // };
+  const handleToggleServer = (server: McpServer, enabled: boolean) => {
+    const updatedServer: McpServer = {
+      ...server,
+      enabled,
+      apps: {
+        claude: enabled,
+        codex: server.apps?.codex ?? false,
+        gemini: server.apps?.gemini ?? false,
+      }
+    };
+
+    // Use dedicated toggle action for cleaner semantics
+    sendToJava('toggle_mcp_server', updatedServer);
+
+    // Show toast notification
+    const serverName = server.name || server.id;
+    const statusKey = enabled ? t('mcp.enabled') : t('mcp.disabled');
+    addToast(`${statusKey}: ${serverName}`, 'success');
+
+    // Note: Smart refresh is handled by mcpServerToggled callback
+  };
 
   const handleEdit = (server: McpServer) => {
     setEditingServer(server);
@@ -389,38 +457,37 @@ export function McpSettingsSection() {
                     {getServerInitial(server)}
                   </div>
                   <span className="server-name">{server.name || server.id}</span>
-                  {/* 连接状态指示器 */}
+                  {/* Connection status indicator */}
                   {(() => {
                     const statusInfo = getServerStatusInfo(server);
                     const status = statusInfo?.status;
                     return (
                       <span
                         className="status-indicator"
-                        style={{ color: getStatusColor(status) }}
-                        title={getStatusText(status)}
+                        style={{ color: getStatusColor(server, status) }}
+                        title={getStatusText(server, status)}
                       >
-                        <span className={`codicon ${getStatusIcon(status)}`}></span>
+                        <span className={`codicon ${getStatusIcon(server, status)}`}></span>
                       </span>
                     );
                   })()}
                 </div>
                 <div className="header-right-section" onClick={(e) => e.stopPropagation()}>
-                  {/* TODO: 启用/禁用开关 - 暂时隐藏，后续再加回 */}
-                  {/* <label className="toggle-switch">
+                  <label className="toggle-switch">
                     <input
                       type="checkbox"
                       checked={isServerEnabled(server)}
                       onChange={(e) => handleToggleServer(server, e.target.checked)}
                     />
                     <span className="toggle-slider"></span>
-                  </label> */}
+                  </label>
                 </div>
               </div>
 
-              {/* 展开内容 */}
+              {/* Expanded content */}
               {expandedServers.has(server.id) && (
                 <div className="card-content">
-                  {/* 连接状态信息 */}
+                  {/* Connection status info */}
                   {(() => {
                     const statusInfo = getServerStatusInfo(server);
                     if (statusInfo) {
@@ -430,10 +497,10 @@ export function McpSettingsSection() {
                             <span className="info-label">{t('mcp.connectionStatus')}:</span>
                             <span
                               className="info-value status-value"
-                              style={{ color: getStatusColor(statusInfo.status) }}
+                              style={{ color: getStatusColor(server, statusInfo.status) }}
                             >
-                              <span className={`codicon ${getStatusIcon(statusInfo.status)}`}></span>
-                              {' '}{getStatusText(statusInfo.status)}
+                              <span className={`codicon ${getStatusIcon(server, statusInfo.status)}`}></span>
+                              {' '}{getStatusText(server, statusInfo.status)}
                             </span>
                           </div>
                           {statusInfo.serverInfo && (

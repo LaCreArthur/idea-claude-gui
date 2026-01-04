@@ -22,6 +22,7 @@ public class McpServerHandler extends BaseMessageHandler {
         "add_mcp_server",
         "update_mcp_server",
         "delete_mcp_server",
+        "toggle_mcp_server",
         "validate_mcp_server"
     };
 
@@ -52,6 +53,9 @@ public class McpServerHandler extends BaseMessageHandler {
             case "delete_mcp_server":
                 handleDeleteMcpServer(content);
                 return true;
+            case "toggle_mcp_server":
+                handleToggleMcpServer(content);
+                return true;
             case "validate_mcp_server":
                 handleValidateMcpServer(content);
                 return true;
@@ -61,13 +65,21 @@ public class McpServerHandler extends BaseMessageHandler {
     }
 
     /**
-     * 获取所有 MCP 服务器
+     * Get all MCP servers with project-level disabled tracking
      */
     private void handleGetMcpServers() {
         try {
-            List<JsonObject> servers = context.getSettingsService().getMcpServers();
+            // Get project path for project-level MCP configuration
+            String projectPath = context.getProject() != null
+                ? context.getProject().getBasePath()
+                : null;
+
+            List<JsonObject> servers = context.getSettingsService().getMcpServersWithProjectPath(projectPath);
             Gson gson = new Gson();
             String serversJson = gson.toJson(servers);
+
+            LOG.info("[McpServerHandler] Loaded " + servers.size() + " MCP servers for project: "
+                + (projectPath != null ? projectPath : "(no project)"));
 
             ApplicationManager.getApplication().invokeLater(() -> {
                 callJavaScript("window.updateMcpServers", escapeJs(serversJson));
@@ -154,7 +166,7 @@ public class McpServerHandler extends BaseMessageHandler {
     }
 
     /**
-     * 删除 MCP 服务器
+     * Delete MCP server
      */
     private void handleDeleteMcpServer(String content) {
         try {
@@ -183,7 +195,41 @@ public class McpServerHandler extends BaseMessageHandler {
     }
 
     /**
-     * 验证 MCP 服务器配置
+     * Toggle MCP server enabled/disabled state
+     */
+    private void handleToggleMcpServer(String content) {
+        try {
+            Gson gson = new Gson();
+            JsonObject server = gson.fromJson(content, JsonObject.class);
+
+            // Update server configuration with project path
+            String projectPath = context.getProject() != null
+                ? context.getProject().getBasePath()
+                : null;
+            context.getSettingsService().upsertMcpServer(server, projectPath);
+
+            boolean isEnabled = !server.has("enabled") || server.get("enabled").getAsBoolean();
+            String serverId = server.get("id").getAsString();
+            String serverName = server.has("name") ? server.get("name").getAsString() : serverId;
+
+            LOG.info("[McpServerHandler] Toggled MCP server: " + serverName + " (enabled: " + isEnabled + ")");
+
+            ApplicationManager.getApplication().invokeLater(() -> {
+                callJavaScript("window.mcpServerToggled", escapeJs(content));
+                handleGetMcpServers();
+                // Also refresh status to show updated connection state
+                handleGetMcpServerStatus();
+            });
+        } catch (Exception e) {
+            LOG.error("[McpServerHandler] Failed to toggle MCP server: " + e.getMessage(), e);
+            ApplicationManager.getApplication().invokeLater(() -> {
+                callJavaScript("window.showError", escapeJs("Failed to toggle MCP server: " + e.getMessage()));
+            });
+        }
+    }
+
+    /**
+     * Validate MCP server configuration
      */
     private void handleValidateMcpServer(String content) {
         try {
