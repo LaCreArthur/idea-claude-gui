@@ -49,20 +49,22 @@ If you've used the Claude Code CLI before (`claude login`), the plugin **detects
 
 ---
 
-### Current Progress
+### Current Version: v0.2.1
 
-##### **December 21 (v0.1.1)**
+**Latest Features:**
+- **MCP Server Management** - Enable/disable MCP servers with project-level tracking
+- **AskUserQuestion Tool** - Interactive dialogs for Claude to ask structured questions
+- **Test Infrastructure** - Comprehensive test coverage with Vitest
+- **Enhanced Reliability** - Fixed bugs, improved error handling
 
-- [x] Add font scaling feature
-- [x] Add DIFF comparison feature
-- [x] Add favorites feature
-- [x] Add title editing feature
-- [x] Add search history by title feature
-- [x] Fix alwaysThinkingEnabled configuration issue
+**v0.2.0 Highlights:**
+- Complete English localization (UI, logs, documentation)
+- CLI session authentication (auto-detects `claude login`)
+- New plugin identity for JetBrains Marketplace
 
 ---
 
-For more iteration progress, please read [CHANGELOG.md](CHANGELOG.md)
+For full changelog, see [CHANGELOG.md](CHANGELOG.md)
 
 ---
 
@@ -76,10 +78,10 @@ cd webview
 npm install
 ```
 
-### 2. Install claude-bridge Dependencies
+### 2. Install AI Bridge Dependencies
 
 ```bash
-cd claude-bridge
+cd ai-bridge
 npm install
 ```
 
@@ -90,7 +92,15 @@ Run in IDEA:
 ./gradlew clean runIde
 ```
 
-### 4. Build Plugin
+### 4. Run Tests
+
+```bash
+./scripts/test-all.sh
+```
+
+This runs tests for all components: webview (React), ai-bridge (Node.js), and Java plugin.
+
+### 5. Build Plugin
 
 ```sh
 ./gradlew clean buildPlugin
