@@ -36,6 +36,13 @@
     ]]></description>
 
     <change-notes><![CDATA[
+        <h3>v0.2.1 - Feature Update (January 4, 2026)</h3>
+        <ul>
+            <li><strong>MCP Toggle Enhancements</strong>: Project-level tracking, smart refresh, visual indicators for disabled servers</li>
+            <li><strong>AskUserQuestion Tool</strong>: Full Claude AskUserQuestion support with interactive dialogs and multi-select</li>
+            <li><strong>Code Quality</strong>: Removed Bedrock SDK, added test infrastructure, fixed reliability issues</li>
+        </ul>
+
         <h3>v0.2.0 - Fork Release (January 3, 2026)</h3>
         <ul>
             <li><strong>Complete English Localization</strong>: All user-facing UI translated — dialogs, buttons, toasts, tooltips, error messages, MCP settings, and tool blocks</li>

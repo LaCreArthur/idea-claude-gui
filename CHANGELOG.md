@@ -1,3 +1,26 @@
+##### **January 4, 2026 (v0.2.1) — Feature Update**
+
+**MCP Server Toggle Enhancements**
+- Dedicated `toggle_mcp_server` action with project-level tracking
+- Smart refresh scheduling for real-time status updates
+- Visual indicators for disabled server state
+- Comprehensive test coverage for MCP settings
+
+**AskUserQuestion Tool Support**
+- Full implementation of Claude's AskUserQuestion tool
+- Interactive dialog for structured user input during tasks
+- Multi-select support for checkbox-style questions
+- "Other" option with free-form text input
+- i18n support across all 6 locales
+
+**Code Quality**
+- Removed AWS Bedrock SDK dependency (simplified authentication)
+- Added test infrastructure with Vitest
+- Fixed Chinese placeholder bug in chat input
+- Enhanced error handling and reliability
+
+---
+
 ##### **January 3, 2026 (v0.2.0) — Fork Release**
 
 🌍 **Complete English Localization**
