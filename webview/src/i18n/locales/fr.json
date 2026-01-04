@@ -281,6 +281,12 @@
     "allowAlways": "Toujours autoriser",
     "deny": "Refuser"
   },
+  "askUserQuestion": {
+    "title": "Claude a besoin de votre réponse",
+    "submit": "Soumettre",
+    "cancel": "Annuler",
+    "otherPlaceholder": "Autre (tapez votre réponse)"
+  },
   "toast": {
     "switchSuccess": "Changement réussi",
     "thinkingEnabled": "Thinking enabled",

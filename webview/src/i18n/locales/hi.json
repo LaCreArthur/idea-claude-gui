@@ -281,6 +281,12 @@
     "allowAlways": "हमेशा अनुमति दें",
     "deny": "अस्वीकार करें"
   },
+  "askUserQuestion": {
+    "title": "Claude को आपके इनपुट की आवश्यकता है",
+    "submit": "सबमिट करें",
+    "cancel": "रद्द करें",
+    "otherPlaceholder": "अन्य (अपना उत्तर टाइप करें)"
+  },
   "toast": {
     "switchSuccess": "स्विच सफल",
     "thinkingEnabled": "Thinking enabled",

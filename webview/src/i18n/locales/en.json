@@ -291,6 +291,12 @@
     "allowAlways": "Always Allow",
     "deny": "Deny"
   },
+  "askUserQuestion": {
+    "title": "Claude needs your input",
+    "submit": "Submit",
+    "cancel": "Cancel",
+    "otherPlaceholder": "Other (type your answer)"
+  },
   "toast": {
     "switchSuccess": "Switched successfully",
     "thinkingEnabled": "Thinking enabled",

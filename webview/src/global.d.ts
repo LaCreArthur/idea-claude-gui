@@ -95,6 +95,11 @@ interface Window {
   showPermissionDialog?: (json: string) => void;
 
   /**
+   * Show ask-user-question dialog
+   */
+  showAskUserQuestionDialog?: (json: string) => void;
+
+  /**
    * Add selection info (file and line numbers) - 自动监听，只更新 ContextBar
    */
   addSelectionInfo?: (selectionInfo: string) => void;
@@ -133,6 +138,11 @@ interface Window {
    * Update MCP server connection status
    */
   updateMcpServerStatus?: (json: string) => void;
+
+  /**
+   * MCP server toggle completed callback
+   */
+  mcpServerToggled?: (json: string) => void;
 
   /**
    * Update providers list

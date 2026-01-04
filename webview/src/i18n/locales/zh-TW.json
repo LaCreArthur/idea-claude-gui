@@ -281,6 +281,12 @@
     "allowAlways": "總是允許",
     "deny": "拒絕"
   },
+  "askUserQuestion": {
+    "title": "Claude 需要您的輸入",
+    "submit": "提交",
+    "cancel": "取消",
+    "otherPlaceholder": "其他（輸入您的答案）"
+  },
   "toast": {
     "switchSuccess": "切換成功",
     "thinkingEnabled": "思考已開啟",

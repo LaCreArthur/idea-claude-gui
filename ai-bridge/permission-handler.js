@@ -170,6 +170,76 @@ export async function requestPermissionFromJava(toolName, input) {
 }
 
 /**
+ * Request user answers for AskUserQuestion tool via filesystem communication
+ * @param {Object} input - AskUserQuestion tool parameters (questions array)
+ * @returns {Promise<Object|null>} - Answers object or null on failure/timeout
+ */
+export async function requestAskUserQuestionAnswers(input) {
+  const requestStartTime = Date.now();
+
+  try {
+    // Generate request ID
+    const requestId = `${Date.now()}-${Math.random().toString(36).substring(7)}`;
+
+    // Create request file (different prefix from permission requests)
+    const requestFile = join(PERMISSION_DIR, `ask-user-question-${requestId}.json`);
+    const responseFile = join(PERMISSION_DIR, `ask-user-question-response-${requestId}.json`);
+
+    const requestData = {
+      requestId,
+      questions: input.questions,
+      timestamp: new Date().toISOString()
+    };
+
+    try {
+      writeFileSync(requestFile, JSON.stringify(requestData, null, 2));
+    } catch (writeError) {
+      console.error('[PermissionHandler] Failed to write ask-user-question request file:', writeError.message);
+      return null;
+    }
+
+    // Wait for response file (max 60 seconds)
+    const timeout = 60000;
+    const pollInterval = 100;
+
+    while (Date.now() - requestStartTime < timeout) {
+      await new Promise(resolve => setTimeout(resolve, pollInterval));
+
+      if (existsSync(responseFile)) {
+        try {
+          const responseContent = readFileSync(responseFile, 'utf-8');
+          const responseData = JSON.parse(responseContent);
+
+          // Clean up response file
+          try {
+            unlinkSync(responseFile);
+          } catch (cleanupError) {
+            // Ignore cleanup errors
+          }
+
+          // Return the answers object if user submitted, null if cancelled
+          if (responseData.cancelled) {
+            return null;
+          }
+          return responseData.answers || null;
+        } catch (e) {
+          console.error('[PermissionHandler] Error reading ask-user-question response:', e.message);
+          return null;
+        }
+      }
+    }
+
+    // Timeout
+    console.warn('[PermissionHandler] Timeout waiting for ask-user-question response');
+    return null;
+
+  } catch (error) {
+    console.error('[PermissionHandler] Unexpected error in requestAskUserQuestionAnswers:', error.message);
+    return null;
+  }
+}
+
+/**
  * canUseTool callback function for Claude SDK
  * Signature: (toolName, input, options) => Promise<PermissionResult>
  * Expected return format: { behavior: 'allow' | 'deny', updatedInput?: object, message?: string }
@@ -193,6 +263,26 @@ export async function canUseTool(toolName, input, options = {}) {
       behavior: 'allow',
       updatedInput: input
     };
+  }
+
+  // Special handling for AskUserQuestion tool
+  if (toolName === 'AskUserQuestion') {
+    const answers = await requestAskUserQuestionAnswers(input);
+    if (answers) {
+      // Return with updated input containing the answers
+      return {
+        behavior: 'allow',
+        updatedInput: {
+          questions: input.questions,
+          answers: answers
+        }
+      };
+    } else {
+      return {
+        behavior: 'deny',
+        message: 'User cancelled or timed out on AskUserQuestion dialog'
+      };
+    }
   }
 
   // Other tools need permission

@@ -7,6 +7,7 @@ import SettingsView from './components/settings';
 import type { SettingsTab } from './components/settings/SettingsSidebar';
 import ConfirmDialog from './components/ConfirmDialog';
 import PermissionDialog, { type PermissionRequest } from './components/PermissionDialog';
+import AskUserQuestionDialog, { type AskUserQuestionRequest } from './components/AskUserQuestionDialog';
 import { ChatInputBox } from './components/ChatInputBox';
 import { CLAUDE_MODELS, CODEX_MODELS } from './components/ChatInputBox/types';
 import type { Attachment, PermissionMode, SelectedAgent } from './components/ChatInputBox/types';
@@ -81,6 +82,10 @@ const App = () => {
   // 权限弹窗状态
   const [permissionDialogOpen, setPermissionDialogOpen] = useState(false);
   const [currentPermissionRequest, setCurrentPermissionRequest] = useState<PermissionRequest | null>(null);
+
+  // AskUserQuestion dialog state
+  const [askUserQuestionDialogOpen, setAskUserQuestionDialogOpen] = useState(false);
+  const [currentAskUserQuestionRequest, setCurrentAskUserQuestionRequest] = useState<AskUserQuestionRequest | null>(null);
 
   // ChatInputBox 相关状态
   const [currentProvider, setCurrentProvider] = useState('claude');
@@ -543,6 +548,17 @@ const App = () => {
         setPermissionDialogOpen(true);
       } catch (error) {
         console.error('[Frontend] Failed to parse permission request:', error);
+      }
+    };
+
+    // AskUserQuestion dialog callback
+    window.showAskUserQuestionDialog = (json) => {
+      try {
+        const request = JSON.parse(json) as AskUserQuestionRequest;
+        setCurrentAskUserQuestionRequest(request);
+        setAskUserQuestionDialogOpen(true);
+      } catch (error) {
+        console.error('[Frontend] Failed to parse ask-user-question request:', error);
       }
     };
 
@@ -1014,6 +1030,33 @@ const App = () => {
     sendBridgeMessage('permission_decision', payload);
     setPermissionDialogOpen(false);
     setCurrentPermissionRequest(null);
+  };
+
+  /**
+   * Handle AskUserQuestion submit
+   */
+  const handleAskUserQuestionSubmit = (requestId: string, answers: Record<string, string>) => {
+    const payload = JSON.stringify({
+      requestId,
+      answers,
+      cancelled: false,
+    });
+    sendBridgeMessage('ask_user_question_response', payload);
+    setAskUserQuestionDialogOpen(false);
+    setCurrentAskUserQuestionRequest(null);
+  };
+
+  /**
+   * Handle AskUserQuestion cancel
+   */
+  const handleAskUserQuestionCancel = (requestId: string) => {
+    const payload = JSON.stringify({
+      requestId,
+      cancelled: true,
+    });
+    sendBridgeMessage('ask_user_question_response', payload);
+    setAskUserQuestionDialogOpen(false);
+    setCurrentAskUserQuestionRequest(null);
   };
 
   const toggleThinking = (messageIndex: number, blockIndex: number) => {
@@ -1800,6 +1843,13 @@ const App = () => {
         onApprove={handlePermissionApprove}
         onSkip={handlePermissionSkip}
         onApproveAlways={handlePermissionApproveAlways}
+      />
+
+      <AskUserQuestionDialog
+        isOpen={askUserQuestionDialogOpen}
+        request={currentAskUserQuestionRequest}
+        onSubmit={handleAskUserQuestionSubmit}
+        onCancel={handleAskUserQuestionCancel}
       />
     </>
   );
