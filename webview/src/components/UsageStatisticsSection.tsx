@@ -36,7 +36,7 @@ const UsageStatisticsSection = () => {
   const sessionsPerPage = 20;
 
   useEffect(() => {
-    // 设置全局回调
+    // Set global callback
     window.updateUsageStatistics = (jsonStr: string) => {
       try {
         const data: ProjectStatistics = JSON.parse(jsonStr);
@@ -48,7 +48,7 @@ const UsageStatisticsSection = () => {
       }
     };
 
-    // 初始加载
+    // Initial load
     loadStatistics();
 
     return () => {
@@ -70,7 +70,7 @@ const UsageStatisticsSection = () => {
     setSessionPage(1);
   };
 
-  // 数字格式化
+  // Number formatting
   const formatNumber = (num: number): string => {
     if (num >= 1_000_000_000) return `${(num / 1_000_000_000).toFixed(1)}B`;
     if (num >= 1_000_000) return `${(num / 1_000_000).toFixed(1)}M`;
@@ -101,7 +101,7 @@ const UsageStatisticsSection = () => {
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
-  // 相对时间格式化（用于最后更新时间）
+  // Relative time formatting (for last updated time)
   const formatRelativeTime = (timestamp: number): string => {
     const now = Date.now();
     const diffMs = now - timestamp;
@@ -116,7 +116,7 @@ const UsageStatisticsSection = () => {
     return formatDate(timestamp);
   };
 
-  // 趋势渲染函数
+  // Trend rendering function
   const renderTrend = (value: number) => {
     if (value === 0) return <span className="trend neutral">→ 0% {t('usage.comparedToLastWeek')}</span>;
     const isUp = value > 0;
@@ -127,7 +127,7 @@ const UsageStatisticsSection = () => {
     );
   };
 
-  // 日期筛选函数
+  // Date range filter function
   const filterByDateRange = <T extends { timestamp?: number; date?: string }>(
     items: T[],
     range: DateRangeType
@@ -145,7 +145,7 @@ const UsageStatisticsSection = () => {
     });
   };
 
-  // 筛选和排序会话
+  // Filter and sort sessions
   const filteredSessions = filterByDateRange(statistics?.sessions || [], dateRange).slice().sort((a, b) => {
     if (sessionSortBy === 'cost') {
       return b.cost - a.cost;
@@ -161,13 +161,13 @@ const UsageStatisticsSection = () => {
 
   const totalPages = Math.ceil(filteredSessions.length / sessionsPerPage);
 
-  // 获取Token百分比
+  // Get token percentage
   const getTokenPercentage = (value: number): number => {
     if (!statistics || statistics.totalUsage.totalTokens === 0) return 0;
     return (value / statistics.totalUsage.totalTokens) * 100;
   };
 
-  // 筛选日期范围内的数据
+  // Filter data within date range
   const getFilteredDailyUsage = (): DailyUsage[] => {
     if (!statistics) return [];
 
@@ -580,32 +580,34 @@ const UsageStatisticsSection = () => {
                           ))}
                         </div>
 
-                        {/* 柱状图 */}
-                        <div className="chart-bars">
-                          {filteredDailyUsage.map((day) => {
-                            const height = maxCost > 0 ? (day.cost / maxCost) * 100 : 0;
-                            return (
-                              <div key={day.date} className="chart-bar-wrapper">
-                                <div className="chart-bar-container">
-                                  <div
-                                    className="chart-bar"
-                                    style={{ height: `${height}%` }}
-                                    onMouseEnter={(e) => {
-                                      const rect = e.currentTarget.getBoundingClientRect();
-                                      setTooltip({
-                                        visible: true,
-                                        x: rect.left + rect.width / 2,
-                                        y: rect.top,
-                                        content: { date: day.date, cost: day.cost, sessions: day.sessions }
-                                      });
-                                    }}
-                                    onMouseLeave={() => setTooltip(prev => ({ ...prev, visible: false }))}
-                                  />
+                        {/* 柱状图滚动区域 */}
+                        <div className="chart-scroll-view">
+                          <div className="chart-bars">
+                            {filteredDailyUsage.map((day) => {
+                              const height = maxCost > 0 ? (day.cost / maxCost) * 100 : 0;
+                              return (
+                                <div key={day.date} className="chart-bar-wrapper">
+                                  <div className="chart-bar-container">
+                                    <div
+                                      className="chart-bar"
+                                      style={{ height: `${height}%` }}
+                                      onMouseEnter={(e) => {
+                                        const rect = e.currentTarget.getBoundingClientRect();
+                                        setTooltip({
+                                          visible: true,
+                                          x: rect.left + rect.width / 2,
+                                          y: rect.top,
+                                          content: { date: day.date, cost: day.cost, sessions: day.sessions }
+                                        });
+                                      }}
+                                      onMouseLeave={() => setTooltip(prev => ({ ...prev, visible: false }))}
+                                    />
+                                  </div>
+                                  <div className="chart-label">{formatChineseDate(day.date)}</div>
                                 </div>
-                                <div className="chart-label">{formatShortDate(day.date)}</div>
-                              </div>
-                            );
-                          })}
+                              );
+                            })}
+                          </div>
                         </div>
                       </div>
                     </div>
