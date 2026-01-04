@@ -46,7 +46,7 @@ export const ChatInputBox = ({
   usageMaxTokens,
   showUsage = true,
   attachments: externalAttachments,
-  placeholder: placeholderProp,
+  placeholder = '',  // Will be passed from parent via t('chat.inputPlaceholder')
   disabled = false,
   value,
   onSubmit,
@@ -67,7 +67,6 @@ export const ChatInputBox = ({
   onOpenAgentSettings,
 }: ChatInputBoxProps) => {
   const { t } = useTranslation();
-  const placeholder = placeholderProp ?? t('chat.inputPlaceholder');
 
   // Internal attachments state (if not provided externally)
   const [internalAttachments, setInternalAttachments] = useState<Attachment[]>([]);
@@ -1793,7 +1792,7 @@ export const ChatInputBox = ({
         items={fileCompletion.items}
         selectedIndex={fileCompletion.activeIndex}
         loading={fileCompletion.loading}
-        emptyText="无匹配文件"
+        emptyText={t('chat.noMatchingFiles')}
         onClose={fileCompletion.close}
         onSelect={(_, index) => fileCompletion.selectIndex(index)}
         onMouseEnter={fileCompletion.handleMouseEnter}
@@ -1807,7 +1806,7 @@ export const ChatInputBox = ({
         items={commandCompletion.items}
         selectedIndex={commandCompletion.activeIndex}
         loading={commandCompletion.loading}
-        emptyText="无匹配命令"
+        emptyText={t('chat.noMatchingCommands')}
         onClose={commandCompletion.close}
         onSelect={(_, index) => commandCompletion.selectIndex(index)}
         onMouseEnter={commandCompletion.handleMouseEnter}
@@ -1821,7 +1820,7 @@ export const ChatInputBox = ({
         items={agentCompletion.items}
         selectedIndex={agentCompletion.activeIndex}
         loading={agentCompletion.loading}
-        emptyText="无可用智能体"
+        emptyText={t('chat.noAvailableAgents')}
         onClose={agentCompletion.close}
         onSelect={(_, index) => agentCompletion.selectIndex(index)}
         onMouseEnter={agentCompletion.handleMouseEnter}
