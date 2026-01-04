@@ -5,7 +5,6 @@
 
 import { query } from '@anthropic-ai/claude-agent-sdk';
 import Anthropic from '@anthropic-ai/sdk';
-import { AnthropicBedrock } from '@anthropic-ai/bedrock-sdk';
 import { randomUUID } from 'crypto';
 
 import { setupApiKey, isCustomBaseUrl, loadClaudeSettings, hasCliSessionAuth } from '../../config/api-config.js';
@@ -312,8 +311,6 @@ export async function sendMessageWithAnthropicSDK(message, resumeSessionId, cwd,
       });
       delete process.env.ANTHROPIC_API_KEY;
       process.env.ANTHROPIC_AUTH_TOKEN = apiKey;
-    } else if (authType === 'aws_bedrock') {
-      client = new AnthropicBedrock();
     } else {
       client = new Anthropic({
         apiKey,

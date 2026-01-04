@@ -64,10 +64,6 @@ export function setupApiKey() {
     apiKey = settings.env.ANTHROPIC_API_KEY;
     authType = 'api_key';  // x-api-key 认证
     apiKeySource = 'settings.json (ANTHROPIC_API_KEY)';
-  } else if (settings?.env?.CLAUDE_CODE_USE_BEDROCK === '1' || settings?.env?.CLAUDE_CODE_USE_BEDROCK === 1 || settings?.env?.CLAUDE_CODE_USE_BEDROCK === 'true' || settings?.env?.CLAUDE_CODE_USE_BEDROCK === true) {
-    apiKey = settings?.env?.CLAUDE_CODE_USE_BEDROCK;
-    authType = 'aws_bedrock';  // aws_bedrock 认证
-    apiKeySource = 'settings.json (AWS_BEDROCK)';
   }
 
   if (settings?.env?.ANTHROPIC_BASE_URL) {
@@ -97,11 +93,8 @@ export function setupApiKey() {
   // 根据认证类型设置对应的环境变量
   if (authType === 'auth_token') {
     process.env.ANTHROPIC_AUTH_TOKEN = apiKey;
-    // 清除 ANTHROPIC_API_KEY 避免混淆
+    // Clear ANTHROPIC_API_KEY to avoid confusion
     delete process.env.ANTHROPIC_API_KEY;
-  } else if (authType === 'aws_bedrock') {
-    delete process.env.ANTHROPIC_API_KEY;
-    delete process.env.ANTHROPIC_AUTH_TOKEN;
   } else {
     process.env.ANTHROPIC_API_KEY = apiKey;
     // 清除 ANTHROPIC_AUTH_TOKEN 避免混淆
