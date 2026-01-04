@@ -56,7 +56,6 @@ src/main/resources/html/*
 .specify
 .claude
 specs
-CLAUDE.md
 .idea/copilot*
 **/.nvmrc
 .github/*.md
