@@ -8,13 +8,13 @@
 
 ## Current Status
 
-**Last Sync**: January 5, 2026 (Session 3)  
-**Branch**: copilot/update-sync-log-file  
-**Commits Behind**: ~26 commits (reduced from ~30)  
-**Last Session**: 1 commit successfully integrated (d35df2d - i18n enhancements)  
-**Next Target**: 1 remaining i18n commit (32a7ae4) or review other upstream commits
+**Last Sync**: January 5, 2026 (Session 4)  
+**Branch**: copilot/cherry-pick-i18n-commit  
+**Commits Behind**: ~25 commits (reduced from ~26)  
+**Last Session**: 1 commit successfully integrated (32a7ae4 - MCP/Skills i18n completeness)  
+**Next Target**: Review other upstream commits for valuable features
 
-> **📋 For Next Agent**: d35df2d completed successfully. Consider 32a7ae4 (MCP/Skills i18n) or review other upstream features
+> **📋 For Next Agent**: 32a7ae4 completed successfully. i18n series complete. Consider reviewing other upstream features or bug fixes.
 
 ---
 
@@ -345,6 +345,74 @@ Track cherry-picks that failed and need investigation.
 
 ---
 
+#### Session 4 - January 5, 2026 (MCP/Skills i18n - 32a7ae4)
+
+**Status**: ✅ Complete  
+**Commits Attempted**: 1  
+**Commits Successfully Picked**: 1  
+**Agent**: GitHub Copilot
+
+**Summary**: Successfully cherry-picked 32a7ae4 (MCP/Skills i18n completeness) completing the i18n enhancement series. Resolved 28 conflicts across 4 TypeScript files using Python script for efficient batch resolution.
+
+**Results**:
+
+##### Successfully Cherry-Picked
+
+1. **32a7ae4**: MCP/Skills i18n completeness & usage statistics improvements
+   - **Files Changed**: 14 files
+     - Java files (2): Token overflow fix (int → long), settings updates
+     - React/TypeScript (4): Usage statistics, MCP dialogs, Skills dialog
+     - Locale files (6): All updated (en, es, fr, hi, zh, zh-TW) - ja.json already current
+     - Style files (2): Scrollable chart view
+   - **Conflicts**: 4 TypeScript files, 28 conflict markers resolved
+     - UsageStatisticsSection.tsx: Fixed Chinese function name (formatChineseDate → formatShortDate)
+     - McpHelpDialog.tsx: Replaced hardcoded English with i18n t() calls (7 conflicts)
+     - McpServerDialog.tsx: Replaced hardcoded English with i18n t() calls (8 conflicts)
+     - SkillHelpDialog.tsx: Replaced hardcoded English with i18n t() calls (12 conflicts)
+   - **Resolution**:
+     - Used Python script for batch conflict resolution (accepted upstream i18n)
+     - Translated all Chinese comments to English (fork standard)
+     - Fixed Chinese colons (：→ :) in Skills dialog
+     - Java files auto-merged successfully
+     - Locale files auto-merged (ja.json already up-to-date from Session 3)
+     - Style files auto-merged (scrollable chart improvements)
+   - **Commit**: c5602f3
+   - **Key Features Added**:
+     - Complete i18n for MCP help dialog (~40 new keys)
+     - Complete i18n for Skills help dialog (~50 new keys)
+     - Token overflow fix (int → long for large token counts)
+     - Scrollable usage statistics chart view
+     - ~100+ new i18n keys across 6 locales
+   - **Notes**:
+     - Python batch resolution script very efficient (28 conflicts in one command)
+     - Post-resolution Chinese comment translation crucial for fork standards
+     - ja.json was already complete from Session 3, no changes needed
+     - All auto-merges successful for Java, locale, and style files
+
+**Commits Behind**:
+- Before: ~26 commits
+- After: ~25 commits (1 picked)
+- **Reduction**: 1 major UX/i18n improvement integrated
+
+**i18n Series Complete**:
+- ✅ Session 3: d35df2d (UI text i18n)
+- ✅ Session 4: 32a7ae4 (MCP/Skills help i18n)
+- Result: Comprehensive i18n coverage across all major dialogs
+
+**Next Session Priorities**:
+1. Review other upstream commits for valuable features
+2. Consider UI improvements or bug fixes
+3. Test all i18n changes in runtime
+
+**Learnings**:
+- Python batch resolution script is essential for large i18n conflicts
+- Auto-merge worked well for Java, locale, and style files
+- Chinese comment translation is a necessary post-resolution step
+- Accepting upstream i18n structure is the right pattern (maintains consistency)
+- ja.json from Session 3 was comprehensive enough to avoid changes
+
+---
+
 ## Overall Progress Summary
 
 ### Sessions Overview
@@ -354,25 +422,27 @@ Track cherry-picks that failed and need investigation.
 | 1 | Jan 5, 2026 | 0 | ✅ Complete | Documentation & setup |
 | 2 | Jan 5, 2026 | 3 | ✅ Complete | Bug fixes (fac0bff, e397cad, d1a7903) |
 | 3 | Jan 5, 2026 | 1 | ✅ Complete | i18n enhancements (d35df2d) |
-| **Total** | - | **4** | - | **4 high-priority commits integrated** |
+| 4 | Jan 5, 2026 | 1 | ✅ Complete | MCP/Skills i18n (32a7ae4) |
+| **Total** | - | **5** | - | **5 high-priority commits integrated** |
 
 ### Commits Tracking
 
-**Successfully Integrated** (4 commits):
+**Successfully Integrated** (5 commits):
 - ✅ fac0bff - Concurrency fixes (Session 2)
 - ✅ e397cad - Windows crash fix (Session 2)
 - ✅ d1a7903 - Node.js auto-detection (Session 2)
 - ✅ d35df2d - i18n enhancements (Session 3)
+- ✅ 32a7ae4 - MCP/Skills i18n completeness (Session 4)
 
-**Next Priority** (1 commit):
-- ⏸️ 32a7ae4 - MCP/Skills i18n completeness (Session 4 target)
+**Next Priority**:
+- Review other upstream commits for features or bug fixes
 
 **Already in Fork** (do NOT cherry-pick):
 - 🔵 d692a81 - IDE Language Detection (manually implemented)
 - 🔵 ca73535 - ACCEPT_EDITS Mode (manually implemented)
 - 🔵 a7735fd - macOS Keychain (manually implemented)
 
-**Commits Behind Upstream**: ~245 (down from ~249)
+**Commits Behind Upstream**: ~244 (down from ~245)
 - Many are minor version bumps, merges, or functionally equivalent
 - Focus on high-value feature commits, not just count
 
@@ -382,16 +452,17 @@ Track cherry-picks that failed and need investigation.
 Upstream Sync Progress (Jan 2026)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Priority Features (4/5 integrated):
-[████████████████████████░░░░] 80%
-✅ Concurrency  ✅ Crash Fix  ✅ Node.js  ✅ i18n-1  ⏸️ i18n-2
+Priority Features (5/5 integrated):
+[████████████████████████████] 100%
+✅ Concurrency  ✅ Crash Fix  ✅ Node.js  ✅ i18n-1  ✅ i18n-2
 
 Session Efficiency:
 Session 1: Setup/Docs        [████████████████████] Complete
 Session 2: 3 commits         [████████████████████] Complete  
 Session 3: 1 commit          [████████████████████] Complete
+Session 4: 1 commit          [████████████████████] Complete
 
-Next: Session 4 - Target 32a7ae4 or explore other valuable commits
+Next: Session 5 - Explore other valuable commits from upstream
 ```
 
 ---
