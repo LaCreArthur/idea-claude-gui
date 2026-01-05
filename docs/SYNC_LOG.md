@@ -160,8 +160,8 @@ Track cherry-picks that failed and need investigation.
 - Created v0.3.0 with 3 upstream features (manual implementation)
 - Attempted full merge (102 conflicts - aborted)
 - Created UPSTREAM_SYNC_STRATEGY.md
-- Created CHERRY_PICK_SESSION_GUIDE.md (13KB, 622 lines)
-- Created this tracking log (6KB, 229 lines)
+- Created CHERRY_PICK_SESSION_GUIDE.md (13KB)
+- Created this tracking log (SYNC_LOG.md)
 - Configured upstream remote: `zhukunpenglinyutong/idea-claude-code-gui`
 - Fetched upstream branches (main, v0.1.1-v0.1.4)
 - Verified all priority commits exist in upstream
