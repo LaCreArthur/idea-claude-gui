@@ -149,7 +149,7 @@ const PermissionDialog = ({
             <button
               className="command-toggle"
               onClick={() => setShowCommand(!showCommand)}
-              title={showCommand ? 'Collapse' : 'Expand'}
+              title={showCommand ? t('chat.collapse') : t('chat.expand')}
             >
               <span className={`codicon codicon-chevron-${showCommand ? 'up' : 'down'}`} />
             </button>
@@ -169,7 +169,7 @@ const PermissionDialog = ({
             onClick={handleApprove}
             onMouseEnter={() => setSelectedIndex(0)}
           >
-            <span className="option-text">Allow</span>
+            <span className="option-text">{t('permission.allow')}</span>
             <span className="option-key">1</span>
           </button>
           <button
@@ -177,7 +177,7 @@ const PermissionDialog = ({
             onClick={handleApproveAlways}
             onMouseEnter={() => setSelectedIndex(1)}
           >
-            <span className="option-text">Always allow</span>
+            <span className="option-text">{t('permission.allowAlways')}</span>
             <span className="option-key">2</span>
           </button>
           <button
@@ -185,7 +185,7 @@ const PermissionDialog = ({
             onClick={handleSkip}
             onMouseEnter={() => setSelectedIndex(2)}
           >
-            <span className="option-text">Deny</span>
+            <span className="option-text">{t('permission.deny')}</span>
             <span className="option-key">3</span>
           </button>
         </div>

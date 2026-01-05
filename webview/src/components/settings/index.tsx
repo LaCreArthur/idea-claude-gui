@@ -174,7 +174,7 @@ const SettingsView = ({ onClose, initialTab }: SettingsViewProps) => {
   // 显示切换成功弹窗
   const showSwitchSuccess = (message: string) => {
     console.log('[SettingsView] showSwitchSuccess called:', message);
-    showAlert('success', 'Switch Successful', message);
+    showAlert('success', t('toast.switchSuccess'), message);
   };
 
   useEffect(() => {
@@ -223,7 +223,7 @@ const SettingsView = ({ onClose, initialTab }: SettingsViewProps) => {
 
     window.showError = (message: string) => {
       console.log('[SettingsView] window.showError called:', message);
-      showAlert('error', 'Operation Failed', message);
+      showAlert('error', t('toast.operationFailed'), message);
       setLoading(false);
       setSavingNodePath(false);
       setSavingWorkingDirectory(false);
@@ -265,7 +265,7 @@ const SettingsView = ({ onClose, initialTab }: SettingsViewProps) => {
 
     window.showSuccess = (message: string) => {
       console.log('[SettingsView] window.showSuccess called:', message);
-      showAlert('success', 'Operation Successful', message);
+      showAlert('success', t('toast.operationSuccess'), message);
       setSavingNodePath(false);
       setSavingWorkingDirectory(false);
     };
@@ -481,7 +481,7 @@ const SettingsView = ({ onClose, initialTab }: SettingsViewProps) => {
     jsonConfig: string;
   }) => {
     if (!data.providerName) {
-      showAlert('warning', 'Notice', 'Please enter a provider name');
+      showAlert('warning', t('common.warning'), t('toast.pleaseEnterProviderName'));
       return;
     }
 
@@ -490,7 +490,7 @@ const SettingsView = ({ onClose, initialTab }: SettingsViewProps) => {
     try {
       parsedConfig = JSON.parse(data.jsonConfig || '{}');
     } catch (e) {
-      showAlert('error', 'Error', 'Invalid JSON configuration format. Please fix and save again.');
+      showAlert('error', t('common.error'), t('toast.invalidJsonConfig'));
       return;
     }
 
@@ -510,7 +510,7 @@ const SettingsView = ({ onClose, initialTab }: SettingsViewProps) => {
         ...updates
       };
       sendToJava(`add_provider:${JSON.stringify(newProvider)}`);
-      addToast('Provider added successfully', 'success');
+      addToast(t('toast.providerAdded'), 'success');
     } else {
       // 更新现有供应商
       if (!providerDialog.provider) return;
@@ -526,7 +526,7 @@ const SettingsView = ({ onClose, initialTab }: SettingsViewProps) => {
         updates,
       };
       sendToJava(`update_provider:${JSON.stringify(updateData)}`);
-      addToast('Provider updated successfully', 'success');
+      addToast(t('toast.providerUpdated'), 'success');
 
       // 如果是当前正在使用的供应商，更新后立即重新应用配置
       if (isActive) {
@@ -571,7 +571,7 @@ const SettingsView = ({ onClose, initialTab }: SettingsViewProps) => {
     console.log('[SettingsView] confirmDeleteProvider - sending delete_provider:', provider.id);
     const data = { id: provider.id };
     sendToJava(`delete_provider:${JSON.stringify(data)}`);
-    addToast('Provider deleted successfully', 'success');
+    addToast(t('toast.providerDeleted'), 'success');
     setLoading(true);
     setDeleteConfirm({ isOpen: false, provider: null });
   };
@@ -733,10 +733,10 @@ const SettingsView = ({ onClose, initialTab }: SettingsViewProps) => {
       {/* 删除确认弹窗 */}
       <ConfirmDialog
         isOpen={deleteConfirm.isOpen}
-        title="Confirm Delete"
+        title={t('settings.provider.deleteConfirm')}
         message={t('settings.provider.deleteProviderMessage', { name: deleteConfirm.provider?.name || '' })}
-        confirmText="Delete"
-        cancelText="Cancel"
+        confirmText={t('common.delete')}
+        cancelText={t('common.cancel')}
         onConfirm={confirmDeleteProvider}
         onCancel={cancelDeleteProvider}
       />

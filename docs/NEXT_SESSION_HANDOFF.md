@@ -1,22 +1,25 @@
 # Next Cherry-Pick Session - Quick Start Guide
 
 **Created**: January 5, 2026  
+**Updated**: January 5, 2026 (Session 3 Complete)  
 **For**: Next agent continuing upstream synchronization  
-**Context**: Session 2 completed with 3/5 commits successfully integrated
+**Context**: Sessions 2 & 3 completed - 4 high-priority commits integrated
 
 ---
 
 ## 🎯 Quick Summary
 
-**Current State**: Successfully cherry-picked 3 high-priority commits (concurrency fixes, Windows crash fix, Node.js auto-detection). 2 i18n-heavy commits deferred due to extensive merge conflicts.
+**Current State**: Successfully cherry-picked 4 priority commits across Sessions 2 & 3:
+- ✅ Session 2: 3 bug fixes (concurrency, Windows crash, Node.js auto-detection)
+- ✅ Session 3: 1 i18n enhancement (d35df2d - UI text improvements)
 
-**Your Mission**: Complete the remaining 2 i18n commits (d35df2d, 32a7ae4) in a dedicated translation review session.
+**Your Mission**: Cherry-pick remaining priority commit 32a7ae4 (MCP/Skills i18n completeness) OR evaluate and cherry-pick other valuable upstream features.
 
 ---
 
-## 📊 What Was Accomplished (Session 2)
+## 📊 What Was Accomplished
 
-### ✅ Successfully Cherry-Picked
+### Session 2: Bug Fixes & Stability Improvements
 
 | Commit | Description | Conflicts | Status |
 |--------|-------------|-----------|--------|
@@ -24,80 +27,99 @@
 | `e397cad` | Windows crash fix | 3 files | ✅ Done (d091c54) |
 | `d1a7903` | Node.js auto-detection | None | ✅ Done (cf4f551) |
 
-**Key Changes Integrated**:
-- Thread-safe execution with Alarm (replaced SwingUtilities)
-- File existence checks to prevent race conditions
-- ErrorBoundary component for crash prevention
-- Fixed useEffect closure issues in dialogs
-- Automatic Node.js path detection on first install
+**Key Changes**: Thread-safe execution, ErrorBoundary, file race condition fixes, Node.js auto-detection
+
+### Session 3: i18n Enhancement (d35df2d)
+
+| Commit | Description | Conflicts | Status |
+|--------|-------------|-----------|--------|
+| `d35df2d` | i18n enhancements | 14 files | ✅ Done (dd7957b) |
+
+**Key Changes**: 
+- Replaced hardcoded English strings with i18n t() calls in 9 React components
+- Added 19 new i18n keys (UI elements, permissions, toast messages)
+- Updated all 7 locale files (en, es, fr, hi, ja, zh, zh-TW)
+- Restored ja.json locale file
 
 **Conflicts Resolution Pattern**:
-- Translated all Chinese comments to English (fork standard)
-- Kept fork's version numbers and group IDs
-- Merged upstream logic while preserving fork's structure
+- TypeScript: Accepted upstream i18n structure (t() calls over hardcoded strings)
+- Locales: Merged fork's existing translations with upstream's new keys
+- Maintained English comments throughout (fork standard)
 
 ---
 
-## 🔜 What's Remaining (Your Task)
+## 🔜 What's Next (Your Task)
 
-### Commit 4: d35df2d - i18n enhancements
+### Priority Option 1: Complete i18n Series
 
-**Description**: UI text improvements and translation completeness  
-**Estimated Conflicts**: 10+ files (all locale files)  
-**Priority**: Medium (UX improvement)
+**Commit 5: 32a7ae4 - MCP/Skills i18n completeness**
 
-**Files Expected to Conflict**:
-```
-webview/src/App.tsx
-webview/src/components/ChatInputBox/ChatInputBox.tsx
-webview/src/components/PermissionDialog.tsx
-webview/src/components/ScrollControl.tsx
-webview/src/components/mcp/McpSettingsSection.tsx
-webview/src/components/settings/index.tsx
-webview/src/components/skills/SkillsSettingsSection.tsx
-webview/src/i18n/locales/en.json
-webview/src/i18n/locales/es.json
-webview/src/i18n/locales/fr.json
-webview/src/i18n/locales/hi.json
-webview/src/i18n/locales/ja.json (may be deleted in fork)
-webview/src/i18n/locales/zh-TW.json
-webview/src/i18n/locales/zh.json
-```
-
-**Resolution Strategy**:
-1. For TypeScript/React files: Keep fork's English text, accept upstream's structure improvements
-2. For locale JSON files: 
-   - Keep fork's existing translations
-   - Add new keys from upstream
-   - Translate any Chinese values to English
-   - Maintain consistency across all 6 locales (en, es, fr, hi, ja, zh, zh-TW)
-
-**Cherry-Pick Command**:
-```bash
-git cherry-pick d35df2d
-```
-
----
-
-### Commit 5: 32a7ae4 - MCP/Skills i18n completeness
-
-**Description**: Complete i18n for MCP and Skills dialogs  
-**Estimated Conflicts**: 5-8 locale files  
-**Priority**: Low (translation completeness)  
-**Dependencies**: Should be done AFTER d35df2d
+**Description**: Complete i18n support for MCP and Skills help dialogs + usage statistics improvements  
+**Estimated Conflicts**: 5-15 files (locale files + UI components)  
+**Priority**: Medium (translation completeness, UX improvement)  
+**Dependencies**: Follows d35df2d (completed in Session 3)
 
 **Files Expected to Conflict**:
 ```
-webview/src/i18n/locales/*.json (5-8 files)
+Java files (2):
+- ClaudeHistoryReader.java (token overflow fix: int → long)
+- SettingsHandler.java
+
+React/TypeScript (5):
+- UsageStatisticsSection.tsx (scrollable chart view)
+- McpHelpDialog.tsx (i18n completion)
+- McpServerDialog.tsx (i18n completion)
+- SkillHelpDialog.tsx (i18n completion)
+
+Locale files (7):
+- webview/src/i18n/locales/*.json (en, es, fr, hi, ja, zh, zh-TW)
+- ~100+ new i18n keys for MCP and Skills dialogs
+
+Styles (2):
+- usage-chart.less
+- usage.less
 ```
 
 **Resolution Strategy**:
-1. Same as d35df2d - keep existing, add new, translate Chinese
-2. Focus on MCP and Skills dialog strings
+1. Java files: Accept upstream logic changes (token overflow fix)
+2. TypeScript: Accept upstream i18n structure (similar to d35df2d)
+3. Locale files: Merge fork's existing + upstream's new keys (same pattern as Session 3)
+4. Style files: Accept upstream improvements
 
 **Cherry-Pick Command**:
 ```bash
 git cherry-pick 32a7ae4
+```
+
+**Expected Outcome**: Complete i18n coverage for MCP/Skills + better usage statistics display
+
+---
+
+### Priority Option 2: Evaluate Other Upstream Features
+
+If 32a7ae4 is too complex or not needed, explore these valuable upstream commits:
+
+**Recent High-Value Commits** (from `git log copilot/update-sync-log-file..upstream/main`):
+
+1. **58417f9**: General UI improvements and i18n enhancements
+2. **2c8b24f**: Improve partially localized copy & UI
+3. **8d3df5b**: Adapt CLI claude code login questions
+4. **0713867**: v0.1.4-beta4 official version features
+5. **94b6686**: Add `/init` and `/review` slash commands + optimizations
+6. **43b7631**: Agent functionality (prompt management)
+7. **07a34a4**: Ask User Question feature adaptation
+
+**Note**: Commits `d692a81` (IDE language detection), `ca73535` (ACCEPT_EDITS), and `a7735fd` (macOS Keychain) are already manually implemented in the fork - **DO NOT cherry-pick these**.
+
+**Evaluation Approach**:
+```bash
+# Review a specific commit
+git show <commit-hash> --stat
+
+# Check for conflicts before cherry-picking
+git show <commit-hash> -- <file-path>
+
+# Start with smallest/cleanest commits first
 ```
 
 ---
@@ -109,9 +131,8 @@ git cherry-pick 32a7ae4
 ```bash
 cd /home/runner/work/idea-claude-gui/idea-claude-gui
 
-# Check branch
+# Check branch - should be main or a feature branch based on latest
 git branch --show-current
-# Expected: copilot/create-cherry-pick-docs
 
 # Verify clean state
 git status
@@ -121,6 +142,9 @@ git status
 git remote -v | grep upstream
 # Expected: upstream https://github.com/zhukunpenglinyutong/idea-claude-code-gui.git
 
+# If upstream not configured:
+git remote add upstream https://github.com/zhukunpenglinyutong/idea-claude-code-gui.git
+
 # Fetch latest upstream
 git fetch upstream
 ```
@@ -128,65 +152,76 @@ git fetch upstream
 ### 2. Review Current State
 
 ```bash
-# See what was done
-git log --oneline -12
+# See recent commits
+git log --oneline -10
 
-# Check commits behind
+# Check how many commits we're behind upstream
 git log --oneline HEAD..upstream/main | wc -l
-# Expected: ~27 commits
+# Note: Total is ~249 commits, but many are minor/already functionally equivalent
+
+# Review what's been integrated
+# Session 2: fac0bff (concurrency), e397cad (crash fix), d1a7903 (Node.js)
+# Session 3: d35df2d (i18n enhancements)
 ```
 
 ### 3. Start Cherry-Picking
 
-#### Option A: Cherry-pick d35df2d (i18n enhancements)
+#### Option A: Cherry-pick 32a7ae4 (MCP/Skills i18n completeness)
 
 ```bash
 # Start the cherry-pick
-GIT_EDITOR=true git cherry-pick d35df2d
+GIT_EDITOR=true git cherry-pick 32a7ae4
 
 # Check conflicts
 git status
 
-# Expected conflicts (10+ files):
-# - webview/src/components/*.tsx (7 files)
-# - webview/src/i18n/locales/*.json (7 files)
+# Expected conflicts (~15 files):
+# - Java files: 2 (ClaudeHistoryReader.java, SettingsHandler.java)
+# - React/TypeScript: 5 (UsageStatisticsSection, MCP/Skills dialogs)
+# - Locale files: 7 (all language files)
+# - Styles: 2 (usage-chart.less, usage.less)
 ```
 
-**Conflict Resolution Steps**:
+**Conflict Resolution Steps** (follow Session 3 patterns):
 
-1. **For React/TypeScript files**:
-   ```bash
-   # Example: webview/src/App.tsx
-   # Keep fork's English text, accept structural changes
-   # Look for conflict markers: <<<<<<<, =======, >>>>>>>
-   ```
-
-2. **For locale JSON files**:
-   ```bash
-   # For each locale file:
-   # 1. Keep all existing fork translations
-   # 2. Add new keys from upstream
-   # 3. Translate Chinese values to English (for en.json)
-   # 4. Use English as base for other locales (es, fr, hi, ja, zh, zh-TW)
-   ```
-
-3. **Resolve and continue**:
-   ```bash
-   # After fixing each file
-   git add <file>
+1. **For Java files**:
+   - Accept upstream logic changes (token overflow fix: int → long)
    
-   # When all resolved
+2. **For React/TypeScript files**:
+   - Accept upstream i18n structure (t() calls)
+   - Similar to d35df2d resolution
+
+3. **For locale JSON files**:
+   - Merge fork's existing translations with upstream's new keys
+   - Maintain consistency across all 7 locales
+   - Pattern: Keep existing + Add new keys + Translate any Chinese
+
+4. **For style files**:
+   - Accept upstream improvements
+
+5. **Resolve and continue**:
+   ```bash
+   # After fixing all conflicts
+   git add .
+   
+   # Continue cherry-pick
    git cherry-pick --continue
    ```
 
-#### Option B: If conflicts are too complex
+#### Option B: Evaluate and cherry-pick other upstream commits
 
 ```bash
-# Abort and document
-git cherry-pick --abort
+# Review a specific commit before cherry-picking
+git show <commit-hash> --stat
 
-# Update SYNC_LOG.md with blocker details
-# Create detailed conflict analysis in docs/I18N_CONFLICTS_ANALYSIS.md
+# Check what files would conflict
+git show <commit-hash> | head -50
+
+# Try cherry-pick
+GIT_EDITOR=true git cherry-pick <commit-hash>
+
+# If conflicts are too complex, abort and document
+git cherry-pick --abort
 ```
 
 ### 4. Test After Cherry-Pick
@@ -206,15 +241,31 @@ cd ..
 
 After each successful cherry-pick, update `docs/SYNC_LOG.md`:
 
+Add a new session entry:
 ```markdown
-4. **d35df2d**: i18n enhancements
+#### Session X - [Date] ([Commit Description])
+
+**Status**: ✅ Complete  
+**Commits Attempted**: 1  
+**Commits Successfully Picked**: 1  
+
+**Results**:
+1. **[commit-hash]**: [Description]
    - **Files Changed**: X files
    - **Conflicts**: Y resolved
    - **Commit**: <new-commit-hash>
-   - **Notes**: [what you did]
+   - **Notes**: [what you did and key learnings]
 ```
 
-Then commit:
+Update the "Current Status" section at the top:
+```markdown
+**Last Sync**: [Date] (Session X)  
+**Commits Behind**: ~[number] commits
+**Last Session**: [summary]
+**Next Target**: [next commit or action]
+```
+
+Then commit via report_progress tool:
 ```bash
 # This will be done via report_progress tool
 # Don't use git commit directly
@@ -336,24 +387,26 @@ git checkout --theirs <file>
 ## 📈 Success Metrics
 
 **Minimum Target**:
-- At least 1 commit cherry-picked (d35df2d)
-- All tests passing
+- At least 1 commit cherry-picked (32a7ae4 or other valuable commit)
+- All tests passing (or pre-existing failures documented)
 - Build successful
-- All translations complete (6 locales)
+- All translations complete (7 locales: en, es, fr, hi, ja, zh, zh-TW)
 
 **Optimal Target**:
-- Both commits cherry-picked (d35df2d, 32a7ae4)
-- Commits behind: 27 → 25
+- Cherry-pick 32a7ae4 (MCP/Skills i18n)
+- Or 2-3 smaller valuable commits
+- Commits behind: ~249 → fewer (focus on high-value commits, not count)
 - No regressions
 - English comments maintained
 
 **Quality Checklist**:
 - [ ] All Chinese comments translated to English
-- [ ] All 6 locale files updated consistently
+- [ ] All 7 locale files updated consistently
 - [ ] Fork's version numbers preserved
-- [ ] Build succeeds
-- [ ] No console errors
-- [ ] SYNC_LOG.md updated
+- [ ] Build succeeds (or at least compiles)
+- [ ] No new console errors
+- [ ] SYNC_LOG.md updated with session details
+- [ ] NEXT_SESSION_HANDOFF.md updated for next agent
 
 ---
 
@@ -369,7 +422,7 @@ git checkout --theirs <file>
 ```markdown
 ## Blocked Cherry-Picks
 
-### Commit: d35df2d
+### Commit: [commit-hash]
 **Reason**: [specific issue]
 **Conflicts**: [list files]
 **Recommendation**: [next steps]
@@ -403,17 +456,18 @@ git checkout --theirs <file>
 
 ## 🔍 Known Challenges
 
-### Challenge 1: Missing ja.json in fork
-**Issue**: Fork may have deleted `webview/src/i18n/locales/ja.json`  
-**Solution**: Accept upstream version, or skip if not critical
+### Challenge 1: ja.json restoration
+**Issue**: Fork had deleted `webview/src/i18n/locales/ja.json`  
+**Solution**: ✅ Resolved in Session 3 - ja.json restored from upstream
 
 ### Challenge 2: Extensive locale conflicts
 **Issue**: All 7 locale files may have conflicts  
 **Solution**: Use pattern matching, resolve one locale as template, apply to others
+**Session 3 Learning**: Python script effective for batch resolution
 
 ### Challenge 3: React component structure changes
 **Issue**: Upstream may have refactored components  
-**Solution**: Focus on keeping English text, accept structural improvements
+**Solution**: Accept i18n structural improvements (t() calls), maintain English text
 
 ---
 
@@ -439,8 +493,9 @@ When done:
 
 ---
 
-**Good luck! The groundwork is done, conflicts are expected and documented. Focus on quality over quantity.**
+**Good luck! Session 3 proved the process works. Focus on quality over quantity - each high-value commit is progress.**
 
 *Document created: January 5, 2026*  
-*Last session: Session 2 - 3 commits integrated*  
-*Next target: d35df2d (i18n) and 32a7ae4 (MCP/Skills i18n)*
+*Updated: January 5, 2026 (Post-Session 3)*  
+*Last session: Session 3 - d35df2d integrated (i18n enhancements)*  
+*Next target: 32a7ae4 (MCP/Skills i18n) or other valuable commits*

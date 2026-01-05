@@ -556,7 +556,7 @@ export function McpSettingsSection() {
                       <button
                         className="action-btn"
                         onClick={() => handleCopyUrl(server.homepage!)}
-                        title="Copy homepage link"
+                        title={t('chat.copyHomepageLink')}
                       >
                         <span className="codicon codicon-home"></span>
                         {t('mcp.homepage')}
@@ -566,7 +566,7 @@ export function McpSettingsSection() {
                       <button
                         className="action-btn"
                         onClick={() => handleCopyUrl(server.docs!)}
-                        title="Copy docs link"
+                        title={t('chat.copyDocsLink')}
                       >
                         <span className="codicon codicon-book"></span>
                         {t('mcp.docs')}
@@ -575,7 +575,7 @@ export function McpSettingsSection() {
                     <button
                       className="action-btn edit-btn"
                       onClick={() => handleEdit(server)}
-                      title="Edit configuration"
+                      title={t('chat.editConfig')}
                     >
                       <span className="codicon codicon-edit"></span>
                       {t('mcp.edit')}
@@ -583,7 +583,7 @@ export function McpSettingsSection() {
                     <button
                       className="action-btn delete-btn"
                       onClick={() => handleDelete(server)}
-                      title="Delete server"
+                      title={t('chat.deleteServer')}
                     >
                       <span className="codicon codicon-trash"></span>
                       {t('mcp.delete')}

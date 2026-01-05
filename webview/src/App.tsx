@@ -1655,11 +1655,11 @@ const App = () => {
                               }
                             }}
                             style={{ cursor: 'pointer' }}
-                            title="Click to preview full image"
+                            title={t('chat.clickToPreview')}
                           >
                             <img
                               src={block.src}
-                              alt="User uploaded image"
+                              alt={t('chat.userUploadedImage')}
                               style={{
                                 maxWidth: message.type === 'user' ? '200px' : '100%',
                                 maxHeight: message.type === 'user' ? '150px' : 'auto',
@@ -1687,7 +1687,7 @@ const App = () => {
                             </div>
                             {isThinkingExpanded(messageIndex, blockIndex) && (
                               <div className="thinking-content">
-                                {block.thinking ?? block.text ?? '(no thinking content)'}
+                                {block.thinking ?? block.text ?? t('chat.noThinkingContent')}
                               </div>
                             )}
                           </div>
