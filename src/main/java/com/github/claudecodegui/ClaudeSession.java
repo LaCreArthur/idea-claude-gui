@@ -102,6 +102,9 @@ public class ClaudeSession {
         permissionManager.setOnPermissionRequestedCallback(request -> {
             callbackHandler.notifyPermissionRequested(request);
         });
+        
+        // Initialize permission mode to default
+        permissionManager.setPermissionMode(PermissionManager.PermissionMode.DEFAULT);
     }
 
     public void setCallback(SessionCallback callback) {
@@ -684,6 +687,9 @@ public class ClaudeSession {
      */
     public void setPermissionMode(String mode) {
         state.setPermissionMode(mode);
+        // Convert string mode to enum and update PermissionManager
+        PermissionManager.PermissionMode enumMode = convertModeStringToEnum(mode);
+        permissionManager.setPermissionMode(enumMode);
     }
 
     /**
@@ -691,6 +697,29 @@ public class ClaudeSession {
      */
     public String getPermissionMode() {
         return state.getPermissionMode();
+    }
+
+    /**
+     * Convert permission mode string to enum
+     * Maps webview mode strings (acceptEdits, bypassPermissions, etc.) to Java enum values
+     */
+    private PermissionManager.PermissionMode convertModeStringToEnum(String mode) {
+        if (mode == null || mode.isEmpty()) {
+            return PermissionManager.PermissionMode.DEFAULT;
+        }
+        
+        switch (mode.toLowerCase()) {
+            case "acceptedits":
+                return PermissionManager.PermissionMode.ACCEPT_EDITS;
+            case "bypasspermissions":
+                return PermissionManager.PermissionMode.ALLOW_ALL;
+            case "default":
+            case "plan": // Plan mode not implemented yet, treat as DEFAULT
+                return PermissionManager.PermissionMode.DEFAULT;
+            default:
+                LOG.warn("[ClaudeSession] Unknown permission mode: " + mode + ", defaulting to DEFAULT");
+                return PermissionManager.PermissionMode.DEFAULT;
+        }
     }
 
     /**
