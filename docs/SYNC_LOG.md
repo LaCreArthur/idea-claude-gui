@@ -203,8 +203,8 @@ Track cherry-picks that failed and need investigation.
 #### Session 2 - January 5, 2026 (Cherry-Pick Execution)
 
 **Status**: 🔄 In Progress  
-**Commits Attempted**: 1  
-**Commits Successfully Picked**: 1  
+**Commits Attempted**: 2  
+**Commits Successfully Picked**: 2  
 **Agent**: GitHub Copilot
 
 **Results**:
@@ -223,8 +223,21 @@ Track cherry-picks that failed and need investigation.
      - Translated all Chinese comments to English per fork standards
    - **Tests**: Build has dependency issues (unrelated), code compiles syntactically
 
+2. **e397cad**: Windows crash fix
+   - **Files Changed**: 9 files (React components, ErrorBoundary, main.tsx)
+   - **Conflicts**: 3 files (CHANGELOG.md, build.gradle, PermissionDialog.tsx)
+   - **Resolution**: Kept fork's versions, accepted upstream bug fixes
+   - **Commit**: d091c54
+   - **Notes**:
+     - Added ErrorBoundary component to prevent application crashes
+     - Fixed useEffect dependency closure issues in PermissionDialog
+     - Optimized useEffect dependencies across dialog components
+     - Kept fork's version (v0.2.1) and group in build.gradle
+     - Kept fork's CHANGELOG structure
+   - **Tests**: React code updated, ErrorBoundary added
+
 ##### Next Steps
-- Continue with e397cad (Windows crash fix)
+- Continue with d1a7903 (Node.js auto-detect)
 - Then d1a7903 (Node.js auto-detect)
 - Monitor for conflicts and test after each
 
