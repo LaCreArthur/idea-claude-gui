@@ -89,14 +89,26 @@ What makes this fork distinct:
 
 Potential features to adopt when users request them:
 
-| Feature | Source | Complexity | Notes |
-|---------|--------|------------|-------|
-| Ask User Question | Upstream | Medium | Extend PermissionHandler pattern |
-| MCP Server Toggle | Upstream | Low | Partially implemented |
-| Slash commands | Upstream | Low | `/init`, `/review` |
-| IDE language detection | Upstream | Low | Improves i18n |
+| Feature | Source | Complexity | Status | Priority |
+|---------|--------|------------|--------|----------|
+| ~~Ask User Question~~ | ~~Upstream~~ | ~~Medium~~ | ✅ **Implemented in v0.2.1** | - |
+| ~~MCP Server Toggle~~ | ~~Upstream~~ | ~~Low~~ | ✅ **Implemented in v0.2.1** | - |
+| ACCEPT_EDITS Mode | Upstream | Medium | 📋 Planned for v0.3.0 | ⭐⭐⭐ HIGH |
+| IDE Language Detection | Upstream | Low | 📋 Planned for v0.3.0 | ⭐⭐⭐ HIGH |
+| macOS Keychain Support | Upstream | Low | 📋 Planned for v0.3.0 | ⭐⭐ MEDIUM |
+| Slash commands (/init, /review) | Upstream | Low | ⏸️ Deferred | ⭐ LOW |
+
+---
+
+## Upstream Evaluations
+
+| Date | Period Covered | Features Adopted | Document |
+|------|----------------|------------------|----------|
+| Jan 2026 | Dec 2025 - Jan 2026 | 3 features planned for v0.3.0 | [UPSTREAM_EVALUATION_2026_01.md](UPSTREAM_EVALUATION_2026_01.md) |
+
+Next evaluation: **February 2026** or when planning v0.4.0
 
 ---
 
 *Created: January 2026*
-*Last updated: January 2026*
+*Last updated: January 5, 2026*

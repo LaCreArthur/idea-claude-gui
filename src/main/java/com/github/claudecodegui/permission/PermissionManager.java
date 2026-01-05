@@ -13,9 +13,10 @@ public class PermissionManager {
 
     // 权限模式枚举
     public enum PermissionMode {
-        DEFAULT,    // 默认模式，每次询问
-        ALLOW_ALL,  // 允许所有工具调用
-        DENY_ALL    // 拒绝所有工具调用
+        DEFAULT,      // 默认模式，每次询问
+        ACCEPT_EDITS, // Accept Edits mode: Auto-approve file editing operations (Write, Edit, CreateDirectory, etc.)
+        ALLOW_ALL,    // 允许所有工具调用
+        DENY_ALL      // 拒绝所有工具调用
     }
 
     private PermissionMode mode = PermissionMode.DEFAULT;
@@ -60,6 +61,15 @@ public class PermissionManager {
         }
 
         // 检查全局权限模式
+        if (mode == PermissionMode.ACCEPT_EDITS) {
+            // ACCEPT_EDITS mode: Auto-approve file editing operations only
+            if (isAutoApprovedInAcceptEditsMode(toolName)) {
+                PermissionRequest request = new PermissionRequest(channelId, toolName, inputs, suggestions, project);
+                request.accept();
+                return request;
+            }
+            // For non-editing tools, fall through to create normal permission request
+        }
         if (mode == PermissionMode.ALLOW_ALL) {
             PermissionRequest request = new PermissionRequest(channelId, toolName, inputs, suggestions, project);
             request.accept();
@@ -177,6 +187,27 @@ public class PermissionManager {
         }
         // 简单的哈希实现，实际可以更复杂
         return String.valueOf(inputs.toString().hashCode());
+    }
+
+    /**
+     * Check if a tool should be auto-approved in ACCEPT_EDITS mode
+     * ACCEPT_EDITS mode auto-approves file editing operations while still prompting for read/execute operations
+     *
+     * @param toolName The name of the tool to check
+     * @return true if the tool should be auto-approved in ACCEPT_EDITS mode
+     */
+    private boolean isAutoApprovedInAcceptEditsMode(String toolName) {
+        if (toolName == null || toolName.isEmpty()) {
+            return false;
+        }
+        // Auto-approve file editing and manipulation tools
+        return "Write".equals(toolName)
+            || "Edit".equals(toolName)
+            || "MultiEdit".equals(toolName)
+            || "CreateDirectory".equals(toolName)
+            || "MoveFile".equals(toolName)
+            || "CopyFile".equals(toolName)
+            || "Rename".equals(toolName);
     }
 
     /**
