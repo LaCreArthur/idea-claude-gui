@@ -13,7 +13,7 @@ import java.util.*;
 import java.util.concurrent.*;
 
 /**
- * 权限服务 - 处理Node.js的权限请求
+ * Permission service - Handles Node.js permission requests
  */
 public class PermissionService {
 
@@ -27,9 +27,9 @@ public class PermissionService {
     private Thread watchThread;
     private boolean running = false;
 
-    // 记忆用户选择（工具+参数级别）
+    // Remember user choices (tool + parameters level)
     private final Map<String, Integer> permissionMemory = new ConcurrentHashMap<>();
-    // 工具级别权限记忆（仅工具名 -> 是否总是允许）
+    // Tool-level permission memory (tool name only -> whether always allow)
     private final Map<String, Boolean> toolOnlyPermissionMemory = new ConcurrentHashMap<>();
     private volatile PermissionDecisionListener decisionListener;
 
@@ -39,7 +39,7 @@ public class PermissionService {
     // AskUserQuestion dialog showers per project
     private final Map<Project, AskUserQuestionDialogShower> askUserQuestionDialogShowers = new ConcurrentHashMap<>();
 
-    // 调试日志辅助方法
+    // Debug logging helper method
     private void debugLog(String tag, String message) {
         LOG.debug(String.format("[%s] %s", tag, message));
     }
@@ -169,11 +169,11 @@ public class PermissionService {
     }
 
     /**
-     * 注册权限对话框显示器（用于显示前端弹窗）
-     * 支持多项目：每个项目注册自己的显示器
+     * Register permission dialog shower (for showing frontend dialogs)
+     * Supports multi-project: each project registers its own shower
      *
-     * @param project 项目
-     * @param shower 权限对话框显示器
+     * @param project Project
+     * @param shower Permission dialog shower
      */
     public void registerDialogShower(Project project, PermissionDialogShower shower) {
         if (project != null && shower != null) {
@@ -184,10 +184,10 @@ public class PermissionService {
     }
 
     /**
-     * 注销权限对话框显示器
-     * 在项目关闭时调用，防止内存泄漏
+     * Unregister permission dialog shower
+     * Called when project closes to prevent memory leaks
      *
-     * @param project 项目
+     * @param project Project
      */
     public void unregisterDialogShower(Project project) {
         if (project != null) {
@@ -244,11 +244,11 @@ public class PermissionService {
     }
 
     /**
-     * 根据文件路径匹配项目
-     * 从 inputs 中提取文件路径，然后找到对应的项目
+     * Match project based on file path
+     * Extract file path from inputs, then find corresponding project
      *
-     * @param inputs 权限请求的输入参数
-     * @return 匹配的项目对应的 DialogShower，如果匹配不到则返回第一个注册的
+     * @param inputs Input parameters from permission request
+     * @return DialogShower for matched project, or first registered if no match
      */
     private PermissionDialogShower findDialogShowerByInputs(JsonObject inputs) {
         if (dialogShowers.isEmpty()) {
@@ -311,33 +311,33 @@ public class PermissionService {
     }
 
     /**
-     * 从 inputs 中提取文件路径
-     * 支持多种字段：file_path、path、command 中的路径等
+     * Extract file path from inputs
+     * Supports multiple fields: file_path, path, paths in command, etc.
      */
     private String extractFilePathFromInputs(JsonObject inputs) {
         if (inputs == null) {
             return null;
         }
 
-        // 优先检查 file_path 字段（最常见）
+        // Check file_path field first (most common)
         if (inputs.has("file_path") && !inputs.get("file_path").isJsonNull()) {
             return inputs.get("file_path").getAsString();
         }
 
-        // 检查 path 字段
+        // Check path field
         if (inputs.has("path") && !inputs.get("path").isJsonNull()) {
             return inputs.get("path").getAsString();
         }
 
-        // 检查 notebook_path 字段（Jupyter notebooks）
+        // Check notebook_path field (Jupyter notebooks)
         if (inputs.has("notebook_path") && !inputs.get("notebook_path").isJsonNull()) {
             return inputs.get("notebook_path").getAsString();
         }
 
-        // 从 command 字段中提取路径（尝试找到绝对路径）
+        // Extract path from command field (try to find absolute path)
         if (inputs.has("command") && !inputs.get("command").isJsonNull()) {
             String command = inputs.get("command").getAsString();
-            // 简单的路径提取：查找以 / 开头的路径（Unix）或包含 :\ 的路径（Windows）
+            // Simple path extraction: look for paths starting with / (Unix) or containing :\ (Windows)
             String[] parts = command.split("\\s+");
             for (String part : parts) {
                 if (part.startsWith("/") || (part.length() > 2 && part.charAt(1) == ':')) {
@@ -401,7 +401,7 @@ public class PermissionService {
     }
 
     /**
-     * 启动权限服务
+     * Start permission service
      */
     public void start() {
         if (running) {
@@ -487,7 +487,7 @@ public class PermissionService {
     private final Set<String> processingRequests = ConcurrentHashMap.newKeySet();
 
     /**
-     * 处理权限请求
+     * Handle permission request
      */
     private void handlePermissionRequest(Path requestFile) {
         String fileName = requestFile.getFileName().toString();
@@ -503,7 +503,18 @@ public class PermissionService {
         try {
             Thread.sleep(100); // 等待文件写入完成
 
-            String content = Files.readString(requestFile);
+            if (!Files.exists(requestFile)) {
+                debugLog("FILE_MISSING", "Request file missing before read, likely already handled: " + fileName);
+                return;
+            }
+
+            String content;
+            try {
+                content = Files.readString(requestFile);
+            } catch (NoSuchFileException e) {
+                debugLog("FILE_MISSING", "Request file missing while reading, likely already handled: " + fileName);
+                return;
+            }
             debugLog("FILE_READ", "Read request content: " + content.substring(0, Math.min(200, content.length())) + "...");
 
             JsonObject request = gson.fromJson(content, JsonObject.class);
@@ -739,7 +750,18 @@ public class PermissionService {
         try {
             Thread.sleep(100); // Wait for file write to complete
 
-            String content = Files.readString(requestFile);
+            if (!Files.exists(requestFile)) {
+                debugLog("FILE_MISSING", "Ask-user-question file missing before read, likely already handled: " + fileName);
+                return;
+            }
+
+            String content;
+            try {
+                content = Files.readString(requestFile);
+            } catch (NoSuchFileException e) {
+                debugLog("FILE_MISSING", "Ask-user-question file missing while reading, likely already handled: " + fileName);
+                return;
+            }
             debugLog("FILE_READ", "Read ask-user-question content: " + content.substring(0, Math.min(200, content.length())) + "...");
 
             JsonObject request = gson.fromJson(content, JsonObject.class);
@@ -860,7 +882,7 @@ public class PermissionService {
     }
 
     /**
-     * 停止权限服务
+     * Stop permission service
      */
     public void stop() {
         running = false;
