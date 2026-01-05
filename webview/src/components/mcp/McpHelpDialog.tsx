@@ -1,11 +1,15 @@
+import { useTranslation } from 'react-i18next';
+
 interface McpHelpDialogProps {
   onClose: () => void;
 }
 
 /**
- * MCP Help Dialog
+ * MCP Help Information Dialog
  */
 export function McpHelpDialog({ onClose }: McpHelpDialogProps) {
+  const { t } = useTranslation();
+
   // Click overlay to close
   const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) {
@@ -17,7 +21,7 @@ export function McpHelpDialog({ onClose }: McpHelpDialogProps) {
     <div className="dialog-overlay" onClick={handleOverlayClick}>
       <div className="dialog mcp-help-dialog">
         <div className="dialog-header">
-          <h3>What is MCP?</h3>
+          <h3>{t('mcp.help.title')}</h3>
           <button className="close-btn" onClick={onClose}>
             <span className="codicon codicon-close"></span>
           </button>
@@ -28,41 +32,40 @@ export function McpHelpDialog({ onClose }: McpHelpDialogProps) {
             <section className="help-section">
               <h4>
                 <span className="codicon codicon-info"></span>
-                Model Context Protocol
+                {t('mcp.help.protocol.title')}
               </h4>
               <p>
-                MCP (Model Context Protocol) is an open protocol developed by Anthropic
-                that enables AI models to securely access external tools and data sources.
+                {t('mcp.help.protocol.description')}
               </p>
             </section>
 
             <section className="help-section">
               <h4>
                 <span className="codicon codicon-rocket"></span>
-                Key Features
+                {t('mcp.help.features.title')}
               </h4>
               <ul>
-                <li><strong>Tool Extensions</strong>: Add file system, network access, and other capabilities to Claude</li>
-                <li><strong>Data Connections</strong>: Connect to databases, APIs, and other external data sources</li>
-                <li><strong>Secure & Controlled</strong>: Strict permission controls and data isolation</li>
-                <li><strong>Easy Integration</strong>: Supports multiple programming languages and runtime environments</li>
+                <li><strong>{t('mcp.help.features.toolExtension.label')}</strong>：{t('mcp.help.features.toolExtension.description')}</li>
+                <li><strong>{t('mcp.help.features.dataConnection.label')}</strong>：{t('mcp.help.features.dataConnection.description')}</li>
+                <li><strong>{t('mcp.help.features.security.label')}</strong>：{t('mcp.help.features.security.description')}</li>
+                <li><strong>{t('mcp.help.features.integration.label')}</strong>：{t('mcp.help.features.integration.description')}</li>
               </ul>
             </section>
 
             <section className="help-section">
               <h4>
                 <span className="codicon codicon-book"></span>
-                Configuration Types
+                {t('mcp.help.configuration.title')}
               </h4>
-              <p>Two configuration types are supported:</p>
+              <p>{t('mcp.help.configuration.description')}</p>
               <ul>
                 <li>
-                  <strong>STDIO</strong>: Communicate with local processes via standard I/O
-                  <code className="inline-code">npx/uvx command startup</code>
+                  <strong>STDIO</strong>：{t('mcp.help.configuration.stdio.description')}
+                  <code className="inline-code">{t('mcp.help.configuration.stdio.example')}</code>
                 </li>
                 <li>
-                  <strong>HTTP/SSE</strong>: Communicate with remote servers via network
-                  <code className="inline-code">URL address</code>
+                  <strong>HTTP/SSE</strong>：{t('mcp.help.configuration.httpSse.description')}
+                  <code className="inline-code">{t('mcp.help.configuration.httpSse.example')}</code>
                 </li>
               </ul>
             </section>
@@ -70,10 +73,10 @@ export function McpHelpDialog({ onClose }: McpHelpDialogProps) {
             <section className="help-section">
               <h4>
                 <span className="codicon codicon-link-external"></span>
-                Learn More
+                {t('mcp.help.learnMore.title')}
               </h4>
               <p>
-                Visit the official documentation:
+                {t('mcp.help.learnMore.description')}
                 <a
                   href="https://modelcontextprotocol.io"
                   target="_blank"
@@ -89,7 +92,7 @@ export function McpHelpDialog({ onClose }: McpHelpDialogProps) {
         </div>
 
         <div className="dialog-footer">
-          <button className="btn btn-primary" onClick={onClose}>Got it</button>
+          <button className="btn btn-primary" onClick={onClose}>{t('mcp.help.gotIt')}</button>
         </div>
       </div>
     </div>
