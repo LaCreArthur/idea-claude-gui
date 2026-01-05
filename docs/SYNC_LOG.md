@@ -203,8 +203,8 @@ Track cherry-picks that failed and need investigation.
 #### Session 2 - January 5, 2026 (Cherry-Pick Execution)
 
 **Status**: 🔄 In Progress  
-**Commits Attempted**: 2  
-**Commits Successfully Picked**: 2  
+**Commits Attempted**: 3  
+**Commits Successfully Picked**: 3  
 **Agent**: GitHub Copilot
 
 **Results**:
@@ -236,8 +236,19 @@ Track cherry-picks that failed and need investigation.
      - Kept fork's CHANGELOG structure
    - **Tests**: React code updated, ErrorBoundary added
 
+3. **d1a7903**: Node.js auto-detection
+   - **Files Changed**: 1 file (ClaudeSDKToolWindow.java)
+   - **Conflicts**: None
+   - **Resolution**: Clean merge
+   - **Commit**: cf4f551
+   - **Notes**:
+     - Added automatic Node.js detection on first installation
+     - Saves auto-detected path to persistent storage
+     - Improved logging and error handling
+   - **Tests**: Auto-merges cleanly
+
 ##### Next Steps
-- Continue with d1a7903 (Node.js auto-detect)
+- Continue with d35df2d (i18n enhancements)
 - Then d1a7903 (Node.js auto-detect)
 - Monitor for conflicts and test after each
 
