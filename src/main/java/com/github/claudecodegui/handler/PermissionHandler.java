@@ -13,7 +13,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Permission Handler.
@@ -106,13 +105,8 @@ public class PermissionHandler extends BaseMessageHandler {
                 context.executeJavaScriptOnEDT(jsCode);
             });
 
-            // Timeout handling
-            CompletableFuture.delayedExecutor(35, TimeUnit.SECONDS).execute(() -> {
-                if (!future.isDone()) {
-                    pendingPermissionRequests.remove(channelId);
-                    future.complete(PermissionService.PermissionResponse.DENY.getValue());
-                }
-            });
+            // No timeout - user can take as long as needed (matches CLI behavior)
+            // The future will be completed when user responds via handlePermissionDecision()
 
         } catch (Exception e) {
             LOG.error("[PERM_DEBUG][FRONTEND_DIALOG] ERROR: " + e.getMessage(), e);
@@ -282,14 +276,8 @@ public class PermissionHandler extends BaseMessageHandler {
                 context.executeJavaScriptOnEDT(jsCode);
             });
 
-            // Timeout handling - 60 seconds
-            CompletableFuture.delayedExecutor(60, TimeUnit.SECONDS).execute(() -> {
-                if (!future.isDone()) {
-                    LOG.debug("[ASK_USER_QUESTION] Timeout for requestId=" + requestId);
-                    pendingAskUserQuestionRequests.remove(requestId);
-                    future.complete(null); // Return null to indicate cancellation/timeout
-                }
-            });
+            // No timeout - user can take as long as needed (matches CLI behavior)
+            // The future will be completed when user responds via handleAskUserQuestionResponse()
 
         } catch (Exception e) {
             LOG.error("[ASK_USER_QUESTION] ERROR: " + e.getMessage(), e);

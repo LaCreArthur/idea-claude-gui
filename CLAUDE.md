@@ -2,6 +2,12 @@
 
 IntelliJ IDEA plugin providing a GUI for Claude Code. React/TypeScript webview + Java plugin + Node.js ai-bridge.
 
+## Design Philosophy
+
+**Goal: Be as close as possible to the Claude Code CLI experience, with a GUI layer on top.**
+
+See [docs/DESIGN.md](docs/DESIGN.md) for full design principles and reference guidelines.
+
 ## Architecture
 
 ```

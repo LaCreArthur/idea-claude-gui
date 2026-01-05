@@ -751,20 +751,20 @@ public class ClaudeSDKBridge {
                                         // 如果不是 JSON，则直接使用原始字符串
                                     }
 
-                                    // 添加环境诊断信息到错误消息
-                                    // 注意：使用 "  \n" (两个空格+换行) 实现 Markdown 硬换行
+                                    // Add environment diagnostics to error message
+                                    // Note: Use "  \n" (two spaces + newline) for Markdown hard line break
                                     StringBuilder diagMsg = new StringBuilder();
                                     diagMsg.append(errorMessage);
-                                    diagMsg.append("\n\n**【环境诊断】**  \n");
-                                    diagMsg.append("  Node.js 路径: `").append(node).append("`  \n");
-                                    diagMsg.append("  Node.js 版本: ").append(nodeVersion != null ? nodeVersion : "❌ 未知").append("  \n");
-                                    diagMsg.append("  SDK 目录: `").append(workDir.getAbsolutePath()).append("`  \n");
+                                    diagMsg.append("\n\n**[Environment Diagnostics]**  \n");
+                                    diagMsg.append("  Node.js path: `").append(node).append("`  \n");
+                                    diagMsg.append("  Node.js version: ").append(nodeVersion != null ? nodeVersion : "Unknown").append("  \n");
+                                    diagMsg.append("  SDK directory: `").append(workDir.getAbsolutePath()).append("`  \n");
                                     diagMsg.append("  channel-manager.js: ").append(channelScript.exists() ? "✓" : "❌").append("  \n");
                                     diagMsg.append("  node_modules: ").append(nodeModules.exists() ? "✓" : "❌").append("  \n");
                                     File settingsFile = new File(settingsPath);
                                     diagMsg.append("  settings.json: ").append(settingsFile.exists() ? "✓" : "❌").append("  \n");
 
-                                    // 检查 Node.js 版本是否过低
+                                    // Check if Node.js version is too low
                                     if (nodeVersion != null) {
                                         int majorVersion = 0;
                                         try {
@@ -777,7 +777,7 @@ public class ClaudeSDKBridge {
                                             // ignore
                                         }
                                         if (majorVersion > 0 && majorVersion < 18) {
-                                            diagMsg.append("\n⚠️ **Node.js 版本过低** (v").append(majorVersion).append(")，建议使用 v18 或更高版本");
+                                            diagMsg.append("\n⚠️ **Node.js version too low** (v").append(majorVersion).append("), v18 or higher recommended");
                                         }
                                     }
 
@@ -878,35 +878,35 @@ public class ClaudeSDKBridge {
                             } else {
                                 String errorMsg = "Process exited with code: " + exitCode;
 
-                                // 针对 exitCode 1 (通常是环境配置问题) 提供更友好的提示
+                                // For exitCode 1 (usually environment configuration issues), provide friendly hints
                                 if (exitCode == 1 && (lastNodeError[0] == null || lastNodeError[0].isEmpty())) {
-                                    // 检查常见问题并给出具体提示
+                                    // Check common issues and provide specific hints
                                     StringBuilder diagMsg = new StringBuilder();
-                                    diagMsg.append("Claude Code 进程启动失败。\n\n");
-                                    diagMsg.append("【环境诊断】\n");
+                                    diagMsg.append("Claude Code process failed to start.\n\n");
+                                    diagMsg.append("[Environment Diagnostics]\n");
 
-                                    // Node.js 信息
-                                    diagMsg.append("  Node.js 路径: ").append(node).append("\n");
-                                    diagMsg.append("  Node.js 版本: ").append(nodeVersion != null ? nodeVersion : "❌ 未知").append("\n");
+                                    // Node.js info
+                                    diagMsg.append("  Node.js path: ").append(node).append("\n");
+                                    diagMsg.append("  Node.js version: ").append(nodeVersion != null ? nodeVersion : "Unknown").append("\n");
 
-                                    // SDK 目录信息
-                                    diagMsg.append("  SDK 目录: ").append(workDir.getAbsolutePath()).append("\n");
-                                    diagMsg.append("  SDK 目录存在: ").append(workDir.exists() ? "✓" : "❌").append("\n");
+                                    // SDK directory info
+                                    diagMsg.append("  SDK directory: ").append(workDir.getAbsolutePath()).append("\n");
+                                    diagMsg.append("  SDK directory exists: ").append(workDir.exists() ? "✓" : "❌").append("\n");
                                     diagMsg.append("  channel-manager.js: ").append(channelScript.exists() ? "✓" : "❌").append("\n");
                                     diagMsg.append("  node_modules: ").append(nodeModules.exists() ? "✓" : "❌").append("\n");
 
-                                    // 配置文件
+                                    // Config file
                                     File settingsFile = new File(settingsPath);
                                     diagMsg.append("  settings.json: ").append(settingsFile.exists() ? "✓" : "❌").append("\n");
 
-                                    // 问题诊断
-                                    diagMsg.append("\n【问题诊断】\n");
+                                    // Issue diagnosis
+                                    diagMsg.append("\n[Issue Diagnosis]\n");
                                     boolean hasIssue = false;
                                     if (nodeVersion == null) {
-                                        diagMsg.append("  ❌ Node.js 未正确安装或路径配置错误\n");
+                                        diagMsg.append("  ❌ Node.js not installed correctly or path misconfigured\n");
                                         hasIssue = true;
                                     } else {
-                                        // 提取主版本号进行比较（如 v20.10.0 -> 20）
+                                        // Extract major version for comparison (e.g., v20.10.0 -> 20)
                                         int majorVersion = 0;
                                         try {
                                             String versionStr = nodeVersion.startsWith("v") ? nodeVersion.substring(1) : nodeVersion;
@@ -917,31 +917,31 @@ public class ClaudeSDKBridge {
                                                 majorVersion = Integer.parseInt(versionStr);
                                             }
                                         } catch (NumberFormatException e) {
-                                            // 无法解析版本号，忽略版本检查
+                                            // Cannot parse version, skip version check
                                         }
                                         if (majorVersion > 0 && majorVersion < 18) {
-                                            diagMsg.append("  ⚠️ Node.js 版本过低 (v").append(majorVersion).append(")，建议使用 v18 或更高版本\n");
+                                            diagMsg.append("  ⚠️ Node.js version too low (v").append(majorVersion).append("), v18 or higher recommended\n");
                                             hasIssue = true;
                                         }
                                     }
                                     if (!nodeModules.exists()) {
-                                        diagMsg.append("  ❌ node_modules 缺失，请重新安装插件\n");
+                                        diagMsg.append("  ❌ node_modules missing, please reinstall the plugin\n");
                                         hasIssue = true;
                                     }
                                     if (!settingsFile.exists()) {
-                                        diagMsg.append("  ❌ settings.json 不存在，请先配置 API Key\n");
+                                        diagMsg.append("  ❌ settings.json not found, please configure API Key first\n");
                                         hasIssue = true;
                                     }
                                     if (!hasIssue) {
-                                        diagMsg.append("  环境配置看起来正常，可能是 API Key 配置问题或网络问题\n");
+                                        diagMsg.append("  Environment looks fine, may be API Key configuration or network issue\n");
                                     }
 
                                     errorMsg = diagMsg.toString();
                                 }
 
-                                // 如果 Node.js 侧有明确的错误日志，将其附加到错误消息中，提升可读性
+                                // If Node.js side has explicit error logs, append them for better readability
                                 if (lastNodeError[0] != null && !lastNodeError[0].isEmpty()) {
-                                    errorMsg = errorMsg + "\n\n详细错误: " + lastNodeError[0];
+                                    errorMsg = errorMsg + "\n\nDetailed error: " + lastNodeError[0];
                                 }
                                 result.success = false;
                                 result.error = errorMsg;

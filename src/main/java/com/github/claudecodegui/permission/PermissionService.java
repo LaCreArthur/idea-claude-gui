@@ -630,8 +630,8 @@ public class PermissionService {
                 future.complete(response);
             });
 
-            debugLog("DIALOG_WAIT", "Waiting for system dialog response (timeout: 30s)");
-            int response = future.get(30, TimeUnit.SECONDS);
+            debugLog("DIALOG_WAIT", "Waiting for system dialog response (no timeout)");
+            int response = future.get(); // No timeout - user can take as long as needed
             debugLog("DIALOG_RESPONSE", "Got system dialog response: " + response);
 
             PermissionResponse decision = PermissionResponse.fromValue(response);

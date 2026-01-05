@@ -131,11 +131,10 @@ export async function requestPermissionFromJava(toolName, input) {
       return false;
     }
 
-    // Wait for response file (max 60 seconds) - slightly longer than IDE frontend timeout
-    const timeout = 60000;
+    // Wait for response file indefinitely (matches CLI behavior - user can take as long as needed)
     const pollInterval = 100;
 
-    while (Date.now() - requestStartTime < timeout) {
+    while (true) {
       await new Promise(resolve => setTimeout(resolve, pollInterval));
 
       if (existsSync(responseFile)) {
@@ -157,11 +156,13 @@ export async function requestPermissionFromJava(toolName, input) {
           return false;
         }
       }
-    }
 
-    // Timeout - deny by default
-    console.warn('[PermissionHandler] Timeout waiting for response');
-    return false;
+      // Also check if request file was deleted (indicates cancellation)
+      if (!existsSync(requestFile)) {
+        console.warn('[PermissionHandler] Request file deleted, assuming cancellation');
+        return false;
+      }
+    }
 
   } catch (error) {
     console.error('[PermissionHandler] Unexpected error:', error.message);
@@ -198,11 +199,10 @@ export async function requestAskUserQuestionAnswers(input) {
       return null;
     }
 
-    // Wait for response file (max 60 seconds)
-    const timeout = 60000;
+    // Wait for response file indefinitely (matches CLI behavior - user can take as long as needed)
     const pollInterval = 100;
 
-    while (Date.now() - requestStartTime < timeout) {
+    while (true) {
       await new Promise(resolve => setTimeout(resolve, pollInterval));
 
       if (existsSync(responseFile)) {
@@ -227,11 +227,13 @@ export async function requestAskUserQuestionAnswers(input) {
           return null;
         }
       }
-    }
 
-    // Timeout
-    console.warn('[PermissionHandler] Timeout waiting for ask-user-question response');
-    return null;
+      // Also check if request file was deleted (indicates cancellation)
+      if (!existsSync(requestFile)) {
+        console.warn('[PermissionHandler] Ask-user-question request file deleted, assuming cancellation');
+        return null;
+      }
+    }
 
   } catch (error) {
     console.error('[PermissionHandler] Unexpected error in requestAskUserQuestionAnswers:', error.message);
