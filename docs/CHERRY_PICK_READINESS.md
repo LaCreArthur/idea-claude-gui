@@ -12,7 +12,7 @@
 - ✅ **Clean working tree**: No uncommitted changes
 - ✅ **Branch**: Currently on `copilot/create-cherry-pick-docs`
 - ✅ **Upstream remote**: Configured (`zhukunpenglinyutong/idea-claude-code-gui`)
-- ✅ **Upstream fetched**: 7 branches, 249 total commits
+- ✅ **Upstream fetched**: 8 branches, 249 total commits
 - ✅ **Git status**: Ready for cherry-picking
 
 ### 2. Documentation Complete
@@ -254,7 +254,7 @@ git remote -v | grep upstream
 
 # 4. Check upstream fetch
 git branch -r | grep upstream
-# Expected: 7 branches listed
+# Expected: 8 branches listed (including HEAD)
 
 # 5. Count commits (estimated functional parity)
 # Target: ~30 commits "behind" → ~25 after session

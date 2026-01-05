@@ -193,7 +193,7 @@ Track cherry-picks that failed and need investigation.
 - **Ready for dedicated cherry-pick session**
 
 **Target for Next Session**:
-- Pick 5 low-conflict commits (fac0bff, e397cad, d1a7903)
+- Pick 5 low-conflict commits (fac0bff, e397cad, d1a7903, d35df2d, 32a7ae4)
 - Reduce from 30 → 25 commits "behind" in functional parity
 - All tests passing after each cherry-pick
 - Document conflicts and resolutions
