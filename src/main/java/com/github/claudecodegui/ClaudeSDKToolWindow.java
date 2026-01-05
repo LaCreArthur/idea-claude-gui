@@ -7,6 +7,7 @@ import com.github.claudecodegui.permission.PermissionRequest;
 import com.github.claudecodegui.permission.PermissionService;
 import com.github.claudecodegui.ui.ErrorPanelBuilder;
 import com.github.claudecodegui.util.FontConfigService;
+import com.github.claudecodegui.util.LanguageConfigService;
 import com.github.claudecodegui.util.HtmlLoader;
 import com.github.claudecodegui.util.JBCefBrowserFactory;
 import com.github.claudecodegui.util.JsUtils;
@@ -575,6 +576,17 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
                         );
                         cefBrowser.executeJavaScript(fontConfigInjection, cefBrowser.getURL(), 0);
                         LOG.info("[FontSync] 字体配置已注入到前端");
+
+                        // 传递 IDEA 语言设置到前端
+                        String languageConfig = LanguageConfigService.getLanguageConfigJson();
+                        LOG.info("[LanguageSync] Detected language config: " + languageConfig);
+                        String languageConfigInjection = String.format(
+                            "if (window.applyIdeaLanguageConfig) { window.applyIdeaLanguageConfig(%s); } " +
+                            "else { window.__pendingLanguageConfig = %s; }",
+                            languageConfig, languageConfig
+                        );
+                        cefBrowser.executeJavaScript(languageConfigInjection, cefBrowser.getURL(), 0);
+                        LOG.info("[LanguageSync] Language config injected to frontend");
 
                         // 斜杠命令的加载现在由前端发起，通过 frontend_ready 事件触发
                         // 不再在 onLoadEnd 中主动调用，避免时序问题

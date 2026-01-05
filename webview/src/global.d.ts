@@ -241,6 +241,21 @@ interface Window {
   };
 
   /**
+   * Apply IDEA language configuration (called from Java backend)
+   * @param config Language configuration object containing language code
+   */
+  applyIdeaLanguageConfig?: (config: {
+    language: string;
+  }) => void;
+
+  /**
+   * Pending language config before applyIdeaLanguageConfig is registered
+   */
+  __pendingLanguageConfig?: {
+    language: string;
+  };
+
+  /**
    * Update enhanced prompt result (for prompt enhancer feature)
    */
   updateEnhancedPrompt?: (result: string) => void;
