@@ -7,14 +7,14 @@ import i18n from './i18n/config';
 import { setupSlashCommandsCallback } from './components/ChatInputBox/providers/slashCommandProvider';
 import { sendBridgeEvent } from './utils/bridge';
 
-// vConsole 调试工具
+// vConsole debugging tool
 const enableVConsole =
   import.meta.env.DEV || import.meta.env.VITE_ENABLE_VCONSOLE === 'true';
 
 if (enableVConsole) {
   void import('vconsole').then(({ default: VConsole }) => {
     new VConsole();
-    // 将 vConsole 按钮移到左下角，避免遮挡右下角的发送按钮
+    // Move vConsole button to bottom-left to avoid blocking send button in bottom-right
     setTimeout(() => {
       const vcSwitch = document.getElementById('__vconsole') as HTMLElement;
       if (vcSwitch) {
@@ -26,23 +26,35 @@ if (enableVConsole) {
 }
 
 /**
- * 应用 IDEA 编辑器字体配置到 CSS 变量
+ * Apply IDEA editor font configuration to CSS variables
  */
-function applyFontConfig(config: { fontFamily: string; fontSize: number; lineSpacing: number }) {
+function applyFontConfig(config: { fontFamily: string; fontSize: number; lineSpacing: number; fallbackFonts?: string[] }) {
   const root = document.documentElement;
 
-  // 构建字体族字符串，添加回退字体
-  const fontFamily = `'${config.fontFamily}', 'Consolas', monospace`;
+  // Build font family string including primary font, fallback fonts and system default fallbacks
+  const fontParts: string[] = [`'${config.fontFamily}'`];
+
+  // Add IDEA configured fallback fonts
+  if (config.fallbackFonts && config.fallbackFonts.length > 0) {
+    for (const fallback of config.fallbackFonts) {
+      fontParts.push(`'${fallback}'`);
+    }
+  }
+
+  // Add system default fallback fonts
+  fontParts.push("'Consolas'", 'monospace');
+
+  const fontFamily = fontParts.join(', ');
 
   root.style.setProperty('--idea-editor-font-family', fontFamily);
   root.style.setProperty('--idea-editor-font-size', `${config.fontSize}px`);
   root.style.setProperty('--idea-editor-line-spacing', String(config.lineSpacing));
 
-  console.log('[Main] Applied IDEA font config:', config);
+  console.log('[Main] Applied IDEA font config:', config, 'fontFamily CSS:', fontFamily);
 }
 
 /**
- * 应用 IDEA 语言配置到 i18n
+ * Apply IDEA language configuration to i18n
  */
 function applyLanguageConfig(config: { language: string }) {
   const { language } = config;
@@ -63,27 +75,27 @@ function applyLanguageConfig(config: { language: string }) {
   });
 }
 
-// 注册 applyIdeaFontConfig 函数
+// Register applyIdeaFontConfig function
 window.applyIdeaFontConfig = applyFontConfig;
 
-// 注册 applyIdeaLanguageConfig 函数
+// Register applyIdeaLanguageConfig function
 window.applyIdeaLanguageConfig = applyLanguageConfig;
 
-// 检查是否有待处理的字体配置（Java 端可能先于 JS 执行）
+// Check for pending font configuration (Java side may execute before JS)
 if (window.__pendingFontConfig) {
   console.log('[Main] Found pending font config, applying...');
   applyFontConfig(window.__pendingFontConfig);
   delete window.__pendingFontConfig;
 }
 
-// 检查是否有待处理的语言配置（Java 端可能先于 JS 执行）
+// Check for pending language configuration (Java side may execute before JS)
 if (window.__pendingLanguageConfig) {
   console.log('[Main] Found pending language config, applying...');
   applyLanguageConfig(window.__pendingLanguageConfig);
   delete window.__pendingLanguageConfig;
 }
 
-// 预注册 updateSlashCommands，避免后端调用早于 React 初始化
+// Pre-register updateSlashCommands to avoid backend call before React initialization
 if (typeof window !== 'undefined' && !window.updateSlashCommands) {
   console.log('[Main] Pre-registering updateSlashCommands placeholder');
   window.updateSlashCommands = (json: string) => {

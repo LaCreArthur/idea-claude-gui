@@ -9,7 +9,7 @@ import { homedir, platform } from 'os';
 import { execSync } from 'child_process';
 
 /**
- * 读取 Claude Code 配置
+ * Read Claude Code configuration
  */
 export function loadClaudeSettings() {
   try {
@@ -65,20 +65,23 @@ function readFileCredentials() {
     const credentialsPath = join(homedir(), '.claude', '.credentials.json');
 
     if (!existsSync(credentialsPath)) {
+      console.log('[DEBUG] No CLI session found: .credentials.json does not exist');
       return null;
     }
 
     const credentials = JSON.parse(readFileSync(credentialsPath, 'utf8'));
     return credentials;
   } catch (error) {
+    console.log('[DEBUG] Failed to read credentials file:', error.message);
     return null;
   }
 }
 
 /**
  * Check if CLI session authentication exists
- * - macOS: Read from system Keychain
+ * - macOS: Read from system Keychain with file fallback
  * - Linux/Windows: Read from ~/.claude/.credentials.json
+ * Checks if user has authenticated via 'claude login'
  * @returns {boolean} True if valid CLI session exists
  */
 export function hasCliSessionAuth() {
@@ -99,37 +102,47 @@ export function hasCliSessionAuth() {
     }
 
     // Validate OAuth access token
-    return !!(credentials?.claudeAiOauth?.accessToken);
+    const hasValidToken = credentials?.claudeAiOauth?.accessToken &&
+                         credentials.claudeAiOauth.accessToken.length > 0;
+
+    if (hasValidToken) {
+      console.log('[DEBUG] Valid CLI session found with access token');
+      return true;
+    } else {
+      console.log('[DEBUG] CLI credentials exist but no valid access token found');
+      return false;
+    }
   } catch (error) {
+    console.log('[DEBUG] Failed to check CLI session:', error.message);
     return false;
   }
 }
 
 /**
- * 配置 API Key
- * @returns {Object} 包含 apiKey, baseUrl, authType 及其来源
+ * Configure API Key
+ * @returns {Object} Contains apiKey, baseUrl, authType and their sources
  */
 export function setupApiKey() {
   const settings = loadClaudeSettings();
 
   let apiKey;
   let baseUrl;
-  let authType = 'api_key';  // 默认使用 api_key（x-api-key header）
+  let authType = 'api_key';  // Default: use api_key (x-api-key header)
   let apiKeySource = 'default';
   let baseUrlSource = 'default';
 
   // Configuration priority: Only read from settings.json, ignore shell environment variables
   // This ensures a single configuration source and avoids shell env interference
 
-  // 优先使用 ANTHROPIC_AUTH_TOKEN（Bearer 认证），回退到 ANTHROPIC_API_KEY（x-api-key 认证）
-  // 这样可以兼容 Claude Code CLI 的两种认证方式
+  // Prefer ANTHROPIC_AUTH_TOKEN (Bearer auth), fallback to ANTHROPIC_API_KEY (x-api-key auth)
+  // This is compatible with both Claude Code CLI authentication methods
   if (settings?.env?.ANTHROPIC_AUTH_TOKEN) {
     apiKey = settings.env.ANTHROPIC_AUTH_TOKEN;
-    authType = 'auth_token';  // Bearer 认证
+    authType = 'auth_token';  // Bearer authentication
     apiKeySource = 'settings.json (ANTHROPIC_AUTH_TOKEN)';
   } else if (settings?.env?.ANTHROPIC_API_KEY) {
     apiKey = settings.env.ANTHROPIC_API_KEY;
-    authType = 'api_key';  // x-api-key 认证
+    authType = 'api_key';  // x-api-key authentication
     apiKeySource = 'settings.json (ANTHROPIC_API_KEY)';
   }
 
@@ -138,40 +151,50 @@ export function setupApiKey() {
     baseUrlSource = 'settings.json';
   }
 
+  // If no API Key configured, check for CLI session auth
   if (!apiKey) {
-    // No API Key configured, check for CLI session auth
+    console.log('[DEBUG] No API Key found in settings.json, checking for CLI session...');
+
     if (hasCliSessionAuth()) {
-      // Clear all auth environment variables, let SDK auto-detect CLI session
-      delete process.env.ANTHROPIC_API_KEY;
-      delete process.env.ANTHROPIC_AUTH_TOKEN;
+      // Use CLI session authentication
+      console.log('[INFO] Using CLI session authentication (claude login)');
+      authType = 'cli_session';
       
       // Set credential source based on platform
       const currentPlatform = platform();
-      const credSource = currentPlatform === 'darwin'
+      apiKeySource = currentPlatform === 'darwin'
         ? 'CLI session (macOS Keychain)'
         : 'CLI session (~/.claude/.credentials.json)';
-      
-      return {
-        apiKey: null,
-        baseUrl: baseUrl || null,
-        authType: 'cli_session',
-        apiKeySource: credSource,
-        baseUrlSource
-      };
+
+      // Clear all API Key environment variables, let SDK auto-detect CLI session
+      delete process.env.ANTHROPIC_API_KEY;
+      delete process.env.ANTHROPIC_AUTH_TOKEN;
+
+      // Set baseUrl (if configured)
+      if (baseUrl) {
+        process.env.ANTHROPIC_BASE_URL = baseUrl;
+      }
+
+      console.log('[DEBUG] Auth type:', authType);
+      return { apiKey: null, baseUrl, authType, apiKeySource, baseUrlSource };
+    } else {
+      // Neither API Key nor CLI session available
+      console.error('[ERROR] API Key not configured and no CLI session found.');
+      console.error('[ERROR] Please either:');
+      console.error('[ERROR]   1. Set ANTHROPIC_API_KEY or ANTHROPIC_AUTH_TOKEN in ~/.claude/settings.json');
+      console.error('[ERROR]   2. Run "claude login" to authenticate via CLI');
+      throw new Error('API Key not configured and no CLI session found');
     }
-    // Neither API Key nor CLI session available
-    console.error('[ERROR] No authentication configured. Run `claude login` or set API key in ~/.claude/settings.json');
-    throw new Error('No authentication configured. Run `claude login` in terminal or configure API key.');
   }
 
-  // 根据认证类型设置对应的环境变量
+  // Set environment variables based on auth type
   if (authType === 'auth_token') {
     process.env.ANTHROPIC_AUTH_TOKEN = apiKey;
     // Clear ANTHROPIC_API_KEY to avoid confusion
     delete process.env.ANTHROPIC_API_KEY;
   } else {
     process.env.ANTHROPIC_API_KEY = apiKey;
-    // 清除 ANTHROPIC_AUTH_TOKEN 避免混淆
+    // Clear ANTHROPIC_AUTH_TOKEN to avoid confusion
     delete process.env.ANTHROPIC_AUTH_TOKEN;
   }
 
@@ -183,9 +206,9 @@ export function setupApiKey() {
 }
 
 /**
- * 检测是否使用自定义 Base URL（非官方 Anthropic API）
+ * Detect if using custom Base URL (non-official Anthropic API)
  * @param {string} baseUrl - Base URL
- * @returns {boolean} 是否为自定义 URL
+ * @returns {boolean} True if custom URL
  */
 export function isCustomBaseUrl(baseUrl) {
   if (!baseUrl) return false;
