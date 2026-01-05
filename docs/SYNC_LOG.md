@@ -154,7 +154,7 @@ Track cherry-picks that failed and need investigation.
 
 **Status**: ✅ Setup Complete - Ready for Cherry-Pick Execution  
 **Commits Attempted**: 0  
-**Commits Behind**: ~30 (estimated relative to features)
+**Commits Behind**: ~30 (estimated based on functional parity with upstream features)
 
 **Activities**:
 - Created v0.3.0 with 3 upstream features (manual implementation)
@@ -173,7 +173,7 @@ Track cherry-picks that failed and need investigation.
 
 **Setup Verification**:
 ✅ Upstream remote configured  
-✅ Upstream fetched (249 commits total)  
+✅ Upstream fetched and up-to-date  
 ✅ Priority commits verified:
   - fac0bff: Concurrency fixes (3 files)
   - e397cad: Windows crash fix (1-2 files)

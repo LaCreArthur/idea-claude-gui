@@ -12,7 +12,7 @@
 - ✅ **Clean working tree**: No uncommitted changes
 - ✅ **Branch**: Currently on `copilot/create-cherry-pick-docs`
 - ✅ **Upstream remote**: Configured (`zhukunpenglinyutong/idea-claude-code-gui`)
-- ✅ **Upstream fetched**: 8 branches, 249 total commits
+- ✅ **Upstream fetched**: Latest commits from all branches
 - ✅ **Git status**: Ready for cherry-picking
 
 ### 2. Documentation Complete
