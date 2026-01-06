@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 export interface PermissionRequest {
   channelId: string;
@@ -24,9 +25,25 @@ const PermissionDialog = ({
 }: PermissionDialogProps) => {
   const [showCommand, setShowCommand] = useState(true); // 默认展开命令
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const { t } = useTranslation();
+
+  const handleApprove = () => {
+    if (!request) return;
+    onApprove(request.channelId);
+  };
+
+  const handleApproveAlways = () => {
+    if (!request) return;
+    onApproveAlways(request.channelId);
+  };
+
+  const handleSkip = () => {
+    if (!request) return;
+    onSkip(request.channelId);
+  };
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && request) {
       setShowCommand(true); // 每次打开时默认展开
       setSelectedIndex(0);
 
@@ -45,31 +62,23 @@ const PermissionDialog = ({
           setSelectedIndex(prev => Math.min(2, prev + 1));
         } else if (e.key === 'Enter') {
           e.preventDefault();
-          if (selectedIndex === 0) handleApprove();
-          else if (selectedIndex === 1) handleApproveAlways();
-          else if (selectedIndex === 2) handleSkip();
+          // Use current selectedIndex from closure instead of state
+          setSelectedIndex(current => {
+            if (current === 0) handleApprove();
+            else if (current === 1) handleApproveAlways();
+            else if (current === 2) handleSkip();
+            return current;
+          });
         }
       };
       window.addEventListener('keydown', handleKeyDown);
       return () => window.removeEventListener('keydown', handleKeyDown);
     }
-  }, [isOpen, selectedIndex]);
+  }, [isOpen, request, onApprove, onApproveAlways, onSkip]);
 
   if (!isOpen || !request) {
     return null;
   }
-
-  const handleApprove = () => {
-    onApprove(request.channelId);
-  };
-
-  const handleApproveAlways = () => {
-    onApproveAlways(request.channelId);
-  };
-
-  const handleSkip = () => {
-    onSkip(request.channelId);
-  };
 
   // 格式化输入参数显示
   const formatInputValue = (value: any): string => {
@@ -119,7 +128,13 @@ const PermissionDialog = ({
 
   // Get tool display title
   const getToolTitle = (toolName: string): string => {
-    return toolName;
+    const key = `permission.tools.${toolName}`;
+    const translated = t(key);
+    // If translation key doesn't exist, return default template
+    if (translated === key) {
+      return t('permission.tools.execute', { toolName });
+    }
+    return translated;
   };
 
   const commandContent = getCommandContent();
@@ -130,7 +145,7 @@ const PermissionDialog = ({
       <div className="permission-dialog-v3">
         {/* 标题区域 */}
         <h3 className="permission-dialog-v3-title">{getToolTitle(request.toolName)}</h3>
-        <p className="permission-dialog-v3-subtitle">Request from external process</p>
+        <p className="permission-dialog-v3-subtitle">{t('permission.fromExternalProcess')}</p>
 
         {/* 命令/内容区域 */}
         <div className="permission-dialog-v3-command-box">
@@ -141,7 +156,7 @@ const PermissionDialog = ({
             <button
               className="command-toggle"
               onClick={() => setShowCommand(!showCommand)}
-              title={showCommand ? 'Collapse' : 'Expand'}
+              title={showCommand ? t('chat.collapse') : t('chat.expand')}
             >
               <span className={`codicon codicon-chevron-${showCommand ? 'up' : 'down'}`} />
             </button>
@@ -161,7 +176,7 @@ const PermissionDialog = ({
             onClick={handleApprove}
             onMouseEnter={() => setSelectedIndex(0)}
           >
-            <span className="option-text">Allow</span>
+            <span className="option-text">{t('permission.allow')}</span>
             <span className="option-key">1</span>
           </button>
           <button
@@ -169,7 +184,7 @@ const PermissionDialog = ({
             onClick={handleApproveAlways}
             onMouseEnter={() => setSelectedIndex(1)}
           >
-            <span className="option-text">Always allow</span>
+            <span className="option-text">{t('permission.allowAlways')}</span>
             <span className="option-key">2</span>
           </button>
           <button
@@ -177,7 +192,7 @@ const PermissionDialog = ({
             onClick={handleSkip}
             onMouseEnter={() => setSelectedIndex(2)}
           >
-            <span className="option-text">Deny</span>
+            <span className="option-text">{t('permission.deny')}</span>
             <span className="option-key">3</span>
           </button>
         </div>
@@ -187,4 +202,3 @@ const PermissionDialog = ({
 };
 
 export default PermissionDialog;
-

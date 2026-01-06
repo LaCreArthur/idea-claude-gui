@@ -104,6 +104,7 @@ export function McpSettingsSection() {
         setServerStatus(statusMap);
         setStatusLoading(false);
         console.log('[McpSettings] Loaded server status:', statusList);
+        console.log('[McpSettings] Status map keys:', Array.from(statusMap.keys()));
       } catch (error) {
         console.error('[McpSettings] Failed to parse server status:', error);
         setStatusLoading(false);
@@ -490,31 +491,30 @@ export function McpSettingsSection() {
                   {/* Connection status info */}
                   {(() => {
                     const statusInfo = getServerStatusInfo(server);
-                    if (statusInfo) {
-                      return (
-                        <div className="status-section">
+                    // 对于已启用的服务器，始终显示状态信息（即使是未知状态）
+                    // 对于已禁用的服务器，也显示禁用状态
+                    return (
+                      <div className="status-section">
+                        <div className="info-row">
+                          <span className="info-label">{t('mcp.connectionStatus')}:</span>
+                          <span
+                            className="info-value status-value"
+                            style={{ color: getStatusColor(server, statusInfo?.status) }}
+                          >
+                            <span className={`codicon ${getStatusIcon(server, statusInfo?.status)}`}></span>
+                            {' '}{getStatusText(server, statusInfo?.status)}
+                          </span>
+                        </div>
+                        {statusInfo?.serverInfo && (
                           <div className="info-row">
-                            <span className="info-label">{t('mcp.connectionStatus')}:</span>
-                            <span
-                              className="info-value status-value"
-                              style={{ color: getStatusColor(server, statusInfo.status) }}
-                            >
-                              <span className={`codicon ${getStatusIcon(server, statusInfo.status)}`}></span>
-                              {' '}{getStatusText(server, statusInfo.status)}
+                            <span className="info-label">{t('mcp.serverVersion')}:</span>
+                            <span className="info-value">
+                              {statusInfo.serverInfo.name} v{statusInfo.serverInfo.version}
                             </span>
                           </div>
-                          {statusInfo.serverInfo && (
-                            <div className="info-row">
-                              <span className="info-label">{t('mcp.serverVersion')}:</span>
-                              <span className="info-value">
-                                {statusInfo.serverInfo.name} v{statusInfo.serverInfo.version}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    }
-                    return null;
+                        )}
+                      </div>
+                    );
                   })()}
 
                    {/* 服务器信息 */}
@@ -556,7 +556,7 @@ export function McpSettingsSection() {
                       <button
                         className="action-btn"
                         onClick={() => handleCopyUrl(server.homepage!)}
-                        title="Copy homepage link"
+                        title={t('chat.copyHomepageLink')}
                       >
                         <span className="codicon codicon-home"></span>
                         {t('mcp.homepage')}
@@ -566,7 +566,7 @@ export function McpSettingsSection() {
                       <button
                         className="action-btn"
                         onClick={() => handleCopyUrl(server.docs!)}
-                        title="Copy docs link"
+                        title={t('chat.copyDocsLink')}
                       >
                         <span className="codicon codicon-book"></span>
                         {t('mcp.docs')}
@@ -575,7 +575,7 @@ export function McpSettingsSection() {
                     <button
                       className="action-btn edit-btn"
                       onClick={() => handleEdit(server)}
-                      title="Edit configuration"
+                      title={t('chat.editConfig')}
                     >
                       <span className="codicon codicon-edit"></span>
                       {t('mcp.edit')}
@@ -583,7 +583,7 @@ export function McpSettingsSection() {
                     <button
                       className="action-btn delete-btn"
                       onClick={() => handleDelete(server)}
-                      title="Delete server"
+                      title={t('chat.deleteServer')}
                     >
                       <span className="codicon codicon-trash"></span>
                       {t('mcp.delete')}

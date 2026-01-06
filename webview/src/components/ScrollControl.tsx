@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface ScrollControlProps {
   containerRef: React.RefObject<HTMLDivElement | null>;
@@ -15,6 +16,7 @@ interface ScrollControlProps {
  * - 位置始终在输入框上方20px
  */
 export const ScrollControl = ({ containerRef, inputAreaRef }: ScrollControlProps) => {
+  const { t } = useTranslation();
   const [visible, setVisible] = useState(false);
   const [direction, setDirection] = useState<'up' | 'down'>('down');
   const [bottomOffset, setBottomOffset] = useState(120);
@@ -192,8 +194,8 @@ export const ScrollControl = ({ containerRef, inputAreaRef }: ScrollControlProps
       className="scroll-control-button"
       style={{ bottom: `${bottomOffset}px` }}
       onClick={handleClick}
-      aria-label={direction === 'up' ? 'Back to top' : 'Back to bottom'}
-      title={direction === 'up' ? 'Back to top' : 'Back to bottom'}
+      aria-label={direction === 'up' ? t('chat.backToTop') : t('chat.backToBottom')}
+      title={direction === 'up' ? t('chat.backToTop') : t('chat.backToBottom')}
     >
       <svg
         width="24"

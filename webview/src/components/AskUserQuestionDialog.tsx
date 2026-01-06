@@ -1,20 +1,22 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import './AskUserQuestionDialog.css';
 
 export interface QuestionOption {
   label: string;
-  description?: string;
+  description: string;
 }
 
 export interface Question {
   question: string;
   header: string;
   options: QuestionOption[];
-  multiSelect?: boolean;
+  multiSelect: boolean;
 }
 
 export interface AskUserQuestionRequest {
   requestId: string;
+  toolName: string;
   questions: Question[];
 }
 
@@ -32,23 +34,20 @@ const AskUserQuestionDialog = ({
   onCancel,
 }: AskUserQuestionDialogProps) => {
   const { t } = useTranslation();
-  const [answers, setAnswers] = useState<Record<string, string | string[]>>({});
-  const [otherInputs, setOtherInputs] = useState<Record<string, string>>({});
+  // Store answers for each question: question -> selectedLabel(s)
+  const [answers, setAnswers] = useState<Record<string, Set<string>>>({});
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
 
   useEffect(() => {
     if (isOpen && request) {
-      // Initialize answers
-      const initialAnswers: Record<string, string | string[]> = {};
-      const initialOtherInputs: Record<string, string> = {};
-      request.questions.forEach((q, idx) => {
-        const key = q.header || `q${idx}`;
-        initialAnswers[key] = q.multiSelect ? [] : '';
-        initialOtherInputs[key] = '';
+      // Initialize answer state
+      const initialAnswers: Record<string, Set<string>> = {};
+      request.questions.forEach((q) => {
+        initialAnswers[q.question] = new Set<string>();
       });
       setAnswers(initialAnswers);
-      setOtherInputs(initialOtherInputs);
+      setCurrentQuestionIndex(0);
 
-      // Handle Escape key
       const handleKeyDown = (e: KeyboardEvent) => {
         if (e.key === 'Escape') {
           handleCancel();
@@ -57,140 +56,158 @@ const AskUserQuestionDialog = ({
       window.addEventListener('keydown', handleKeyDown);
       return () => window.removeEventListener('keydown', handleKeyDown);
     }
-  }, [isOpen, request]);
+  }, [isOpen]); // Remove 'request' from dependencies to prevent re-registering listeners
 
   if (!isOpen || !request) {
     return null;
   }
 
+  const currentQuestion = request.questions[currentQuestionIndex];
+  const isLastQuestion = currentQuestionIndex === request.questions.length - 1;
+  const currentAnswerSet = answers[currentQuestion.question] || new Set<string>();
+
+  const handleOptionToggle = (label: string) => {
+    setAnswers((prev) => {
+      const newAnswers = { ...prev };
+      const currentSet = new Set(newAnswers[currentQuestion.question] || []);
+
+      if (currentQuestion.multiSelect) {
+        // Multi-select mode: toggle option
+        if (currentSet.has(label)) {
+          currentSet.delete(label);
+        } else {
+          currentSet.add(label);
+        }
+      } else {
+        // Single-select mode: clear and set new option
+        currentSet.clear();
+        currentSet.add(label);
+      }
+
+      newAnswers[currentQuestion.question] = currentSet;
+      return newAnswers;
+    });
+  };
+
+  const handleNext = () => {
+    if (isLastQuestion) {
+      handleSubmitFinal();
+    } else {
+      setCurrentQuestionIndex((prev) => prev + 1);
+    }
+  };
+
+  const handleBack = () => {
+    if (currentQuestionIndex > 0) {
+      setCurrentQuestionIndex((prev) => prev - 1);
+    }
+  };
+
+  const handleSubmitFinal = () => {
+    // Convert Set to comma-separated string (multi) or single string (single)
+    const formattedAnswers: Record<string, string> = {};
+    request.questions.forEach((q) => {
+      const selectedSet = answers[q.question] || new Set<string>();
+      if (selectedSet.size > 0) {
+        formattedAnswers[q.question] = Array.from(selectedSet).join(', ');
+      } else {
+        formattedAnswers[q.question] = '';
+      }
+    });
+
+    onSubmit(request.requestId, formattedAnswers);
+  };
+
   const handleCancel = () => {
     onCancel(request.requestId);
   };
 
-  const handleSubmit = () => {
-    // Build final answers object
-    const finalAnswers: Record<string, string> = {};
-    request.questions.forEach((q, idx) => {
-      const key = q.header || `q${idx}`;
-      const answer = answers[key];
-      const otherInput = otherInputs[key];
-
-      if (otherInput) {
-        // If "Other" input has content, use that
-        finalAnswers[key] = otherInput;
-      } else if (Array.isArray(answer)) {
-        // Multi-select: join answers
-        finalAnswers[key] = answer.join(', ');
-      } else {
-        finalAnswers[key] = answer || '';
-      }
-    });
-    onSubmit(request.requestId, finalAnswers);
-  };
-
-  const handleOptionClick = (questionKey: string, optionLabel: string, multiSelect: boolean) => {
-    if (multiSelect) {
-      setAnswers(prev => {
-        const current = (prev[questionKey] as string[]) || [];
-        if (current.includes(optionLabel)) {
-          return { ...prev, [questionKey]: current.filter(o => o !== optionLabel) };
-        }
-        return { ...prev, [questionKey]: [...current, optionLabel] };
-      });
-    } else {
-      setAnswers(prev => ({ ...prev, [questionKey]: optionLabel }));
-      // Clear other input when selecting an option
-      setOtherInputs(prev => ({ ...prev, [questionKey]: '' }));
-    }
-  };
-
-  const isOptionSelected = (questionKey: string, optionLabel: string, multiSelect: boolean): boolean => {
-    const answer = answers[questionKey];
-    if (multiSelect) {
-      return Array.isArray(answer) && answer.includes(optionLabel);
-    }
-    return answer === optionLabel;
-  };
-
-  const handleOtherInputChange = (questionKey: string, value: string) => {
-    setOtherInputs(prev => ({ ...prev, [questionKey]: value }));
-    // Clear option selection when typing in Other
-    if (value) {
-      setAnswers(prev => ({ ...prev, [questionKey]: '' }));
-    }
-  };
-
-  const hasValidAnswer = (): boolean => {
-    // At least one question should have an answer
-    return request.questions.some((q, idx) => {
-      const key = q.header || `q${idx}`;
-      const answer = answers[key];
-      const otherInput = otherInputs[key];
-      if (otherInput) return true;
-      if (Array.isArray(answer)) return answer.length > 0;
-      return !!answer;
-    });
-  };
+  const canProceed = currentAnswerSet.size > 0;
 
   return (
     <div className="permission-dialog-overlay">
       <div className="ask-user-question-dialog">
-        <h3 className="ask-user-question-title">{t('askUserQuestion.title')}</h3>
-
-        <div className="ask-user-question-content">
-          {request.questions.map((question, idx) => {
-            const key = question.header || `q${idx}`;
-            return (
-              <div key={key} className="question-section">
-                <div className="question-header">
-                  <span className="question-chip">{question.header}</span>
-                </div>
-                <p className="question-text">{question.question}</p>
-
-                <div className="question-options">
-                  {question.options.map((option, optIdx) => (
-                    <button
-                      key={optIdx}
-                      className={`question-option ${isOptionSelected(key, option.label, question.multiSelect || false) ? 'selected' : ''}`}
-                      onClick={() => handleOptionClick(key, option.label, question.multiSelect || false)}
-                    >
-                      <span className="option-label">{option.label}</span>
-                      {option.description && (
-                        <span className="option-description">{option.description}</span>
-                      )}
-                    </button>
-                  ))}
-
-                  {/* Other option with text input */}
-                  <div className="question-option-other">
-                    <input
-                      type="text"
-                      className="other-input"
-                      placeholder={t('askUserQuestion.otherPlaceholder')}
-                      value={otherInputs[key] || ''}
-                      onChange={(e) => handleOtherInputChange(key, e.target.value)}
-                    />
-                  </div>
-                </div>
-              </div>
-            );
+        {/* Title area */}
+        <h3 className="ask-user-question-dialog-title">
+          {t('askUserQuestion.title', 'Claude has some questions for you')}
+        </h3>
+        <div className="ask-user-question-dialog-progress">
+          {t('askUserQuestion.progress', 'Question {{current}} / {{total}}', {
+            current: currentQuestionIndex + 1,
+            total: request.questions.length,
           })}
         </div>
 
-        <div className="ask-user-question-actions">
+        {/* Question area */}
+        <div className="ask-user-question-dialog-question">
+          <div className="question-header">
+            <span className="question-tag">{currentQuestion.header}</span>
+          </div>
+          <p className="question-text">{currentQuestion.question}</p>
+
+          {/* Options list */}
+          <div className="question-options">
+            {currentQuestion.options.map((option, index) => {
+              const isSelected = currentAnswerSet.has(option.label);
+              return (
+                <button
+                  key={index}
+                  className={`question-option ${isSelected ? 'selected' : ''}`}
+                  onClick={() => handleOptionToggle(option.label)}
+                >
+                  <div className="option-checkbox">
+                    {currentQuestion.multiSelect ? (
+                      <span className={`codicon codicon-${isSelected ? 'check' : 'blank'}`} />
+                    ) : (
+                      <span className={`codicon codicon-${isSelected ? 'circle-filled' : 'circle-outline'}`} />
+                    )}
+                  </div>
+                  <div className="option-content">
+                    <div className="option-label">{option.label}</div>
+                    <div className="option-description">{option.description}</div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Hint text */}
+          {currentQuestion.multiSelect && (
+            <p className="question-hint">
+              {t('askUserQuestion.multiSelectHint', 'You can select multiple options')}
+            </p>
+          )}
+        </div>
+
+        {/* Button area */}
+        <div className="ask-user-question-dialog-actions">
           <button
-            className="action-btn cancel-btn"
+            className="action-button secondary"
             onClick={handleCancel}
           >
-            {t('askUserQuestion.cancel')}
+            {t('askUserQuestion.cancel', 'Cancel')}
           </button>
-          <button
-            className="action-btn submit-btn"
-            onClick={handleSubmit}
-            disabled={!hasValidAnswer()}
-          >
-            {t('askUserQuestion.submit')}
-          </button>
+
+          <div className="action-buttons-right">
+            {currentQuestionIndex > 0 && (
+              <button
+                className="action-button secondary"
+                onClick={handleBack}
+              >
+                {t('askUserQuestion.back', 'Back')}
+              </button>
+            )}
+
+            <button
+              className={`action-button primary ${!canProceed ? 'disabled' : ''}`}
+              onClick={handleNext}
+              disabled={!canProceed}
+            >
+              {isLastQuestion
+                ? t('askUserQuestion.submit', 'Submit')
+                : t('askUserQuestion.next', 'Next')}
+            </button>
+          </div>
         </div>
       </div>
     </div>

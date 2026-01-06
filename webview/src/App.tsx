@@ -82,12 +82,18 @@ const App = () => {
   // 权限弹窗状态
   const [permissionDialogOpen, setPermissionDialogOpen] = useState(false);
   const [currentPermissionRequest, setCurrentPermissionRequest] = useState<PermissionRequest | null>(null);
+  const permissionDialogOpenRef = useRef(false);
+  const currentPermissionRequestRef = useRef<PermissionRequest | null>(null);
+  const pendingPermissionRequestsRef = useRef<PermissionRequest[]>([]);
 
   // AskUserQuestion dialog state
   const [askUserQuestionDialogOpen, setAskUserQuestionDialogOpen] = useState(false);
   const [currentAskUserQuestionRequest, setCurrentAskUserQuestionRequest] = useState<AskUserQuestionRequest | null>(null);
+  const askUserQuestionDialogOpenRef = useRef(false);
+  const currentAskUserQuestionRequestRef = useRef<AskUserQuestionRequest | null>(null);
+  const pendingAskUserQuestionRequestsRef = useRef<AskUserQuestionRequest[]>([]);
 
-  // ChatInputBox 相关状态
+  // ChatInputBox state
   const [currentProvider, setCurrentProvider] = useState('claude');
   const [selectedClaudeModel, setSelectedClaudeModel] = useState(CLAUDE_MODELS[0].id);
   const [selectedCodexModel, setSelectedCodexModel] = useState(CODEX_MODELS[0].id);
@@ -119,6 +125,48 @@ const App = () => {
   const inputAreaRef = useRef<HTMLDivElement | null>(null);
   // 追踪用户是否在底部（用于判断是否需要自动滚动）
   const isUserAtBottomRef = useRef(true);
+
+  useEffect(() => {
+    permissionDialogOpenRef.current = permissionDialogOpen;
+    currentPermissionRequestRef.current = currentPermissionRequest;
+  }, [permissionDialogOpen, currentPermissionRequest]);
+
+  useEffect(() => {
+    askUserQuestionDialogOpenRef.current = askUserQuestionDialogOpen;
+    currentAskUserQuestionRequestRef.current = currentAskUserQuestionRequest;
+  }, [askUserQuestionDialogOpen, currentAskUserQuestionRequest]);
+
+  const openPermissionDialog = (request: PermissionRequest) => {
+    currentPermissionRequestRef.current = request;
+    permissionDialogOpenRef.current = true;
+    setCurrentPermissionRequest(request);
+    setPermissionDialogOpen(true);
+  };
+
+  const openAskUserQuestionDialog = (request: AskUserQuestionRequest) => {
+    currentAskUserQuestionRequestRef.current = request;
+    askUserQuestionDialogOpenRef.current = true;
+    setCurrentAskUserQuestionRequest(request);
+    setAskUserQuestionDialogOpen(true);
+  };
+
+  useEffect(() => {
+    if (permissionDialogOpen) return;
+    if (currentPermissionRequest) return;
+    const next = pendingPermissionRequestsRef.current.shift();
+    if (next) {
+      openPermissionDialog(next);
+    }
+  }, [permissionDialogOpen, currentPermissionRequest]);
+
+  useEffect(() => {
+    if (askUserQuestionDialogOpen) return;
+    if (currentAskUserQuestionRequest) return;
+    const next = pendingAskUserQuestionRequestsRef.current.shift();
+    if (next) {
+      openAskUserQuestionDialog(next);
+    }
+  }, [askUserQuestionDialogOpen, currentAskUserQuestionRequest]);
 
   const syncActiveProviderModelMapping = (provider?: ProviderConfig | null) => {
     if (typeof window === 'undefined' || !window.localStorage) return;
@@ -559,6 +607,27 @@ const App = () => {
         setAskUserQuestionDialogOpen(true);
       } catch (error) {
         console.error('[Frontend] Failed to parse ask-user-question request:', error);
+      }
+    };
+
+    // AskUserQuestion 弹窗回调
+    window.showAskUserQuestionDialog = (json) => {
+      console.log('[ASK_USER_QUESTION][FRONTEND] showAskUserQuestionDialog called');
+      console.log('[ASK_USER_QUESTION][FRONTEND] Raw JSON:', json);
+      try {
+        const request = JSON.parse(json) as AskUserQuestionRequest;
+        console.log('[ASK_USER_QUESTION][FRONTEND] Parsed request:', request);
+        console.log('[ASK_USER_QUESTION][FRONTEND] requestId:', request.requestId);
+        console.log('[ASK_USER_QUESTION][FRONTEND] questions count:', request.questions?.length);
+        if (askUserQuestionDialogOpenRef.current || currentAskUserQuestionRequestRef.current) {
+          pendingAskUserQuestionRequestsRef.current.push(request);
+          console.log('[ASK_USER_QUESTION][FRONTEND] Dialog busy, queued request. queueSize=', pendingAskUserQuestionRequestsRef.current.length);
+        } else {
+          openAskUserQuestionDialog(request);
+          console.log('[ASK_USER_QUESTION][FRONTEND] Dialog state set to open');
+        }
+      } catch (error) {
+        console.error('[ASK_USER_QUESTION][FRONTEND] ERROR: Failed to parse request:', error);
       }
     };
 
@@ -1655,11 +1724,11 @@ const App = () => {
                               }
                             }}
                             style={{ cursor: 'pointer' }}
-                            title="Click to preview full image"
+                            title={t('chat.clickToPreview')}
                           >
                             <img
                               src={block.src}
-                              alt="User uploaded image"
+                              alt={t('chat.userUploadedImage')}
                               style={{
                                 maxWidth: message.type === 'user' ? '200px' : '100%',
                                 maxHeight: message.type === 'user' ? '150px' : 'auto',
@@ -1687,7 +1756,7 @@ const App = () => {
                             </div>
                             {isThinkingExpanded(messageIndex, blockIndex) && (
                               <div className="thinking-content">
-                                {block.thinking ?? block.text ?? '(no thinking content)'}
+                                {block.thinking ?? block.text ?? t('chat.noThinkingContent')}
                               </div>
                             )}
                           </div>

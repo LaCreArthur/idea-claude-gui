@@ -16,6 +16,66 @@ import { persistJsonlMessage, loadSessionHistory } from './session-service.js';
 import { loadAttachments, buildContentBlocks } from './attachment-service.js';
 import { buildIDEContextPrompt } from '../system-prompts.js';
 
+const ACCEPT_EDITS_AUTO_APPROVE_TOOLS = new Set([
+  'Write',
+  'Edit',
+  'MultiEdit',
+  'CreateDirectory',
+  'MoveFile',
+  'CopyFile',
+  'Rename'
+]);
+
+function shouldAutoApproveTool(permissionMode, toolName) {
+  if (!toolName) return false;
+  if (permissionMode === 'bypassPermissions') return true;
+  if (permissionMode === 'acceptEdits') return ACCEPT_EDITS_AUTO_APPROVE_TOOLS.has(toolName);
+  return false;
+}
+
+function createPreToolUseHook(permissionMode) {
+  const normalizedPermissionMode = (!permissionMode || permissionMode === '') ? 'default' : permissionMode;
+
+  return async (input) => {
+    console.log('[PERM_DEBUG] PreToolUse hook called:', input?.tool_name);
+
+    if (normalizedPermissionMode === 'plan') {
+      return {
+        decision: 'block',
+        reason: 'Permission mode is plan (no execution)'
+      };
+    }
+
+    if (shouldAutoApproveTool(normalizedPermissionMode, input?.tool_name)) {
+      console.log('[PERM_DEBUG] Auto-approve tool:', input?.tool_name, 'mode:', normalizedPermissionMode);
+      return { decision: 'approve' };
+    }
+
+    console.log('[PERM_DEBUG] Calling canUseTool...');
+    try {
+      const result = await canUseTool(input?.tool_name, input?.tool_input);
+      console.log('[PERM_DEBUG] canUseTool returned:', result?.behavior);
+
+      if (result?.behavior === 'allow') {
+        return { decision: 'approve' };
+      }
+      if (result?.behavior === 'deny') {
+        return {
+          decision: 'block',
+          reason: result?.message || 'Permission denied'
+        };
+      }
+      return {};
+    } catch (error) {
+      console.error('[PERM_DEBUG] canUseTool error:', error?.message);
+      return {
+        decision: 'block',
+        reason: 'Permission check failed: ' + (error?.message || String(error))
+      };
+    }
+  };
+}
+
 /**
  * Build error payload with configuration details for user-facing error messages
  */
@@ -159,8 +219,13 @@ export async function sendMessage(message, resumeSessionId = null, cwd = null, p
     const systemPromptAppend = buildIDEContextPrompt(openedFiles, agentPrompt);
 
     // Prepare options
-    const effectivePermissionMode = permissionMode || 'default';
+    // Note: We don't pass pathToClaudeCodeExecutable, let SDK use built-in cli.js
+    // This avoids Windows CLI path issues (ENOENT errors)
+    const effectivePermissionMode = (!permissionMode || permissionMode === '') ? 'default' : permissionMode;
     const shouldUseCanUseTool = effectivePermissionMode === 'default';
+    console.log('[PERM_DEBUG] permissionMode:', permissionMode);
+    console.log('[PERM_DEBUG] effectivePermissionMode:', effectivePermissionMode);
+    console.log('[PERM_DEBUG] shouldUseCanUseTool:', shouldUseCanUseTool);
 
     // Read Extended Thinking configuration from settings.json
     const settings = loadClaudeSettings();
@@ -180,6 +245,7 @@ export async function sendMessage(message, resumeSessionId = null, cwd = null, p
       permissionMode: effectivePermissionMode,
       model: sdkModelName,
       maxTurns: 100,
+      // Extended Thinking configuration (based on settings.json alwaysThinkingEnabled)
       ...(maxThinkingTokens !== undefined && { maxThinkingTokens }),
       additionalDirectories: Array.from(
         new Set(
@@ -187,7 +253,14 @@ export async function sendMessage(message, resumeSessionId = null, cwd = null, p
         )
       ),
       canUseTool: shouldUseCanUseTool ? canUseTool : undefined,
+      hooks: {
+        PreToolUse: [{
+          hooks: [createPreToolUseHook(effectivePermissionMode)]
+        }]
+      },
+      // Don't pass pathToClaudeCodeExecutable, SDK will use built-in cli.js
       settingSources: ['user', 'project', 'local'],
+      // Use Claude Code preset system prompt so Claude knows current working directory
       systemPrompt: {
         type: 'preset',
         preset: 'claude_code',
@@ -196,6 +269,8 @@ export async function sendMessage(message, resumeSessionId = null, cwd = null, p
       // AbortController must be inside options (not at top level) per SDK documentation
       abortController
     };
+    console.log('[PERM_DEBUG] options.canUseTool:', options.canUseTool ? 'SET' : 'NOT SET');
+    console.log('[PERM_DEBUG] options.hooks:', options.hooks ? 'SET (PreToolUse)' : 'NOT SET');
 
     // Resume session if sessionId is provided
     if (resumeSessionId && resumeSessionId !== '') {
@@ -525,32 +600,8 @@ export async function sendMessageWithAttachments(message, resumeSessionId = null
     const normalizedPermissionMode = (!permissionMode || permissionMode === '') ? 'default' : permissionMode;
 
     // PreToolUse hook for permission control (replaces canUseTool in AsyncIterable mode)
-    const preToolUseHook = async (input) => {
-      // Auto-approve in non-default mode
-      if (normalizedPermissionMode !== 'default') {
-        return { decision: 'approve' };
-      }
-
-      // Call canUseTool for permission check
-      try {
-        const result = await canUseTool(input.tool_name, input.tool_input);
-        if (result.behavior === 'allow') {
-          return { decision: 'approve' };
-        } else if (result.behavior === 'deny') {
-          return {
-            decision: 'block',
-            reason: result.message || 'Permission denied'
-          };
-        }
-        return {};
-      } catch (error) {
-        console.error('[ERROR] canUseTool error:', error.message);
-        return {
-          decision: 'block',
-          reason: 'Permission check failed: ' + error.message
-        };
-      }
-    };
+    // See docs/multimodal-permission-bug.md
+    const preToolUseHook = createPreToolUseHook(normalizedPermissionMode);
 
     // Read Extended Thinking configuration from settings.json
     const settings = loadClaudeSettings();
@@ -578,11 +629,12 @@ export async function sendMessageWithAttachments(message, resumeSessionId = null
       ),
       // Set both canUseTool and hooks to ensure at least one takes effect
       canUseTool: normalizedPermissionMode === 'default' ? canUseTool : undefined,
-      hooks: normalizedPermissionMode === 'default' ? {
+      hooks: {
         PreToolUse: [{
           hooks: [preToolUseHook]
         }]
-      } : undefined,
+      },
+      // Don't pass pathToClaudeCodeExecutable, SDK will use built-in cli.js
       settingSources: ['user', 'project', 'local'],
       systemPrompt: {
         type: 'preset',

@@ -281,7 +281,7 @@ public class McpServerManager {
                     // Write back file with flush
                     try (FileWriter writer = new FileWriter(claudeJsonFile)) {
                         gson.toJson(claudeJson, writer);
-                        writer.flush();
+                        writer.flush();  // Ensure data is fully written to disk
                     }
 
                     LOG.info("[McpServerManager] Upserted MCP server in ~/.claude.json: " + serverId
@@ -372,14 +372,20 @@ public class McpServerManager {
                             // 写回文件
                             try (FileWriter writer = new FileWriter(claudeJsonFile)) {
                                 gson.toJson(claudeJson, writer);
-                                LOG.info("[McpServerManager] Deleted MCP server from ~/.claude.json: " + serverId);
-
-                                // 同步到 settings.json
-                                claudeSettingsManager.syncMcpToClaudeSettings();
-
-                                removed = true;
-                                return true;
+                                writer.flush();  // 确保数据完全写入磁盘
                             }
+
+                            LOG.info("[McpServerManager] Deleted MCP server from ~/.claude.json: " + serverId);
+
+                            // 同步到 settings.json（在文件写入完成后）
+                            try {
+                                claudeSettingsManager.syncMcpToClaudeSettings();
+                            } catch (Exception syncError) {
+                                LOG.warn("[McpServerManager] Failed to sync MCP to settings.json: " + syncError.getMessage());
+                            }
+
+                            removed = true;
+                            return true;
                         }
                     }
                 }

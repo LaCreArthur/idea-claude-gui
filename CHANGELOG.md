@@ -1,4 +1,14 @@
-##### **January 4, 2026 (v0.2.1) — Feature Update**
+##### **January 5, 2026 (v0.1.4-beta7) — Upstream**
+
+- Fix permission dialog rejection issue in proxy mode
+- Support official subscription-based login on macOS
+- Resolve some error messages
+
+##### **January 5, 2026 (v0.1.4-beta6) — Upstream**
+
+- Fix permission dialog exception causing plugin black screen issue on Windows
+
+##### **January 4, 2026 (v0.2.1) — Fork Feature Update**
 
 **MCP Server Toggle Enhancements**
 - Dedicated `toggle_mcp_server` action with project-level tracking

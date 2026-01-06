@@ -68,3 +68,4 @@ logs/*.log
 /.idea/
 docs-plan
 firebase-debug.log
+.ace-tool/

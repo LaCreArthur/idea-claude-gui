@@ -1446,6 +1446,14 @@ export const ChatInputBox = ({
 
     // 没有图片文件，处理文本（文件路径或其他文本）
     if (text && text.trim()) {
+      // 提取文件路径并添加到路径映射中
+      const filePath = text.trim();
+      const fileName = filePath.split(/[/\\]/).pop() || filePath;
+
+      // 将路径添加到 pathMappingRef，使其成为"有效引用"
+      pathMappingRef.current.set(fileName, filePath);
+      pathMappingRef.current.set(filePath, filePath);
+
       // 自动添加 @ 前缀（如果还没有），并添加空格以触发渲染
       const textToInsert = (text.startsWith('@') ? text : `@${text}`) + ' ';
 
@@ -1565,6 +1573,14 @@ export const ChatInputBox = ({
     // 注册全局函数以接收 Java 传递的文件路径
     (window as any).handleFilePathFromJava = (filePath: string) => {
       if (!editableRef.current) return;
+
+      // 提取文件路径并添加到路径映射中
+      const absolutePath = filePath.trim();
+      const fileName = absolutePath.split(/[/\\]/).pop() || absolutePath;
+
+      // 将路径添加到 pathMappingRef，使其成为"有效引用"
+      pathMappingRef.current.set(fileName, absolutePath);
+      pathMappingRef.current.set(absolutePath, absolutePath);
 
       // 插入文件路径到输入框（自动添加 @ 前缀），并添加空格以触发渲染
       const pathToInsert = (filePath.startsWith('@') ? filePath : `@${filePath}`) + ' ';
@@ -1793,7 +1809,7 @@ export const ChatInputBox = ({
         items={fileCompletion.items}
         selectedIndex={fileCompletion.activeIndex}
         loading={fileCompletion.loading}
-        emptyText="无匹配文件"
+        emptyText={t('chat.noMatchingFiles')}
         onClose={fileCompletion.close}
         onSelect={(_, index) => fileCompletion.selectIndex(index)}
         onMouseEnter={fileCompletion.handleMouseEnter}
@@ -1807,7 +1823,7 @@ export const ChatInputBox = ({
         items={commandCompletion.items}
         selectedIndex={commandCompletion.activeIndex}
         loading={commandCompletion.loading}
-        emptyText="无匹配命令"
+        emptyText={t('chat.noMatchingCommands')}
         onClose={commandCompletion.close}
         onSelect={(_, index) => commandCompletion.selectIndex(index)}
         onMouseEnter={commandCompletion.handleMouseEnter}
@@ -1821,7 +1837,7 @@ export const ChatInputBox = ({
         items={agentCompletion.items}
         selectedIndex={agentCompletion.activeIndex}
         loading={agentCompletion.loading}
-        emptyText="无可用智能体"
+        emptyText={t('chat.noAvailableAgents')}
         onClose={agentCompletion.close}
         onSelect={(_, index) => agentCompletion.selectIndex(index)}
         onMouseEnter={agentCompletion.handleMouseEnter}

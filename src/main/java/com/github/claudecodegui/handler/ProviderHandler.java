@@ -304,7 +304,7 @@ public class ProviderHandler extends BaseMessageHandler {
             context.getSettingsService().applyActiveProviderToClaudeSettings();
 
             ApplicationManager.getApplication().invokeLater(() -> {
-                callJavaScript("window.showSwitchSuccess", escapeJs("Provider switched successfully!\n\nSettings synced to ~/.claude/settings.json. Next request will use the new configuration."));
+                callJavaScript("window.showSwitchSuccess", escapeJs(com.github.claudecodegui.ClaudeCodeGuiBundle.message("toast.providerSwitchSuccess") + "\n\nSettings synced to ~/.claude/settings.json. Next request will use the new configuration."));
                 handleGetProviders(); // 刷新供应商列表
                 handleGetCurrentClaudeConfig(); // 刷新 Claude CLI 配置显示
                 handleGetActiveProvider(); // 刷新当前激活的供应商配置
@@ -312,7 +312,7 @@ public class ProviderHandler extends BaseMessageHandler {
         } catch (Exception e) {
             LOG.error("[ProviderHandler] Failed to switch provider: " + e.getMessage(), e);
             ApplicationManager.getApplication().invokeLater(() -> {
-                callJavaScript("window.showError", escapeJs("Failed to switch provider: " + e.getMessage()));
+                callJavaScript("window.showError", escapeJs(com.github.claudecodegui.ClaudeCodeGuiBundle.message("toast.providerSwitchFailed") + ": " + e.getMessage()));
             });
         }
     }
@@ -459,9 +459,9 @@ public class ProviderHandler extends BaseMessageHandler {
                 }
 
                 if (!dbFile.canRead()) {
-                    String errorMsg = "Unable to read file\n" +
+                    String errorMsg = com.github.claudecodegui.ClaudeCodeGuiBundle.message("error.cannotReadFile") + "\n" +
                                      "Path: " + dbFile.getAbsolutePath() + "\n" +
-                                     "Please check file permissions";
+                                     com.github.claudecodegui.ClaudeCodeGuiBundle.message("error.checkFilePermissions");
                     LOG.error("[ProviderHandler] " + errorMsg);
                     sendErrorToFrontend("Permission error", errorMsg);
                     return;

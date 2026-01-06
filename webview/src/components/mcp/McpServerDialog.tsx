@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { McpServer, McpServerSpec } from '../../types/mcp';
 
 interface McpServerDialogProps {
@@ -9,9 +10,10 @@ interface McpServerDialogProps {
 }
 
 /**
- * MCP 服务器配置对话框（添加/编辑）
+ * MCP Server Configuration Dialog (Add/Edit)
  */
 export function McpServerDialog({ server, existingIds = [], onClose, onSave }: McpServerDialogProps) {
+  const { t } = useTranslation();
   const [saving, setSaving] = useState(false);
   const [jsonContent, setJsonContent] = useState('');
   const [parseError, setParseError] = useState('');
@@ -102,9 +104,9 @@ export function McpServerDialog({ server, existingIds = [], onClose, onSave }: M
       // mcpServers 格式
       if (parsed.mcpServers && typeof parsed.mcpServers === 'object') {
         for (const [id, config] of Object.entries(parsed.mcpServers)) {
-          // 检查 ID 是否已存在（编辑模式除外）
+          // Check if ID already exists (except in edit mode)
           if (!server && existingIds.includes(id)) {
-            setParseError(`Server ID "${id}" already exists`);
+            setParseError(t('mcp.serverDialog.errors.idExists', { id }));
             return null;
           }
 
@@ -155,13 +157,13 @@ export function McpServerDialog({ server, existingIds = [], onClose, onSave }: M
       }
 
       if (servers.length === 0) {
-        setParseError('Unrecognized configuration format');
+        setParseError(t('mcp.serverDialog.errors.unrecognizedFormat'));
         return null;
       }
 
       return servers;
     } catch (e) {
-      setParseError(`JSON parse error: ${(e as Error).message}`);
+      setParseError(t('mcp.serverDialog.errors.jsonParseError', { message: (e as Error).message }));
       return null;
     }
   };
@@ -209,10 +211,10 @@ export function McpServerDialog({ server, existingIds = [], onClose, onSave }: M
     <div className="dialog-overlay" onClick={handleOverlayClick}>
       <div className="dialog mcp-server-dialog">
         <div className="dialog-header">
-          <h3>{server ? 'Edit Server' : 'Manual Configuration'}</h3>
+          <h3>{server ? t('mcp.serverDialog.editTitle') : t('mcp.serverDialog.addTitle')}</h3>
           <div className="header-actions">
             <button className="mode-btn active">
-              Raw Config (JSON)
+              {t('mcp.serverDialog.rawConfig')}
             </button>
             <button className="close-btn" onClick={onClose}>
               <span className="codicon codicon-close"></span>
@@ -222,7 +224,7 @@ export function McpServerDialog({ server, existingIds = [], onClose, onSave }: M
 
         <div className="dialog-body">
           <p className="dialog-desc">
-            Enter MCP Servers configuration JSON (NPX or UVX config preferred)
+            {t('mcp.serverDialog.description')}
           </p>
 
           <div className="json-editor">
@@ -253,17 +255,17 @@ export function McpServerDialog({ server, existingIds = [], onClose, onSave }: M
         <div className="dialog-footer">
           <div className="footer-hint">
             <span className="codicon codicon-info"></span>
-            Please verify the source and assess risks before configuring
+            {t('mcp.serverDialog.securityWarning')}
           </div>
           <div className="footer-actions">
-            <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
+            <button className="btn btn-secondary" onClick={onClose}>{t('common.cancel')}</button>
             <button
               className="btn btn-primary"
               onClick={handleConfirm}
               disabled={!isValid() || saving}
             >
               {saving && <span className="codicon codicon-loading codicon-modifier-spin"></span>}
-              {saving ? 'Saving...' : 'Confirm'}
+              {saving ? t('mcp.serverDialog.saving') : t('common.confirm')}
             </button>
           </div>
         </div>

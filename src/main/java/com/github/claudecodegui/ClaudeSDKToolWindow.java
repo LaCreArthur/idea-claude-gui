@@ -10,6 +10,7 @@ import com.github.claudecodegui.util.FontConfigService;
 import com.github.claudecodegui.util.HtmlLoader;
 import com.github.claudecodegui.util.JBCefBrowserFactory;
 import com.github.claudecodegui.util.JsUtils;
+import com.github.claudecodegui.util.LanguageConfigService;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -240,17 +241,43 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
             try {
                 PropertiesComponent props = PropertiesComponent.getInstance();
                 String savedNodePath = props.getValue(NODE_PATH_PROPERTY_KEY);
+
                 if (savedNodePath != null && !savedNodePath.trim().isEmpty()) {
+                    // 使用已保存的路径
                     String path = savedNodePath.trim();
-                    // 同时设置 Claude 和 Codex 的 Node.js 路径
                     claudeSDKBridge.setNodeExecutable(path);
                     codexSDKBridge.setNodeExecutable(path);
-                    // 关键修复：验证并缓存 Node.js 版本，避免首次发送消息时 getCachedNodeVersion() 返回 null
+                    // 验证并缓存 Node.js 版本
                     claudeSDKBridge.verifyAndCacheNodePath(path);
                     LOG.info("Using manually configured Node.js path: " + path);
+                } else {
+                    // 首次安装或未配置路径时，自动检测并缓存
+                    LOG.info("No saved Node.js path found, attempting auto-detection...");
+                    com.github.claudecodegui.model.NodeDetectionResult detected =
+                        claudeSDKBridge.detectNodeWithDetails();
+
+                    if (detected != null && detected.isFound() && detected.getNodePath() != null) {
+                        String detectedPath = detected.getNodePath();
+                        String detectedVersion = detected.getNodeVersion();
+
+                        // 保存检测到的路径
+                        props.setValue(NODE_PATH_PROPERTY_KEY, detectedPath);
+
+                        // 设置到两个 bridge
+                        claudeSDKBridge.setNodeExecutable(detectedPath);
+                        codexSDKBridge.setNodeExecutable(detectedPath);
+
+                        // 验证并缓存版本信息
+                        claudeSDKBridge.verifyAndCacheNodePath(detectedPath);
+
+                        LOG.info("Auto-detected Node.js: " + detectedPath + " (" + detectedVersion + ")");
+                    } else {
+                        LOG.warn("Failed to auto-detect Node.js path. Error: " +
+                            (detected != null ? detected.getErrorMessage() : "Unknown error"));
+                    }
                 }
             } catch (Exception e) {
-                LOG.warn("Failed to load manual Node.js path: " + e.getMessage());
+                LOG.error("Failed to load Node.js path: " + e.getMessage(), e);
             }
         }
 
@@ -575,6 +602,17 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
                         );
                         cefBrowser.executeJavaScript(fontConfigInjection, cefBrowser.getURL(), 0);
                         LOG.info("[FontSync] 字体配置已注入到前端");
+
+                        // 传递 IDEA 语言配置到前端
+                        String languageConfig = LanguageConfigService.getLanguageConfigJson();
+                        LOG.info("[LanguageSync] 获取到的语言配置: " + languageConfig);
+                        String languageConfigInjection = String.format(
+                            "if (window.applyIdeaLanguageConfig) { window.applyIdeaLanguageConfig(%s); } " +
+                            "else { window.__pendingLanguageConfig = %s; }",
+                            languageConfig, languageConfig
+                        );
+                        cefBrowser.executeJavaScript(languageConfigInjection, cefBrowser.getURL(), 0);
+                        LOG.info("[LanguageSync] 语言配置已注入到前端");
 
                         // 斜杠命令的加载现在由前端发起，通过 frontend_ready 事件触发
                         // 不再在 onLoadEnd 中主动调用，避免时序问题
@@ -1173,11 +1211,11 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
 
                 LOG.info("New session created successfully, working directory: " + workingDirectory);
 
-                // 更新前端状态
+                // Update frontend status
                 ApplicationManager.getApplication().invokeLater(() -> {
-                    callJavaScript("updateStatus", JsUtils.escapeJs("New session created, you can start asking questions"));
+                    callJavaScript("updateStatus", JsUtils.escapeJs(ClaudeCodeGuiBundle.message("toast.newSessionCreatedReady")));
 
-                    // 重置 Token 使用统计
+                    // Reset token usage statistics
                     int maxTokens = SettingsHandler.getModelContextLimit(handlerContext.getCurrentModel());
                     JsonObject usageUpdate = new JsonObject();
                     usageUpdate.addProperty("percentage", 0);
@@ -1354,7 +1392,7 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
                 contextUpdateAlarm.dispose();
             }
 
-            // 清理斜杠命令缓存
+            // Clean up slash command cache
             if (slashCommandCache != null) {
                 slashCommandCache.dispose();
                 slashCommandCache = null;
