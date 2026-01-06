@@ -1,3 +1,21 @@
+##### **January 6, 2026 (v0.2.3) — Multi-Provider Architecture**
+
+Major merge integrating 20 upstream commits adding Codex multi-provider support.
+
+**New Features:**
+- **Multi-Provider Architecture** - Provider abstraction supporting Claude and Codex
+- **Codex Integration** - OpenAI Codex support with environment variable API keys
+- **Animated Empty State** - Provider switcher with smooth transitions
+- **Usage Statistics for Codex** - Track usage across providers
+- **History Icons** - Visual indicators in conversation history
+
+**Bug Fixes:**
+- Windows editing reliability (prompt constraints)
+- Agent prompt injection fixes
+- Double tip display bug
+
+---
+
 ##### **January 6, 2026 (v0.2.2) — Upstream Sync**
 
 Major merge integrating 57 upstream commits while preserving fork improvements.

@@ -45,19 +45,22 @@ If you've used the Claude Code CLI before (`claude login`), the plugin **detects
 
 ## Installation
 
-[IDEA Claude GUI Installation](https://plugins.jetbrains.com/plugin/29342-claude-code-gui)
+[IDEA Claude GUI Installation](https://plugins.jetbrains.com/plugin/29599-claude-gui)
 
 ---
 
-### Current Version: v0.2.2
+### Current Version: v0.2.3
 
-**Latest Features (v0.2.2):**
-- **Upstream Sync** - Merged 57 commits from upstream, resolving 15 conflicts
-- **ACCEPT_EDITS Mode** - Auto-approve file editing tools for agent workflows
-- **macOS Keychain Support** - Native credential storage on macOS
-- **PreToolUse Hooks** - Unified permission handling across message services
-- **Permission Dialog Queueing** - Fixed concurrency issues with multiple dialogs
-- **Enhanced i18n** - 8 language bundles with complete coverage
+**Latest Features (v0.2.3):**
+- **Multi-Provider Architecture** - Provider abstraction supporting Claude and Codex
+- **Codex Integration** - OpenAI Codex support with environment variable API keys
+- **Animated Empty State** - Provider switcher with smooth transitions
+- **Usage Statistics for Codex** - Track usage across providers
+
+**v0.2.2 Highlights:**
+- Upstream Sync - Merged 57 commits from upstream
+- ACCEPT_EDITS Mode, macOS Keychain, PreToolUse Hooks
+- Enhanced i18n with 8 language bundles
 
 **v0.2.1 Highlights:**
 - MCP Server Management with project-level tracking

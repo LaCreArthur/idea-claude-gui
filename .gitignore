@@ -69,3 +69,4 @@ logs/*.log
 docs-plan
 firebase-debug.log
 .ace-tool/
+.workflow

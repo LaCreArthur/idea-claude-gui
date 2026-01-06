@@ -237,6 +237,7 @@ public class FileHandler extends BaseMessageHandler {
 
     /**
      * 在编辑器中打开文件
+     * 支持带行号的文件路径格式：file.txt:100 或 file.txt:100-200
      */
     private void handleOpenFile(String filePath) {
         LOG.info("Requesting to open file: " + filePath);
@@ -244,11 +245,37 @@ public class FileHandler extends BaseMessageHandler {
         // 先在普通线程中处理文件路径解析（不涉及 VFS 操作）
         CompletableFuture.runAsync(() -> {
             try {
-                File file = new File(filePath);
+                // 解析文件路径和行号
+                final String[] parsedPath = {filePath};
+                final int[] parsedLineNumber = {-1};
+
+                // 检测并提取行号（格式：file.txt:100 或 file.txt:100-200）
+                int colonIndex = filePath.lastIndexOf(':');
+                if (colonIndex > 0) {
+                    String afterColon = filePath.substring(colonIndex + 1);
+                    // 检查冒号后是否为行号（可能包含范围，如 100-200）
+                    if (afterColon.matches("\\d+(-\\d+)?")) {
+                        parsedPath[0] = filePath.substring(0, colonIndex);
+                        // 提取起始行号
+                        int dashIndex = afterColon.indexOf('-');
+                        String lineStr = dashIndex > 0 ? afterColon.substring(0, dashIndex) : afterColon;
+                        try {
+                            parsedLineNumber[0] = Integer.parseInt(lineStr);
+                            LOG.info("检测到行号: " + parsedLineNumber[0]);
+                        } catch (NumberFormatException e) {
+                            LOG.warn("解析行号失败: " + lineStr);
+                        }
+                    }
+                }
+
+                final String actualPath = parsedPath[0];
+                final int lineNumber = parsedLineNumber[0];
+
+                File file = new File(actualPath);
 
                 // 如果文件不存在且是相对路径，尝试相对于项目根目录解析
                 if (!file.exists() && !file.isAbsolute() && context.getProject().getBasePath() != null) {
-                    File projectFile = new File(context.getProject().getBasePath(), filePath);
+                    File projectFile = new File(context.getProject().getBasePath(), actualPath);
                     LOG.info("Trying to resolve relative to project root: " + projectFile.getAbsolutePath());
                     if (projectFile.exists()) {
                         file = projectFile;
@@ -256,22 +283,44 @@ public class FileHandler extends BaseMessageHandler {
                 }
 
                 if (!file.exists()) {
-                    LOG.error("File does not exist: " + filePath);
+                    LOG.error("File does not exist: " + actualPath);
                     ApplicationManager.getApplication().invokeLater(() -> {
-                        callJavaScript("addErrorMessage", escapeJs("Cannot open file: file does not exist (" + filePath + ")"));
+                        callJavaScript("addErrorMessage", escapeJs("Cannot open file: file does not exist (" + actualPath + ")"));
                     }, ModalityState.nonModal());
                     return;
                 }
 
-                final File finalFile = file;
-
                 // 使用工具类方法异步刷新并查找文件
                 EditorFileUtils.refreshAndFindFileAsync(
-                        finalFile,
+                        file,
                         virtualFile -> {
-                            // 成功找到文件，在编辑器中打开
-                            FileEditorManager.getInstance(context.getProject()).openFile(virtualFile, true);
-                            LOG.info("Successfully opened file: " + filePath);
+                            // File found, open in editor
+                            FileEditorManager fileEditorManager = FileEditorManager.getInstance(context.getProject());
+                            fileEditorManager.openFile(virtualFile, true);
+
+                            // If line number specified, jump to that line
+                            if (lineNumber > 0) {
+                                ApplicationManager.getApplication().invokeLater(() -> {
+                                    com.intellij.openapi.editor.Editor editor =
+                                        com.intellij.openapi.fileEditor.FileEditorManager.getInstance(context.getProject())
+                                            .getSelectedTextEditor();
+                                    if (editor != null && editor.getDocument().getTextLength() > 0) {
+                                        // Line numbers are 0-based internally, user input is 1-based
+                                        int zeroBasedLine = Math.max(0, lineNumber - 1);
+                                        int lineCount = editor.getDocument().getLineCount();
+                                        if (zeroBasedLine < lineCount) {
+                                            int offset = editor.getDocument().getLineStartOffset(zeroBasedLine);
+                                            editor.getCaretModel().moveToOffset(offset);
+                                            editor.getScrollingModel().scrollToCaret(com.intellij.openapi.editor.ScrollType.CENTER);
+                                            LOG.info("Jumped to line " + lineNumber);
+                                        } else {
+                                            LOG.warn("Line number " + lineNumber + " out of range (file has " + lineCount + " lines)");
+                                        }
+                                    }
+                                }, ModalityState.nonModal());
+                            }
+
+                            LOG.info("Successfully opened file: " + actualPath);
                         },
                         () -> {
                             // 失败回调

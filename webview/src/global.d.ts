@@ -58,6 +58,11 @@ interface Window {
   addErrorMessage?: (message: string) => void;
 
   /**
+   * Add single history message (used for Codex session loading)
+   */
+  addHistoryMessage?: (message: any) => void;
+
+  /**
    * Add toast notification (called from backend)
    */
   addToast?: (message: string, type: 'success' | 'error' | 'warning' | 'info') => void;
@@ -288,4 +293,19 @@ interface Window {
    * Selected agent changed callback - 选择智能体后的回调
    */
   onSelectedAgentChanged?: (json: string) => void;
+
+  /**
+   * Update Codex providers list
+   */
+  updateCodexProviders?: (json: string) => void;
+
+  /**
+   * Update active Codex provider
+   */
+  updateActiveCodexProvider?: (json: string) => void;
+
+  /**
+   * Update current Codex config (from ~/.codex/)
+   */
+  updateCurrentCodexConfig?: (json: string) => void;
 }
