@@ -2,6 +2,43 @@
 > Agentic hindsight - reverse chronological
 ---
 
+## 2026-01-06: v0.2.2 Documentation Sync - Post-Merge Cleanup
+
+**Changes**:
+- README.md: Updated version 0.2.1 → 0.2.2, added v0.2.2 feature highlights
+- CHANGELOG.md: Added v0.2.2 entry with merge statistics (57 commits, 15 conflicts, 82 files)
+- FORK_STRATEGY.md: Rewrote strategy - git merge IS practical (was "impractical")
+- FORK_STRATEGY.md: Marked 7 features as implemented, added Option A/B integration approaches
+- CLAUDE.md: Updated locales 6 → 8, added upstream sync section with merge learnings
+
+**Learnings**:
+
+1. **Git merge with upstream works**: Despite 60+ localized files, merge succeeded with ~18% conflict rate (15/82 files)
+
+2. **i18n conflict resolution pattern**: Prefer upstream's `t('key')` translation calls over fork's hardcoded English text. This preserves internationalization infrastructure.
+
+3. **Common merge artifacts to watch for**:
+   - Duplicate method declarations (e.g., `handleAskUserQuestionRequest` appeared twice in PermissionService.java)
+   - Duplicate state declarations (e.g., AskUserQuestion state in App.tsx)
+   - Duplicate imports (e.g., LanguageConfigService imported twice)
+   - Orphaned conflict markers (found in api-config.js)
+
+4. **Documentation version locations**:
+   - build.gradle: `version = 'X.Y.Z'` (source of truth)
+   - README.md: Current Version section
+   - CHANGELOG.md: Top entry
+   - plugin.xml: `<change-notes>` section (for JetBrains Marketplace)
+
+**Hindsight**:
+- After any upstream merge, run comprehensive documentation review
+- Memory search (`mem-search` skill) can reconstruct merge history from observations
+- FORK_STRATEGY.md was outdated after successful merge - strategy docs need updating when proven wrong
+- Version 0.2.2 reflects merge commit e982fc2
+
+**Context**: 4 documentation files updated, 98 insertions
+
+---
+
 ## 2026-01-04: v0.2.1 Release - AI Cherry-Pick from Upstream
 
 **Changes**:

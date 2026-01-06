@@ -1,3 +1,28 @@
+##### **January 6, 2026 (v0.2.2) — Upstream Sync**
+
+Major merge integrating 57 upstream commits while preserving fork improvements.
+
+**New Features from Upstream:**
+- **ACCEPT_EDITS Permission Mode** - Auto-approve file editing tools for agent workflows
+- **macOS Keychain Support** - Native credential storage using macOS Keychain
+- **PreToolUse Hooks** - Unified permission handling across both message services
+- **Permission Dialog Queueing** - Fixed concurrency issues with multiple permission dialogs
+- **Node.js Auto-Detection** - Automatic path detection on first installation
+- **Enhanced i18n** - Complete internationalization with 8 language bundles
+
+**Merge Statistics:**
+- 57 upstream commits integrated
+- 82 files changed (8,692 insertions)
+- 15 files with manual conflict resolution
+- Preserved fork improvements: English localization, CLI auth, test infrastructure
+
+**Bug Fixes:**
+- Fixed permission dialog crash on Windows (black screen issue)
+- Improved concurrency handling with Alarm-based debounce
+- Added file existence checks in PermissionService
+
+---
+
 ##### **January 5, 2026 (v0.1.4-beta7) — Upstream**
 
 - Fix permission dialog rejection issue in proxy mode

@@ -49,13 +49,20 @@ If you've used the Claude Code CLI before (`claude login`), the plugin **detects
 
 ---
 
-### Current Version: v0.2.1
+### Current Version: v0.2.2
 
-**Latest Features:**
-- **MCP Server Management** - Enable/disable MCP servers with project-level tracking
-- **AskUserQuestion Tool** - Interactive dialogs for Claude to ask structured questions
-- **Test Infrastructure** - Comprehensive test coverage with Vitest
-- **Enhanced Reliability** - Fixed bugs, improved error handling
+**Latest Features (v0.2.2):**
+- **Upstream Sync** - Merged 57 commits from upstream, resolving 15 conflicts
+- **ACCEPT_EDITS Mode** - Auto-approve file editing tools for agent workflows
+- **macOS Keychain Support** - Native credential storage on macOS
+- **PreToolUse Hooks** - Unified permission handling across message services
+- **Permission Dialog Queueing** - Fixed concurrency issues with multiple dialogs
+- **Enhanced i18n** - 8 language bundles with complete coverage
+
+**v0.2.1 Highlights:**
+- MCP Server Management with project-level tracking
+- AskUserQuestion Tool for interactive dialogs
+- Test Infrastructure with Vitest
 
 **v0.2.0 Highlights:**
 - Complete English localization (UI, logs, documentation)

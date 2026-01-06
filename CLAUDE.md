@@ -60,7 +60,7 @@ it('calls sendToJava when clicked', async () => {
 - English comments only
 - No excessive debug logging in production
 - Follow existing patterns in codebase
-- i18n for all user-facing strings (6 locales)
+- i18n for all user-facing strings (8 locales)
 
 ## Key Files
 
@@ -68,3 +68,16 @@ it('calls sendToJava when clicked', async () => {
 - `ai-bridge/permission-handler.js` - File-based IPC
 - `src/main/java/.../ClaudeSDKToolWindow.java` - Plugin entry
 - `src/main/java/.../handler/` - Message handlers
+- `src/main/java/.../permission/PermissionService.java` - Permission handling
+
+## Upstream Sync
+
+This is a fork of [zhukunpenglinyutong/idea-claude-code-gui](https://github.com/zhukunpenglinyutong/idea-claude-code-gui).
+
+See [docs/FORK_STRATEGY.md](docs/FORK_STRATEGY.md) for merge strategy and feature adoption guidelines.
+
+**Key learnings from v0.2.2 merge:**
+- Git merge is practical (~18% manual conflict rate)
+- i18n conflicts: prefer upstream's translation keys over hardcoded English
+- Watch for duplicate code artifacts after merge (methods, imports, state declarations)
+- Run full test suite after merge to catch compilation issues

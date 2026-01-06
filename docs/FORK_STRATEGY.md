@@ -1,16 +1,27 @@
 # Fork Evolution Strategy
 
-> Independent fork with AI-assisted feature adoption
+> Independent fork with periodic upstream syncs
 
 ## Core Approach
 
-**Independent Fork** - Treat as a separate product, not a tracking fork.
+**Independent Fork with Sync Capability** - Treat as a separate product with periodic upstream integration.
 
-Git merge with upstream is impractical due to:
-- 60+ localized files would conflict
-- Different coding standards (English vs Chinese comments)
-- Different quality bar (tests required)
-- Different priorities
+### Merge Strategy (Updated Jan 2026)
+
+Git merge with upstream **is practical** with careful conflict resolution:
+- v0.2.2 merged 57 upstream commits successfully
+- 15 files required manual resolution (18% conflict rate)
+- AI-assisted conflict resolution proved effective
+
+**When to Merge:**
+- Major upstream releases (e.g., v0.1.4)
+- Critical bug fixes
+- Features with high user demand
+
+**Challenges to Expect:**
+- i18n files will conflict (fork uses English defaults, upstream uses translation keys)
+- Components with different implementations need careful merging
+- Duplicate code artifacts require cleanup after merge
 
 ---
 
@@ -21,11 +32,19 @@ Git merge with upstream is impractical due to:
 - Evaluate each feature for adoption independently
 - No obligation to match upstream feature-for-feature
 
-### 2. Implement, Don't Merge (AI Cherry-Pick)
-- Use AI agents to understand upstream's solution
+### 2. Two Integration Approaches
+
+**Option A: Full Git Merge** (for major releases)
+- Use when upstream has many valuable changes
+- Expect ~18% manual conflict rate
+- AI agents can assist with conflict resolution
+- Clean up duplicate code artifacts after merge
+
+**Option B: AI Cherry-Pick** (for selective features)
+- Use when adopting specific features only
 - Implement using fork's patterns and standards
 - Follow fork's coding standards (English comments, tests, i18n)
-- Avoid git-level integration entirely
+- Avoids git-level integration complexity
 
 ### 3. Quality Bar
 - New features require tests
@@ -87,16 +106,26 @@ What makes this fork distinct:
 
 ## Feature Backlog
 
-Potential features to adopt when users request them:
+### Implemented Features (v0.2.2)
+
+| Feature | Source | Status | Notes |
+|---------|--------|--------|-------|
+| Ask User Question | Upstream | **Done** | Full implementation with multi-select, free-form input |
+| MCP Server Toggle | Upstream | **Done** | Project-level tracking, visual indicators |
+| Slash commands | Upstream | **Done** | `/init`, `/review` integrated |
+| IDE language detection | Upstream | **Done** | Auto-localization based on IDE settings |
+| ACCEPT_EDITS mode | Upstream | **Done** | Auto-approve file editing for agents |
+| macOS Keychain | Upstream | **Done** | Native credential storage |
+| PreToolUse hooks | Upstream | **Done** | Unified permission handling |
+
+### Potential Future Features
 
 | Feature | Source | Complexity | Notes |
 |---------|--------|------------|-------|
-| Ask User Question | Upstream | Medium | Extend PermissionHandler pattern |
-| MCP Server Toggle | Upstream | Low | Partially implemented |
-| Slash commands | Upstream | Low | `/init`, `/review` |
-| IDE language detection | Upstream | Low | Improves i18n |
+| Custom agents | Upstream | Medium | Prompt injection system |
+| Provider management | Upstream | Low | cc-switch config import |
 
 ---
 
 *Created: January 2026*
-*Last updated: January 2026*
+*Last updated: January 6, 2026*
