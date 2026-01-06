@@ -2,6 +2,43 @@
 > Agentic hindsight - reverse chronological
 ---
 
+## 2026-01-06: v0.2.3 Release - Multi-Provider Architecture
+
+**Changes**:
+- Merged 20 upstream commits (v0.1.4-codex branch)
+- 97 files changed, 7 conflicts resolved
+- Added `lineNumber` i18n key to all 7 locale files (was missing)
+- Fixed hardcoded Chinese in ReadToolBlock.tsx line info display
+
+### Architecture Changes
+- New `provider/` package with `claude/`, `codex/`, `common/` subdirectories
+- ClaudeSDKBridge moved to `provider/claude/ClaudeSDKBridge.java`
+- New BaseSDKBridge abstraction for shared provider functionality
+- Channel abstraction: `claude-channel.js`, `codex-channel.js`
+
+### Features Added from Upstream
+- Multi-provider support (Claude + Codex)
+- Codex integration with environment variable API keys
+- Animated empty state with provider switcher
+- Usage statistics for Codex provider
+- History icons
+- Line number navigation in file open
+
+### Conflict Resolution Notes
+1. **channel-manager.js**: Adopted upstream's modular channel imports
+2. **build.gradle**: Kept fork version (0.2.3), kept codex-sdk exclusion optimization
+3. **ClaudeSDKBridge.java**: Deleted old location, kept new provider/claude/ version
+4. **HistoryHandler.java**: Took upstream's multi-provider support, translated Chinese logs to English
+5. **FileHandler.java**: Merged line number navigation feature with English logs
+6. **ReadToolBlock.tsx**: Kept upstream's improved styling, used English colon
+
+**Learnings**:
+- Codex SDK binaries (~310MB) should be excluded from plugin bundle
+- Provider abstraction pattern works well for multi-AI support
+- HistoryHandler needed bulk Chinese→English log translations
+
+---
+
 ## 2026-01-06: v0.2.2 Documentation Sync - Post-Merge Cleanup
 
 **Changes**:

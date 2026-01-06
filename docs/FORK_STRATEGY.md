@@ -8,20 +8,24 @@
 
 ### Merge Strategy (Updated Jan 2026)
 
-Git merge with upstream **is practical** with careful conflict resolution:
-- v0.2.2 merged 57 upstream commits successfully
-- 15 files required manual resolution (18% conflict rate)
-- AI-assisted conflict resolution proved effective
+Git merge with upstream **is practical** and getting easier with experience:
+
+| Release | Commits | Files Changed | Conflicts | Rate |
+|---------|---------|---------------|-----------|------|
+| v0.2.2  | 57      | 82            | 15        | 18%  |
+| v0.2.3  | 20      | 97            | 7         | 7%   |
+
+AI-assisted conflict resolution is highly effective - resolves in ~30 minutes.
 
 **When to Merge:**
-- Major upstream releases (e.g., v0.1.4)
+- Major upstream releases (e.g., v0.1.4-codex)
 - Critical bug fixes
-- Features with high user demand
+- New provider integrations
 
-**Challenges to Expect:**
-- i18n files will conflict (fork uses English defaults, upstream uses translation keys)
-- Components with different implementations need careful merging
-- Duplicate code artifacts require cleanup after merge
+**Typical Conflict Zones:**
+- i18n locale files (use upstream's `t('key')` pattern)
+- Handler files when both sides add features
+- Version numbers in build.gradle
 
 ---
 

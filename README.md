@@ -56,6 +56,7 @@ If you've used the Claude Code CLI before (`claude login`), the plugin **detects
 - **Codex Integration** - OpenAI Codex support with environment variable API keys
 - **Animated Empty State** - Provider switcher with smooth transitions
 - **Usage Statistics for Codex** - Track usage across providers
+- **Line Number Navigation** - Click file:line references to jump directly
 
 **v0.2.2 Highlights:**
 - Upstream Sync - Merged 57 commits from upstream

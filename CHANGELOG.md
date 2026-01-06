@@ -8,11 +8,19 @@ Major merge integrating 20 upstream commits adding Codex multi-provider support.
 - **Animated Empty State** - Provider switcher with smooth transitions
 - **Usage Statistics for Codex** - Track usage across providers
 - **History Icons** - Visual indicators in conversation history
+- **Line Number Navigation** - Click file:line references to jump directly to that line
+
+**Merge Statistics:**
+- 20 upstream commits integrated
+- 97 files changed (+12,763 / -2,391 lines)
+- 7 conflicts resolved manually
+- Preserved fork improvements: English localization, CLI auth, test infrastructure
 
 **Bug Fixes:**
 - Windows editing reliability (prompt constraints)
 - Agent prompt injection fixes
 - Double tip display bug
+- Fixed hardcoded Chinese in ReadToolBlock line info display
 
 ---
 
