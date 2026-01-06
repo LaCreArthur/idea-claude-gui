@@ -329,6 +329,10 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
             permissionService.registerAskUserQuestionDialogShower(project, (requestId, questionsData) ->
                 permissionHandler.showAskUserQuestionDialog(requestId, questionsData));
 
+            // Register PlanApproval dialog shower
+            permissionService.registerPlanApprovalDialogShower(project, (requestId, planData) ->
+                permissionHandler.showPlanApprovalDialog(requestId, planData));
+
             LOG.info("Started permission service with frontend dialogs for project: " + project.getName());
         }
 
@@ -1000,6 +1004,14 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
                         LOG.debug("Received " + incomingCount + " slash commands (old format), but keeping existing commands with descriptions");
                     }
                 }
+
+                @Override
+                public void onModeChanged(String newMode) {
+                    // Phase 4 of Plan Mode: Notify webview of mode change after ExitPlanMode approval
+                    LOG.info("Permission mode changed to: " + newMode);
+                    String jsCode = "if(window.onModeChanged) window.onModeChanged('" + newMode + "');";
+                    executeJavaScriptCode(jsCode);
+                }
             });
         }
 
@@ -1502,6 +1514,7 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
                 PermissionService permissionService = PermissionService.getInstance(project);
                 permissionService.unregisterDialogShower(project);
                 permissionService.unregisterAskUserQuestionDialogShower(project);
+                permissionService.unregisterPlanApprovalDialogShower(project);
             } catch (Exception e) {
                 LOG.warn("Failed to unregister dialog showers: " + e.getMessage());
             }

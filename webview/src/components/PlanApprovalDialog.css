@@ -1,0 +1,210 @@
+/* Plan Approval Dialog Styles */
+.plan-approval-dialog {
+    background: var(--bg-elevated, #252526);
+    border: 1px solid #454545;
+    border-radius: 12px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.7);
+    min-width: 500px;
+    max-width: 700px;
+    max-height: 80vh;
+    overflow: hidden;
+    animation: slideUp 0.3s ease-out;
+    display: flex;
+    flex-direction: column;
+}
+
+.plan-approval-dialog-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid #454545;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: linear-gradient(180deg, #2d2d30 0%, #252526 100%);
+}
+
+.plan-approval-icon {
+    font-size: 20px;
+    color: #4ec9b0;
+}
+
+.plan-approval-dialog-title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-secondary, #ccc);
+    flex: 1;
+}
+
+.plan-approval-dialog-subtitle {
+    padding: 12px 24px;
+    font-size: 13px;
+    color: #999;
+    border-bottom: 1px solid #333;
+}
+
+.plan-approval-dialog-content {
+    padding: 16px 24px;
+    max-height: 300px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.plan-content-wrapper {
+    background: #1e1e1e;
+    border: 1px solid var(--border-secondary, #333);
+    border-radius: 6px;
+    padding: 16px;
+    font-size: 13px;
+    color: var(--text-secondary, #ccc);
+    line-height: 1.6;
+}
+
+.plan-content-wrapper h1,
+.plan-content-wrapper h2,
+.plan-content-wrapper h3,
+.plan-content-wrapper h4 {
+    color: #4ec9b0;
+    margin-top: 0;
+    margin-bottom: 12px;
+}
+
+.plan-content-wrapper ul,
+.plan-content-wrapper ol {
+    padding-left: 20px;
+    margin: 8px 0;
+}
+
+.plan-content-wrapper li {
+    margin: 4px 0;
+}
+
+.plan-content-wrapper code {
+    background: #333;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: var(--idea-editor-font-family, monospace);
+    font-size: 12px;
+}
+
+.plan-content-wrapper pre {
+    background: #333;
+    padding: 12px;
+    border-radius: 6px;
+    overflow-x: auto;
+}
+
+.plan-content-wrapper pre code {
+    background: none;
+    padding: 0;
+}
+
+.plan-approval-dialog-mode-section {
+    padding: 16px 24px;
+    border-top: 1px solid #333;
+    background: #1e1e1e;
+}
+
+.plan-approval-mode-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+}
+
+.plan-approval-mode-options {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.plan-approval-mode-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: #252526;
+    border: 1px solid #333;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-align: left;
+    color: var(--text-secondary, #ccc);
+    font-size: 13px;
+}
+
+.plan-approval-mode-option:hover {
+    background: #2d2d30;
+    border-color: #454545;
+}
+
+.plan-approval-mode-option.selected {
+    background: rgba(78, 201, 176, 0.1);
+    border-color: #4ec9b0;
+}
+
+.plan-approval-mode-option .codicon {
+    font-size: 14px;
+    color: #666;
+}
+
+.plan-approval-mode-option.selected .codicon {
+    color: #4ec9b0;
+}
+
+.mode-option-text {
+    flex: 1;
+}
+
+.plan-approval-dialog-actions {
+    padding: 16px 24px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    border-top: 1px solid #454545;
+    background: linear-gradient(180deg, #252526 0%, #1e1e1e 100%);
+}
+
+.plan-approval-dialog-actions .action-button {
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border: none;
+}
+
+.plan-approval-dialog-actions .action-button.primary {
+    background: #4ec9b0;
+    color: #000;
+}
+
+.plan-approval-dialog-actions .action-button.primary:hover {
+    background: #5fdfc4;
+}
+
+.plan-approval-dialog-actions .action-button.secondary {
+    background: #333;
+    color: #ccc;
+    border: 1px solid #454545;
+}
+
+.plan-approval-dialog-actions .action-button.secondary:hover {
+    background: #3c3c3c;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

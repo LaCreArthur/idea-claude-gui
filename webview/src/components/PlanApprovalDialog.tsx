@@ -1,0 +1,140 @@
+import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import ReactMarkdown from 'react-markdown';
+import './PlanApprovalDialog.css';
+
+export interface PlanApprovalRequest {
+  requestId: string;
+  plan: string;
+}
+
+export type ExecutionMode = 'default' | 'acceptEdits' | 'bypassPermissions';
+
+interface PlanApprovalDialogProps {
+  isOpen: boolean;
+  request: PlanApprovalRequest | null;
+  onApprove: (requestId: string, newMode: ExecutionMode) => void;
+  onReject: (requestId: string) => void;
+}
+
+const PlanApprovalDialog = ({
+  isOpen,
+  request,
+  onApprove,
+  onReject,
+}: PlanApprovalDialogProps) => {
+  const { t } = useTranslation();
+  const [selectedMode, setSelectedMode] = useState<ExecutionMode>('default');
+
+  useEffect(() => {
+    if (isOpen && request) {
+      // Reset to default mode when dialog opens
+      setSelectedMode('default');
+
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') {
+          handleReject();
+        }
+      };
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
+    }
+  }, [isOpen]);
+
+  if (!isOpen || !request) {
+    return null;
+  }
+
+  const handleApprove = () => {
+    onApprove(request.requestId, selectedMode);
+  };
+
+  const handleReject = () => {
+    onReject(request.requestId);
+  };
+
+  const modeOptions: { id: ExecutionMode; labelKey: string; descKey: string }[] = [
+    {
+      id: 'default',
+      labelKey: 'planApproval.modeDefault',
+      descKey: 'Default (confirm each action)',
+    },
+    {
+      id: 'acceptEdits',
+      labelKey: 'planApproval.modeAcceptEdits',
+      descKey: 'Accept Edits (auto-approve file changes)',
+    },
+    {
+      id: 'bypassPermissions',
+      labelKey: 'planApproval.modeBypass',
+      descKey: 'Full Auto (bypass all permissions)',
+    },
+  ];
+
+  return (
+    <div className="permission-dialog-overlay">
+      <div className="plan-approval-dialog">
+        {/* Header */}
+        <div className="plan-approval-dialog-header">
+          <span className="codicon codicon-tasklist plan-approval-icon"></span>
+          <h3 className="plan-approval-dialog-title">
+            {t('planApproval.title', 'Plan Ready for Review')}
+          </h3>
+        </div>
+
+        {/* Subtitle */}
+        <div className="plan-approval-dialog-subtitle">
+          {t('planApproval.subtitle', 'Claude has created a plan. Review and approve to start execution.')}
+        </div>
+
+        {/* Plan content */}
+        <div className="plan-approval-dialog-content">
+          <div className="plan-content-wrapper">
+            <ReactMarkdown>{request.plan}</ReactMarkdown>
+          </div>
+        </div>
+
+        {/* Mode selector */}
+        <div className="plan-approval-dialog-mode-section">
+          <div className="plan-approval-mode-label">
+            {t('planApproval.executeWith', 'Execute with mode:')}
+          </div>
+          <div className="plan-approval-mode-options">
+            {modeOptions.map((option) => (
+              <button
+                key={option.id}
+                className={`plan-approval-mode-option ${selectedMode === option.id ? 'selected' : ''}`}
+                onClick={() => setSelectedMode(option.id)}
+              >
+                <span className={`codicon codicon-${selectedMode === option.id ? 'circle-filled' : 'circle-outline'}`} />
+                <span className="mode-option-text">
+                  {t(option.labelKey, option.descKey)}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="plan-approval-dialog-actions">
+          <button
+            className="action-button secondary"
+            onClick={handleReject}
+          >
+            {t('planApproval.reject', 'Reject')}
+          </button>
+
+          <button
+            className="action-button primary"
+            onClick={handleApprove}
+          >
+            <span className="codicon codicon-play"></span>
+            {t('planApproval.execute', 'Execute Plan')}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default PlanApprovalDialog;

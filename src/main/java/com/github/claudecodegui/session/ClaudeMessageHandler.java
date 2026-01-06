@@ -101,6 +101,9 @@ public class ClaudeMessageHandler implements MessageCallback {
             case "system":
                 handleSystemMessage(content);
                 break;
+            case "mode_change":
+                handleModeChange(content);
+                break;
         }
     }
 
@@ -368,6 +371,26 @@ public class ClaudeMessageHandler implements MessageCallback {
             }
         } catch (Exception e) {
             LOG.warn("Failed to extract slash commands from system message: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Handle mode change message
+     * Called when ExitPlanMode is approved and mode switches
+     * (Phase 4 of Plan Mode implementation)
+     */
+    private void handleModeChange(String content) {
+        LOG.debug("Mode change message: " + content);
+
+        try {
+            JsonObject modeObj = gson.fromJson(content, JsonObject.class);
+            if (modeObj.has("mode")) {
+                String newMode = modeObj.get("mode").getAsString();
+                LOG.info("Permission mode changed to: " + newMode);
+                callbackHandler.notifyModeChanged(newMode);
+            }
+        } catch (Exception e) {
+            LOG.warn("Failed to parse mode change message: " + e.getMessage());
         }
     }
 }

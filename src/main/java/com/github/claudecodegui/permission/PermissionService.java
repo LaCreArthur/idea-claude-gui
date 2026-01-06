@@ -39,6 +39,9 @@ public class PermissionService {
     // AskUserQuestion dialog showers per project
     private final Map<Project, AskUserQuestionDialogShower> askUserQuestionDialogShowers = new ConcurrentHashMap<>();
 
+    // PlanApproval dialog showers per project
+    private final Map<Project, PlanApprovalDialogShower> planApprovalDialogShowers = new ConcurrentHashMap<>();
+
     // 调试日志辅助方法
     private void debugLog(String tag, String message) {
         LOG.debug(String.format("[%s] %s", tag, message));
@@ -141,6 +144,19 @@ public class PermissionService {
         CompletableFuture<JsonObject> showAskUserQuestionDialog(String requestId, JsonObject questionsData);
     }
 
+    /**
+     * PlanApproval dialog shower interface - for showing plan approval dialogs
+     */
+    public interface PlanApprovalDialogShower {
+        /**
+         * Show plan approval dialog and return user decision
+         * @param requestId Request ID for correlation
+         * @param planData Plan data containing the plan text
+         * @return CompletableFuture<JsonObject> returning { approved: boolean, newMode: string } or null if cancelled
+         */
+        CompletableFuture<JsonObject> showPlanApprovalDialog(String requestId, JsonObject planData);
+    }
+
     private PermissionService(Project project) {
         this.project = project;
         // 使用临时目录进行通信
@@ -241,6 +257,39 @@ public class PermissionService {
             return null;
         }
         return askUserQuestionDialogShowers.values().iterator().next();
+    }
+
+    /**
+     * Register PlanApproval dialog shower for a project
+     * @param project Project
+     * @param shower PlanApproval dialog shower
+     */
+    public void registerPlanApprovalDialogShower(Project project, PlanApprovalDialogShower shower) {
+        if (project != null && shower != null) {
+            planApprovalDialogShowers.put(project, shower);
+            debugLog("CONFIG", "PlanApproval dialog shower registered for project: " + project.getName());
+        }
+    }
+
+    /**
+     * Unregister PlanApproval dialog shower for a project
+     * @param project Project
+     */
+    public void unregisterPlanApprovalDialogShower(Project project) {
+        if (project != null) {
+            planApprovalDialogShowers.remove(project);
+            debugLog("CONFIG", "PlanApproval dialog shower unregistered for project: " + project.getName());
+        }
+    }
+
+    /**
+     * Get a PlanApproval dialog shower (uses first available if multiple)
+     */
+    private PlanApprovalDialogShower getPlanApprovalDialogShower() {
+        if (planApprovalDialogShowers.isEmpty()) {
+            return null;
+        }
+        return planApprovalDialogShowers.values().iterator().next();
     }
 
     /**
@@ -440,12 +489,17 @@ public class PermissionService {
                 File[] askUserQuestionFiles = dir.listFiles((d, name) ->
                     name.startsWith("ask-user-question-") && name.endsWith(".json") && !name.contains("-response"));
 
+                // Scan for plan-approval request files
+                File[] planApprovalFiles = dir.listFiles((d, name) ->
+                    name.startsWith("plan-approval-") && name.endsWith(".json") && !name.contains("-response"));
+
                 // Log status periodically (every ~50 seconds)
                 if (pollCount % 100 == 0) {
                     int permFileCount = permissionFiles != null ? permissionFiles.length : 0;
                     int askFileCount = askUserQuestionFiles != null ? askUserQuestionFiles.length : 0;
-                    debugLog("POLL_STATUS", String.format("Poll #%d, found %d permission + %d ask-user-question files",
-                        pollCount, permFileCount, askFileCount));
+                    int planFileCount = planApprovalFiles != null ? planApprovalFiles.length : 0;
+                    debugLog("POLL_STATUS", String.format("Poll #%d, found %d permission + %d ask-user-question + %d plan-approval files",
+                        pollCount, permFileCount, askFileCount, planFileCount));
                 }
 
                 // Handle permission requests
@@ -464,6 +518,16 @@ public class PermissionService {
                         if (file.exists()) {
                             debugLog("ASK_USER_QUESTION_FOUND", "Found ask-user-question file: " + file.getName());
                             handleAskUserQuestionRequest(file.toPath());
+                        }
+                    }
+                }
+
+                // Handle plan-approval requests
+                if (planApprovalFiles != null && planApprovalFiles.length > 0) {
+                    for (File file : planApprovalFiles) {
+                        if (file.exists()) {
+                            debugLog("PLAN_APPROVAL_FOUND", "Found plan-approval file: " + file.getName());
+                            handlePlanApprovalRequest(file.toPath());
                         }
                     }
                 }
@@ -837,6 +901,114 @@ public class PermissionService {
             }
         } catch (IOException e) {
             debugLog("WRITE_ERROR", "Failed to write ask-user-question response file: " + e.getMessage());
+            LOG.error("Error occurred", e);
+        }
+    }
+
+    // Set to track plan-approval requests being processed
+    private final Set<String> processingPlanApprovalRequests = ConcurrentHashMap.newKeySet();
+
+    /**
+     * Handle plan-approval request
+     */
+    private void handlePlanApprovalRequest(Path requestFile) {
+        String fileName = requestFile.getFileName().toString();
+        debugLog("HANDLE_PLAN_APPROVAL", "Processing request file: " + fileName);
+
+        // Prevent duplicate processing
+        if (!processingPlanApprovalRequests.add(fileName)) {
+            debugLog("SKIP_DUPLICATE", "Plan-approval request already being processed: " + fileName);
+            return;
+        }
+
+        try {
+            Thread.sleep(100); // Wait for file write to complete
+
+            String content = Files.readString(requestFile);
+            debugLog("FILE_READ", "Read plan-approval content: " + content.substring(0, Math.min(200, content.length())) + "...");
+
+            JsonObject request = gson.fromJson(content, JsonObject.class);
+            String requestId = request.get("requestId").getAsString();
+
+            // Get dialog shower
+            PlanApprovalDialogShower dialogShower = getPlanApprovalDialogShower();
+            if (dialogShower == null) {
+                debugLog("NO_DIALOG_SHOWER", "No PlanApproval dialog shower registered, rejecting plan");
+                writePlanApprovalResponse(requestId, false, "default");
+                Files.deleteIfExists(requestFile);
+                processingPlanApprovalRequests.remove(fileName);
+                return;
+            }
+
+            // Delete request file immediately to prevent duplicate processing
+            try {
+                Files.deleteIfExists(requestFile);
+                debugLog("FILE_DELETE", "Deleted plan-approval request file: " + fileName);
+            } catch (Exception e) {
+                debugLog("FILE_DELETE_ERROR", "Failed to delete request file: " + e.getMessage());
+            }
+
+            // Show dialog asynchronously
+            debugLog("DIALOG_SHOW", "Calling showPlanApprovalDialog for requestId: " + requestId);
+            CompletableFuture<JsonObject> future = dialogShower.showPlanApprovalDialog(requestId, request);
+
+            future.thenAccept(result -> {
+                try {
+                    if (result != null && result.has("approved") && result.get("approved").getAsBoolean()) {
+                        String newMode = result.has("newMode") ? result.get("newMode").getAsString() : "default";
+                        debugLog("DIALOG_RESPONSE", "Plan approved for requestId: " + requestId + ", newMode: " + newMode);
+                        writePlanApprovalResponse(requestId, true, newMode);
+                    } else {
+                        debugLog("DIALOG_REJECTED", "Plan rejected for requestId: " + requestId);
+                        writePlanApprovalResponse(requestId, false, "default");
+                    }
+                } catch (Exception e) {
+                    debugLog("DIALOG_ERROR", "Error writing response: " + e.getMessage());
+                    LOG.error("Error occurred", e);
+                } finally {
+                    processingPlanApprovalRequests.remove(fileName);
+                }
+            }).exceptionally(ex -> {
+                debugLog("DIALOG_EXCEPTION", "Dialog exception: " + ex.getMessage());
+                try {
+                    writePlanApprovalResponse(requestId, false, "default");
+                } catch (Exception e) {
+                    LOG.error("Error occurred", e);
+                }
+                processingPlanApprovalRequests.remove(fileName);
+                return null;
+            });
+
+        } catch (Exception e) {
+            debugLog("HANDLE_ERROR", "Error handling plan-approval request: " + e.getMessage());
+            LOG.error("Error occurred", e);
+            processingPlanApprovalRequests.remove(fileName);
+        }
+    }
+
+    /**
+     * Write plan-approval response file
+     */
+    private void writePlanApprovalResponse(String requestId, boolean approved, String newMode) {
+        debugLog("WRITE_PLAN_APPROVAL_RESPONSE", String.format(
+            "Writing response for requestId=%s, approved=%s, newMode=%s", requestId, approved, newMode));
+        try {
+            JsonObject response = new JsonObject();
+            response.addProperty("approved", approved);
+            response.addProperty("newMode", newMode);
+            response.addProperty("cancelled", !approved);
+
+            Path responseFile = permissionDir.resolve("plan-approval-response-" + requestId + ".json");
+            String responseContent = gson.toJson(response);
+            debugLog("RESPONSE_CONTENT", "Response JSON: " + responseContent);
+
+            Files.writeString(responseFile, responseContent);
+
+            if (Files.exists(responseFile)) {
+                debugLog("WRITE_SUCCESS", "Plan-approval response file written successfully");
+            }
+        } catch (IOException e) {
+            debugLog("WRITE_ERROR", "Failed to write plan-approval response file: " + e.getMessage());
             LOG.error("Error occurred", e);
         }
     }

@@ -10,6 +10,7 @@ import type { SettingsTab } from './components/settings/SettingsSidebar';
 import ConfirmDialog from './components/ConfirmDialog';
 import PermissionDialog, { type PermissionRequest } from './components/PermissionDialog';
 import AskUserQuestionDialog, { type AskUserQuestionRequest } from './components/AskUserQuestionDialog';
+import PlanApprovalDialog, { type PlanApprovalRequest, type ExecutionMode } from './components/PlanApprovalDialog';
 import { ChatInputBox } from './components/ChatInputBox';
 import { CLAUDE_MODELS, CODEX_MODELS } from './components/ChatInputBox/types';
 import type { Attachment, PermissionMode, SelectedAgent } from './components/ChatInputBox/types';
@@ -94,6 +95,13 @@ const App = () => {
   const currentAskUserQuestionRequestRef = useRef<AskUserQuestionRequest | null>(null);
   const pendingAskUserQuestionRequestsRef = useRef<AskUserQuestionRequest[]>([]);
 
+  // PlanApproval dialog state
+  const [planApprovalDialogOpen, setPlanApprovalDialogOpen] = useState(false);
+  const [currentPlanApprovalRequest, setCurrentPlanApprovalRequest] = useState<PlanApprovalRequest | null>(null);
+  const planApprovalDialogOpenRef = useRef(false);
+  const currentPlanApprovalRequestRef = useRef<PlanApprovalRequest | null>(null);
+  const pendingPlanApprovalRequestsRef = useRef<PlanApprovalRequest[]>([]);
+
   // ChatInputBox state
   const [currentProvider, setCurrentProvider] = useState('claude');
   const [selectedClaudeModel, setSelectedClaudeModel] = useState(CLAUDE_MODELS[0].id);
@@ -169,6 +177,22 @@ const App = () => {
       openAskUserQuestionDialog(next);
     }
   }, [askUserQuestionDialogOpen, currentAskUserQuestionRequest]);
+
+  const openPlanApprovalDialog = (request: PlanApprovalRequest) => {
+    currentPlanApprovalRequestRef.current = request;
+    planApprovalDialogOpenRef.current = true;
+    setCurrentPlanApprovalRequest(request);
+    setPlanApprovalDialogOpen(true);
+  };
+
+  useEffect(() => {
+    if (planApprovalDialogOpen) return;
+    if (currentPlanApprovalRequest) return;
+    const next = pendingPlanApprovalRequestsRef.current.shift();
+    if (next) {
+      openPlanApprovalDialog(next);
+    }
+  }, [planApprovalDialogOpen, currentPlanApprovalRequest]);
 
   const syncActiveProviderModelMapping = (provider?: ProviderConfig | null) => {
     if (typeof window === 'undefined' || !window.localStorage) return;
@@ -646,6 +670,26 @@ const App = () => {
         }
       } catch (error) {
         console.error('[ASK_USER_QUESTION][FRONTEND] ERROR: Failed to parse request:', error);
+      }
+    };
+
+    // PlanApproval dialog callback
+    window.showPlanApprovalDialog = (json) => {
+      console.log('[PLAN_APPROVAL][FRONTEND] showPlanApprovalDialog called');
+      console.log('[PLAN_APPROVAL][FRONTEND] Raw JSON:', json);
+      try {
+        const request = JSON.parse(json) as PlanApprovalRequest;
+        console.log('[PLAN_APPROVAL][FRONTEND] Parsed request:', request);
+        console.log('[PLAN_APPROVAL][FRONTEND] requestId:', request.requestId);
+        if (planApprovalDialogOpenRef.current || currentPlanApprovalRequestRef.current) {
+          pendingPlanApprovalRequestsRef.current.push(request);
+          console.log('[PLAN_APPROVAL][FRONTEND] Dialog busy, queued request. queueSize=', pendingPlanApprovalRequestsRef.current.length);
+        } else {
+          openPlanApprovalDialog(request);
+          console.log('[PLAN_APPROVAL][FRONTEND] Dialog state set to open');
+        }
+      } catch (error) {
+        console.error('[PLAN_APPROVAL][FRONTEND] ERROR: Failed to parse request:', error);
       }
     };
 
@@ -1158,6 +1202,35 @@ const App = () => {
     sendBridgeMessage('ask_user_question_response', payload);
     setAskUserQuestionDialogOpen(false);
     setCurrentAskUserQuestionRequest(null);
+  };
+
+  /**
+   * Handle PlanApproval approve
+   */
+  const handlePlanApprovalApprove = (requestId: string, newMode: ExecutionMode) => {
+    const payload = JSON.stringify({
+      requestId,
+      approved: true,
+      newMode,
+      cancelled: false,
+    });
+    sendBridgeMessage('plan_approval_response', payload);
+    setPlanApprovalDialogOpen(false);
+    setCurrentPlanApprovalRequest(null);
+  };
+
+  /**
+   * Handle PlanApproval reject
+   */
+  const handlePlanApprovalReject = (requestId: string) => {
+    const payload = JSON.stringify({
+      requestId,
+      approved: false,
+      cancelled: true,
+    });
+    sendBridgeMessage('plan_approval_response', payload);
+    setPlanApprovalDialogOpen(false);
+    setCurrentPlanApprovalRequest(null);
   };
 
   const toggleThinking = (messageIndex: number, blockIndex: number) => {
@@ -1954,6 +2027,13 @@ const App = () => {
         request={currentAskUserQuestionRequest}
         onSubmit={handleAskUserQuestionSubmit}
         onCancel={handleAskUserQuestionCancel}
+      />
+
+      <PlanApprovalDialog
+        isOpen={planApprovalDialogOpen}
+        request={currentPlanApprovalRequest}
+        onApprove={handlePlanApprovalApprove}
+        onReject={handlePlanApprovalReject}
       />
     </>
   );

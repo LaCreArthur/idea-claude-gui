@@ -697,8 +697,8 @@
     },
     "plan": {
       "label": "Plan Mode",
-      "tooltip": "Plan mode - No execution (not supported yet)",
-      "description": "Planning only without execution, not supported yet"
+      "tooltip": "Plan mode - Claude plans first, executes after approval",
+      "description": "Claude analyzes and creates a plan, then executes after your approval"
     },
     "acceptEdits": {
       "label": "Agent Mode",
@@ -719,8 +719,8 @@
     },
     "plan": {
       "label": "Plan Mode",
-      "tooltip": "Planning only (not supported yet)",
-      "description": "Outlines steps without executing (coming soon)"
+      "tooltip": "Planning only - review and approve before execution",
+      "description": "Outlines steps without executing, you approve before execution"
     },
     "acceptEdits": {
       "label": "Auto Edit",
@@ -756,5 +756,18 @@
     "enhanceFailed": "Failed to enhance prompt",
     "emptyPrompt": "Please enter a prompt first",
     "copyEnhanced": "Copy Enhanced"
+  },
+  "planApproval": {
+    "title": "Plan Ready for Review",
+    "subtitle": "Claude has created a plan. Review and approve to start execution.",
+    "executeWith": "Execute with mode:",
+    "modeDefault": "Default (confirm each action)",
+    "modeAcceptEdits": "Accept Edits (auto-approve file changes)",
+    "modeBypass": "Full Auto (bypass all permissions)",
+    "reject": "Reject",
+    "revise": "Ask to Revise",
+    "execute": "Execute Plan",
+    "planRejected": "Plan rejected",
+    "planApproved": "Plan approved, starting execution"
   }
 }

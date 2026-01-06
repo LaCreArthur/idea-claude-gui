@@ -8,6 +8,7 @@
 import { writeFileSync, readFileSync, existsSync, unlinkSync, readdirSync, mkdirSync } from 'fs';
 import { join, basename } from 'path';
 import { tmpdir } from 'os';
+import { setEffectiveMode } from './session-state.js';
 
 // Communication directory for permission requests
 const PERMISSION_DIR = process.env.CLAUDE_PERMISSION_DIR
@@ -171,6 +172,84 @@ export async function requestPermissionFromJava(toolName, input) {
 }
 
 /**
+ * Request plan approval from Java process via filesystem communication
+ * ExitPlanMode tool shows the plan to user for approval before switching to execution mode
+ * @param {Object} input - ExitPlanMode tool input containing the plan
+ * @returns {Promise<Object|null>} - { approved: boolean, newMode: string } or null on failure
+ */
+export async function requestPlanApprovalFromJava(input) {
+  const requestStartTime = Date.now();
+
+  try {
+    // Generate request ID
+    const requestId = `${Date.now()}-${Math.random().toString(36).substring(7)}`;
+
+    // Create request file (different prefix from other requests)
+    const requestFile = join(PERMISSION_DIR, `plan-approval-${requestId}.json`);
+    const responseFile = join(PERMISSION_DIR, `plan-approval-response-${requestId}.json`);
+
+    const requestData = {
+      requestId,
+      plan: input.plan || input,  // The plan text to display to user
+      timestamp: new Date().toISOString()
+    };
+
+    try {
+      writeFileSync(requestFile, JSON.stringify(requestData, null, 2));
+      console.log('[PermissionHandler] Plan approval request written:', requestId);
+    } catch (writeError) {
+      console.error('[PermissionHandler] Failed to write plan-approval request file:', writeError.message);
+      return null;
+    }
+
+    // Wait for response file indefinitely (matches CLI behavior - user can take as long as needed)
+    const pollInterval = 100;
+
+    while (true) {
+      await new Promise(resolve => setTimeout(resolve, pollInterval));
+
+      if (existsSync(responseFile)) {
+        try {
+          const responseContent = readFileSync(responseFile, 'utf-8');
+          const responseData = JSON.parse(responseContent);
+
+          // Clean up response file
+          try {
+            unlinkSync(responseFile);
+          } catch (cleanupError) {
+            // Ignore cleanup errors
+          }
+
+          console.log('[PermissionHandler] Plan approval response:', responseData);
+
+          // Return the approval decision
+          if (responseData.cancelled || !responseData.approved) {
+            return { approved: false };
+          }
+          return {
+            approved: true,
+            newMode: responseData.newMode || 'default'
+          };
+        } catch (e) {
+          console.error('[PermissionHandler] Error reading plan-approval response:', e.message);
+          return null;
+        }
+      }
+
+      // Also check if request file was deleted (indicates cancellation)
+      if (!existsSync(requestFile)) {
+        console.warn('[PermissionHandler] Plan-approval request file deleted, assuming cancellation');
+        return { approved: false };
+      }
+    }
+
+  } catch (error) {
+    console.error('[PermissionHandler] Unexpected error in requestPlanApprovalFromJava:', error.message);
+    return null;
+  }
+}
+
+/**
  * Request user answers for AskUserQuestion tool via filesystem communication
  * @param {Object} input - AskUserQuestion tool parameters (questions array)
  * @returns {Promise<Object|null>} - Answers object or null on failure/timeout
@@ -283,6 +362,43 @@ export async function canUseTool(toolName, input, options = {}) {
       return {
         behavior: 'deny',
         message: 'User cancelled or timed out on AskUserQuestion dialog'
+      };
+    }
+  }
+
+  // Special handling for ExitPlanMode tool
+  // This is called when Claude wants to exit plan mode and start execution
+  if (toolName === 'ExitPlanMode') {
+    console.log('[PermissionHandler] ExitPlanMode tool called, showing plan approval dialog');
+    const approval = await requestPlanApprovalFromJava(input);
+    if (approval && approval.approved) {
+      const newMode = approval.newMode || 'default';
+      console.log('[PermissionHandler] Plan approved, new mode:', newMode);
+
+      // Update session's effective mode (Phase 4 of Plan Mode)
+      const { sessionId } = options;
+      if (sessionId && newMode) {
+        setEffectiveMode(sessionId, newMode);
+        console.log('[PermissionHandler] Mode override set for session:', sessionId, '->', newMode);
+
+        // Notify Java/webview of mode change via stdout
+        // This message is parsed by MessageHandler.java to update the UI
+        console.log('[MODE_CHANGE]', JSON.stringify({ mode: newMode }));
+      }
+
+      return {
+        behavior: 'allow',
+        updatedInput: {
+          ...input,
+          approved: true,
+          newMode: newMode
+        }
+      };
+    } else {
+      console.log('[PermissionHandler] Plan rejected or cancelled');
+      return {
+        behavior: 'deny',
+        message: 'User rejected the plan'
       };
     }
   }

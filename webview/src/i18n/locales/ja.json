@@ -662,8 +662,8 @@
     },
     "plan": {
       "label": "プランモード",
-      "tooltip": "プランモード - 実行なし(まだサポートされていません)",
-      "description": "実行なしの計画のみ、まだサポートされていません"
+      "tooltip": "プランモード - Claudeが先に計画、承認後に実行",
+      "description": "Claudeが分析して計画を作成、承認後に実行"
     },
     "acceptEdits": {
       "label": "エージェントモード",
@@ -699,5 +699,18 @@
     "enhanceFailed": "プロンプトの強化に失敗しました",
     "emptyPrompt": "最初にプロンプトを入力してください",
     "copyEnhanced": "強化版をコピー"
+  },
+  "planApproval": {
+    "title": "計画のレビュー準備完了",
+    "subtitle": "Claudeが計画を作成しました。確認して承認すると実行を開始します。",
+    "executeWith": "実行モード：",
+    "modeDefault": "デフォルト（各操作を確認）",
+    "modeAcceptEdits": "編集承認（ファイル変更を自動承認）",
+    "modeBypass": "完全自動（すべての権限をバイパス）",
+    "reject": "拒否",
+    "revise": "修正を依頼",
+    "execute": "計画を実行",
+    "planRejected": "計画が拒否されました",
+    "planApproved": "計画が承認されました、実行を開始"
   }
 }

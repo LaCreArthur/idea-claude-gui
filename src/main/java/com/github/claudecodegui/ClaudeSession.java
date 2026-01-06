@@ -87,6 +87,11 @@ public class ClaudeSession {
         void onPermissionRequested(PermissionRequest request);
         void onThinkingStatusChanged(boolean isThinking);
         void onSlashCommandsReceived(List<String> slashCommands);
+        /**
+         * Called when permission mode changes after ExitPlanMode approval
+         * (Phase 4 of Plan Mode implementation)
+         */
+        default void onModeChanged(String newMode) {}
     }
 
     public ClaudeSession(Project project, ClaudeSDKBridge claudeSDKBridge, CodexSDKBridge codexSDKBridge) {

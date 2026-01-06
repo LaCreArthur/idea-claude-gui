@@ -69,4 +69,14 @@ public class CallbackHandler {
             callback.onSlashCommandsReceived(slashCommands);
         }
     }
+
+    /**
+     * 通知权限模式变化
+     * Notify mode change (after ExitPlanMode approval)
+     */
+    public void notifyModeChanged(String newMode) {
+        if (callback != null) {
+            callback.onModeChanged(newMode);
+        }
+    }
 }

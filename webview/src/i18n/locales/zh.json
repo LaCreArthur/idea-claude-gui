@@ -698,8 +698,8 @@
     },
     "plan": {
       "label": "规划模式",
-      "tooltip": "规划模式——无执行（暂不支持）",
-      "description": "仅规划不执行，暂不支持"
+      "tooltip": "规划模式——Claude先规划，审批后执行",
+      "description": "Claude先分析并创建计划，审批后再执行"
     },
     "acceptEdits": {
       "label": "代理模式",
@@ -752,5 +752,18 @@
     "enhanceFailed": "增强提示词失败",
     "emptyPrompt": "请先输入提示词",
     "copyEnhanced": "复制增强版本"
+  },
+  "planApproval": {
+    "title": "计划待审批",
+    "subtitle": "Claude 已创建计划。审阅后批准开始执行。",
+    "executeWith": "执行模式：",
+    "modeDefault": "默认（确认每个操作）",
+    "modeAcceptEdits": "自动编辑（自动批准文件更改）",
+    "modeBypass": "全自动（绕过所有权限）",
+    "reject": "拒绝",
+    "revise": "要求修改",
+    "execute": "执行计划",
+    "planRejected": "计划已拒绝",
+    "planApproved": "计划已批准，开始执行"
   }
 }

@@ -194,9 +194,8 @@ export const AVAILABLE_MODES: ModeInfo[] = [
     id: 'plan',
     label: '规划模式',
     icon: 'codicon-tasklist',
-    disabled: true,
-    tooltip: '规划模式——无执行（暂不支持）',
-    description: '仅规划不执行，暂不支持'
+    tooltip: '规划模式——Claude先规划，审批后执行',
+    description: 'Claude先分析并创建计划，审批后再执行'
   },
   {
     id: 'acceptEdits',

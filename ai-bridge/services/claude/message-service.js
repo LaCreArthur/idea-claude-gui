@@ -15,6 +15,7 @@ import { canUseTool } from '../../permission-handler.js';
 import { persistJsonlMessage, loadSessionHistory } from './session-service.js';
 import { loadAttachments, buildContentBlocks } from './attachment-service.js';
 import { buildIDEContextPrompt } from '../system-prompts.js';
+import { getEffectiveMode, clearModeOverride } from '../../session-state.js';
 
 const ACCEPT_EDITS_AUTO_APPROVE_TOOLS = new Set([
   'Write',
@@ -33,27 +34,46 @@ function shouldAutoApproveTool(permissionMode, toolName) {
   return false;
 }
 
-function createPreToolUseHook(permissionMode) {
-  const normalizedPermissionMode = (!permissionMode || permissionMode === '') ? 'default' : permissionMode;
+/**
+ * Create PreToolUse hook with dynamic mode reading from session state
+ * @param {string} initialMode - Initial permission mode
+ * @param {Object} sessionRef - Mutable session reference { sessionId: string | null }
+ *                              Updated when we receive session_id from SDK
+ */
+function createPreToolUseHook(initialMode, sessionRef) {
+  const normalizedInitialMode = (!initialMode || initialMode === '') ? 'default' : initialMode;
 
   return async (input) => {
-    console.log('[PERM_DEBUG] PreToolUse hook called:', input?.tool_name);
+    // Read current effective mode from session state (may have been updated by ExitPlanMode)
+    const currentMode = sessionRef.sessionId
+      ? getEffectiveMode(sessionRef.sessionId, normalizedInitialMode)
+      : normalizedInitialMode;
 
-    if (normalizedPermissionMode === 'plan') {
-      return {
-        decision: 'block',
-        reason: 'Permission mode is plan (no execution)'
-      };
+    console.log('[PERM_DEBUG] PreToolUse hook called:', input?.tool_name);
+    console.log('[PERM_DEBUG] Effective mode:', currentMode, '(initial:', normalizedInitialMode, ', sessionId:', sessionRef.sessionId, ')');
+
+    // In plan mode, block all tools EXCEPT ExitPlanMode (which is used to approve the plan)
+    if (currentMode === 'plan') {
+      if (input?.tool_name === 'ExitPlanMode') {
+        console.log('[PERM_DEBUG] Allowing ExitPlanMode through in plan mode');
+        // Let ExitPlanMode go through to canUseTool for plan approval dialog
+      } else {
+        return {
+          decision: 'block',
+          reason: 'Permission mode is plan (no execution)'
+        };
+      }
     }
 
-    if (shouldAutoApproveTool(normalizedPermissionMode, input?.tool_name)) {
-      console.log('[PERM_DEBUG] Auto-approve tool:', input?.tool_name, 'mode:', normalizedPermissionMode);
+    if (shouldAutoApproveTool(currentMode, input?.tool_name)) {
+      console.log('[PERM_DEBUG] Auto-approve tool:', input?.tool_name, 'mode:', currentMode);
       return { decision: 'approve' };
     }
 
     console.log('[PERM_DEBUG] Calling canUseTool...');
     try {
-      const result = await canUseTool(input?.tool_name, input?.tool_input);
+      // Pass sessionId to canUseTool for mode switching after ExitPlanMode approval
+      const result = await canUseTool(input?.tool_name, input?.tool_input, { sessionId: sessionRef.sessionId });
       console.log('[PERM_DEBUG] canUseTool returned:', result?.behavior);
 
       if (result?.behavior === 'allow') {
@@ -222,10 +242,21 @@ export async function sendMessage(message, resumeSessionId = null, cwd = null, p
     // Note: We don't pass pathToClaudeCodeExecutable, let SDK use built-in cli.js
     // This avoids Windows CLI path issues (ENOENT errors)
     const effectivePermissionMode = (!permissionMode || permissionMode === '') ? 'default' : permissionMode;
-    const shouldUseCanUseTool = effectivePermissionMode === 'default';
+
+    // IMPORTANT: SDK does NOT support 'plan' mode natively
+    // (See https://platform.claude.com/docs/en/agent-sdk/permissions - "Not currently supported in SDK")
+    // We implement plan mode ourselves via PreToolUse hook, but pass 'default' to SDK
+    const sdkPermissionMode = effectivePermissionMode === 'plan' ? 'default' : effectivePermissionMode;
+    const shouldUseCanUseTool = sdkPermissionMode === 'default';
+
     console.log('[PERM_DEBUG] permissionMode:', permissionMode);
     console.log('[PERM_DEBUG] effectivePermissionMode:', effectivePermissionMode);
+    console.log('[PERM_DEBUG] sdkPermissionMode:', sdkPermissionMode, effectivePermissionMode === 'plan' ? '(plan mode handled by PreToolUse hook)' : '');
     console.log('[PERM_DEBUG] shouldUseCanUseTool:', shouldUseCanUseTool);
+
+    // Create session reference for dynamic mode switching (Phase 4 of Plan Mode)
+    // This is a mutable object that gets updated when we receive the session_id
+    const sessionRef = { sessionId: resumeSessionId || null };
 
     // Read Extended Thinking configuration from settings.json
     const settings = loadClaudeSettings();
@@ -242,7 +273,7 @@ export async function sendMessage(message, resumeSessionId = null, cwd = null, p
 
     const options = {
       cwd: workingDirectory,
-      permissionMode: effectivePermissionMode,
+      permissionMode: sdkPermissionMode,  // Use SDK-compatible mode (not 'plan')
       model: sdkModelName,
       maxTurns: 100,
       // Extended Thinking configuration (based on settings.json alwaysThinkingEnabled)
@@ -255,7 +286,8 @@ export async function sendMessage(message, resumeSessionId = null, cwd = null, p
       canUseTool: shouldUseCanUseTool ? canUseTool : undefined,
       hooks: {
         PreToolUse: [{
-          hooks: [createPreToolUseHook(effectivePermissionMode)]
+          // Pass effectivePermissionMode (including 'plan') to hook for our custom handling
+          hooks: [createPreToolUseHook(effectivePermissionMode, sessionRef)]
         }]
       },
       // Don't pass pathToClaudeCodeExecutable, SDK will use built-in cli.js
@@ -335,6 +367,8 @@ export async function sendMessage(message, resumeSessionId = null, cwd = null, p
         // Capture and save session_id
         if (msg.type === 'system' && msg.session_id) {
           currentSessionId = msg.session_id;
+          // Update session reference for dynamic mode switching in PreToolUse hook
+          sessionRef.sessionId = msg.session_id;
           console.log('[SESSION_ID]', msg.session_id);
         }
 
@@ -362,6 +396,9 @@ export async function sendMessage(message, resumeSessionId = null, cwd = null, p
     console.log(JSON.stringify(payload));
   } finally {
     if (timeoutId) clearTimeout(timeoutId);
+    // Clear mode override when session ends (optional - keeps state clean)
+    // Note: We intentionally do NOT clear here to allow resuming sessions with the same mode
+    // The override will be cleared when a new session with the same ID starts
   }
 }
 
@@ -599,9 +636,18 @@ export async function sendMessageWithAttachments(message, resumeSessionId = null
     // Normalize permissionMode: empty string or null treated as 'default'
     const normalizedPermissionMode = (!permissionMode || permissionMode === '') ? 'default' : permissionMode;
 
+    // IMPORTANT: SDK does NOT support 'plan' mode natively
+    // (See https://platform.claude.com/docs/en/agent-sdk/permissions - "Not currently supported in SDK")
+    // We implement plan mode ourselves via PreToolUse hook, but pass 'default' to SDK
+    const sdkPermissionMode = normalizedPermissionMode === 'plan' ? 'default' : normalizedPermissionMode;
+
+    // Create session reference for dynamic mode switching (Phase 4 of Plan Mode)
+    const sessionRef = { sessionId: resumeSessionId || null };
+
     // PreToolUse hook for permission control (replaces canUseTool in AsyncIterable mode)
     // See docs/multimodal-permission-bug.md
-    const preToolUseHook = createPreToolUseHook(normalizedPermissionMode);
+    // Pass normalizedPermissionMode (including 'plan') to hook for our custom handling
+    const preToolUseHook = createPreToolUseHook(normalizedPermissionMode, sessionRef);
 
     // Read Extended Thinking configuration from settings.json
     const settings = loadClaudeSettings();
@@ -618,7 +664,7 @@ export async function sendMessageWithAttachments(message, resumeSessionId = null
 
     const options = {
       cwd: workingDirectory,
-      permissionMode: normalizedPermissionMode,
+      permissionMode: sdkPermissionMode,  // Use SDK-compatible mode (not 'plan')
       model: sdkModelName,
       maxTurns: 100,
       ...(maxThinkingTokens !== undefined && { maxThinkingTokens }),
@@ -628,7 +674,7 @@ export async function sendMessageWithAttachments(message, resumeSessionId = null
         )
       ),
       // Set both canUseTool and hooks to ensure at least one takes effect
-      canUseTool: normalizedPermissionMode === 'default' ? canUseTool : undefined,
+      canUseTool: sdkPermissionMode === 'default' ? canUseTool : undefined,
       hooks: {
         PreToolUse: [{
           hooks: [preToolUseHook]
@@ -696,6 +742,8 @@ export async function sendMessageWithAttachments(message, resumeSessionId = null
 
         if (msg.type === 'system' && msg.session_id) {
           currentSessionId = msg.session_id;
+          // Update session reference for dynamic mode switching in PreToolUse hook
+          sessionRef.sessionId = msg.session_id;
           console.log('[SESSION_ID]', msg.session_id);
         }
 
@@ -722,6 +770,8 @@ export async function sendMessageWithAttachments(message, resumeSessionId = null
     console.log(JSON.stringify(payload));
   } finally {
     if (timeoutId) clearTimeout(timeoutId);
+    // Clear mode override when session ends (optional - keeps state clean)
+    // Note: We intentionally do NOT clear here to allow resuming sessions with the same mode
   }
 }
 

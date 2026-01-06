@@ -24,7 +24,8 @@ public class PermissionHandler extends BaseMessageHandler {
 
     private static final String[] SUPPORTED_TYPES = {
         "permission_decision",
-        "ask_user_question_response"
+        "ask_user_question_response",
+        "plan_approval_response"
     };
 
     // Permission request mapping
@@ -32,6 +33,9 @@ public class PermissionHandler extends BaseMessageHandler {
 
     // AskUserQuestion request mapping
     private final Map<String, CompletableFuture<JsonObject>> pendingAskUserQuestionRequests = new ConcurrentHashMap<>();
+
+    // PlanApproval request mapping
+    private final Map<String, CompletableFuture<JsonObject>> pendingPlanApprovalRequests = new ConcurrentHashMap<>();
 
     // Permission denied callback
     public interface PermissionDeniedCallback {
@@ -64,6 +68,11 @@ public class PermissionHandler extends BaseMessageHandler {
             LOG.debug("[ASK_USER_QUESTION][BRIDGE_RECV] Received ask_user_question_response from JS");
             LOG.debug("[ASK_USER_QUESTION][BRIDGE_RECV] Content: " + content);
             handleAskUserQuestionResponse(content);
+            return true;
+        } else if ("plan_approval_response".equals(type)) {
+            LOG.debug("[PLAN_APPROVAL][BRIDGE_RECV] Received plan_approval_response from JS");
+            LOG.debug("[PLAN_APPROVAL][BRIDGE_RECV] Content: " + content);
+            handlePlanApprovalResponse(content);
             return true;
         }
         return false;
@@ -316,6 +325,90 @@ public class PermissionHandler extends BaseMessageHandler {
             }
         } catch (Exception e) {
             LOG.error("[ASK_USER_QUESTION] ERROR handling response: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Show plan-approval dialog in frontend.
+     * @param requestId Request ID for correlation
+     * @param planData Plan data containing the plan text
+     * @return CompletableFuture<JsonObject> returning { approved: boolean, newMode: string } or null if cancelled
+     */
+    public CompletableFuture<JsonObject> showPlanApprovalDialog(String requestId, JsonObject planData) {
+        CompletableFuture<JsonObject> future = new CompletableFuture<>();
+
+        LOG.debug("[PLAN_APPROVAL] Starting showPlanApprovalDialog, requestId=" + requestId);
+
+        pendingPlanApprovalRequests.put(requestId, future);
+
+        try {
+            Gson gson = new Gson();
+            JsonObject requestData = new JsonObject();
+            requestData.addProperty("requestId", requestId);
+            // Pass the plan text
+            if (planData.has("plan")) {
+                requestData.addProperty("plan", planData.get("plan").getAsString());
+            } else {
+                requestData.addProperty("plan", planData.toString());
+            }
+
+            String requestJson = gson.toJson(requestData);
+            String escapedJson = escapeJs(requestJson);
+
+            ApplicationManager.getApplication().invokeLater(() -> {
+                String jsCode = "(function retryShowDialog(retries) { " +
+                    "  if (window.showPlanApprovalDialog) { " +
+                    "    window.showPlanApprovalDialog('" + escapedJson + "'); " +
+                    "  } else if (retries > 0) { " +
+                    "    setTimeout(function() { retryShowDialog(retries - 1); }, 200); " +
+                    "  } else { " +
+                    "    console.error('[PLAN_APPROVAL] FAILED: showPlanApprovalDialog not available!'); " +
+                    "  } " +
+                    "})(30);";
+
+                context.executeJavaScriptOnEDT(jsCode);
+            });
+
+            // No timeout - user can take as long as needed (matches CLI behavior)
+            // The future will be completed when user responds via handlePlanApprovalResponse()
+
+        } catch (Exception e) {
+            LOG.error("[PLAN_APPROVAL] ERROR: " + e.getMessage(), e);
+            pendingPlanApprovalRequests.remove(requestId);
+            future.complete(null);
+        }
+
+        return future;
+    }
+
+    /**
+     * Handle plan-approval response from JavaScript.
+     */
+    private void handlePlanApprovalResponse(String jsonContent) {
+        LOG.debug("[PLAN_APPROVAL] Received response from JS: " + jsonContent);
+        try {
+            Gson gson = new Gson();
+            JsonObject response = gson.fromJson(jsonContent, JsonObject.class);
+
+            String requestId = response.get("requestId").getAsString();
+            boolean cancelled = response.has("cancelled") && response.get("cancelled").getAsBoolean();
+
+            CompletableFuture<JsonObject> pendingFuture = pendingPlanApprovalRequests.remove(requestId);
+
+            if (pendingFuture != null) {
+                if (cancelled) {
+                    LOG.debug("[PLAN_APPROVAL] User cancelled for requestId=" + requestId);
+                    pendingFuture.complete(null);
+                } else {
+                    // Return the full response object with approved and newMode
+                    LOG.debug("[PLAN_APPROVAL] Got approval response for requestId=" + requestId);
+                    pendingFuture.complete(response);
+                }
+            } else {
+                LOG.warn("[PLAN_APPROVAL] No pending request found for requestId=" + requestId);
+            }
+        } catch (Exception e) {
+            LOG.error("[PLAN_APPROVAL] ERROR handling response: " + e.getMessage(), e);
         }
     }
 }
