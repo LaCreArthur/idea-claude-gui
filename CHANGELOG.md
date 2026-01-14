@@ -1,4 +1,4 @@
-##### **v0.2.3** (2026-01-14)
+##### **v0.2.4** (2026-01-14)
 
 **Upstream Sync Release** - Merged 88 commits from upstream in 11 batches.
 
