@@ -143,10 +143,6 @@ public class ClaudeSDKBridge extends BaseSDKBridge {
             callback.onMessage("message_start", "");
         } else if (line.startsWith("[MESSAGE_END]")) {
             callback.onMessage("message_end", "");
-        } else if (line.startsWith("[MODE_CHANGE]")) {
-            // Handle mode change after ExitPlanMode approval (Phase 4 of Plan Mode)
-            String modeChangeJson = line.substring("[MODE_CHANGE]".length()).trim();
-            callback.onMessage("mode_change", modeChangeJson);
         }
     }
 
@@ -754,10 +750,9 @@ public class ClaudeSDKBridge extends BaseSDKBridge {
                                 callback.onMessage("message_start", "");
                             } else if (line.startsWith("[MESSAGE_END]")) {
                                 callback.onMessage("message_end", "");
-                            } else if (line.startsWith("[MODE_CHANGE]")) {
-                                // Handle mode change after ExitPlanMode approval (Phase 4 of Plan Mode)
-                                String modeChangeJson = line.substring("[MODE_CHANGE]".length()).trim();
-                                callback.onMessage("mode_change", modeChangeJson);
+                            } else {
+                                // Forward all other Node.js output to frontend for debugging
+                                callback.onMessage("node_log", line);
                             }
                         }
                     }

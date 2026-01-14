@@ -16,8 +16,8 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Session management message handler.
- * Handles message sending, interruption, restart, new session, etc.
+ * 会话管理消息处理器
+ * 处理消息发送、中断、重启、新建会话等
  */
 public class SessionHandler extends BaseMessageHandler {
 
@@ -28,7 +28,7 @@ public class SessionHandler extends BaseMessageHandler {
         "send_message_with_attachments",
         "interrupt_session",
         "restart_session"
-        // Note: create_new_session should not be handled here, should be handled by ClaudeSDKToolWindow.createNewSession()
+        // 注意：create_new_session 不应该在这里处理，应该由 ClaudeSDKToolWindow.createNewSession() 处理
     };
 
     public SessionHandler(HandlerContext context) {
@@ -44,19 +44,19 @@ public class SessionHandler extends BaseMessageHandler {
     public boolean handle(String type, String content) {
         switch (type) {
             case "send_message":
-                LOG.debug("[SessionHandler] Processing: send_message");
+                LOG.debug("[SessionHandler] 处理: send_message");
                 handleSendMessage(content);
                 return true;
             case "send_message_with_attachments":
-                LOG.debug("[SessionHandler] Processing: send_message_with_attachments");
+                LOG.debug("[SessionHandler] 处理: send_message_with_attachments");
                 handleSendMessageWithAttachments(content);
                 return true;
             case "interrupt_session":
-                LOG.debug("[SessionHandler] Processing: interrupt_session");
+                LOG.debug("[SessionHandler] 处理: interrupt_session");
                 handleInterruptSession();
                 return true;
             case "restart_session":
-                LOG.debug("[SessionHandler] Processing: restart_session");
+                LOG.debug("[SessionHandler] 处理: restart_session");
                 handleRestartSession();
                 return true;
             default:
@@ -66,12 +66,13 @@ public class SessionHandler extends BaseMessageHandler {
 
     /**
      * Send message to Claude
+     * 【FIX】Now parses JSON format to extract text and agent info
      */
-    private void handleSendMessage(String prompt) {
+    private void handleSendMessage(String content) {
         String nodeVersion = context.getClaudeSDKBridge().getCachedNodeVersion();
         if (nodeVersion == null) {
             ApplicationManager.getApplication().invokeLater(() -> {
-                callJavaScript("addErrorMessage", escapeJs("No valid Node.js version detected. Please configure it in settings or reopen the tool window."));
+                callJavaScript("addErrorMessage", escapeJs("未检测到有效的 Node.js 版本，请在设置中配置或重新打开工具窗口。"));
             });
             return;
         }
@@ -79,10 +80,38 @@ public class SessionHandler extends BaseMessageHandler {
             int minVersion = NodeDetector.MIN_NODE_MAJOR_VERSION;
             ApplicationManager.getApplication().invokeLater(() -> {
                 callJavaScript("addErrorMessage", escapeJs(
-                    "Node.js version too low (" + nodeVersion + "). Plugin requires v" + minVersion + " or higher. Please configure the correct Node.js path in settings."));
+                    "Node.js 版本过低 (" + nodeVersion + ")，插件需要 v" + minVersion + " 或更高版本才能正常运行。请在设置中配置正确的 Node.js 路径。"));
             });
             return;
         }
+
+        // 【FIX】Parse JSON format to extract text and agent info for per-tab agent selection
+        String prompt;
+        String agentPrompt = null;
+        try {
+            Gson gson = new Gson();
+            JsonObject payload = gson.fromJson(content, JsonObject.class);
+            prompt = payload != null && payload.has("text") && !payload.get("text").isJsonNull()
+                ? payload.get("text").getAsString()
+                : content; // Fallback to raw content if not JSON
+
+            // Extract agent prompt from the message
+            if (payload != null && payload.has("agent") && !payload.get("agent").isJsonNull()) {
+                JsonObject agent = payload.getAsJsonObject("agent");
+                if (agent.has("prompt") && !agent.get("prompt").isJsonNull()) {
+                    agentPrompt = agent.get("prompt").getAsString();
+                    String agentName = agent.has("name") ? agent.get("name").getAsString() : "Unknown";
+                    LOG.info("[SessionHandler] Using agent from message: " + agentName);
+                }
+            }
+        } catch (Exception e) {
+            // If parsing fails, treat content as plain text (backward compatibility)
+            LOG.debug("[SessionHandler] Message is plain text, not JSON: " + e.getMessage());
+            prompt = content;
+        }
+
+        final String finalPrompt = prompt;
+        final String finalAgentPrompt = agentPrompt;
 
         CompletableFuture.runAsync(() -> {
             String currentWorkingDir = determineWorkingDirectory();
@@ -99,7 +128,8 @@ public class SessionHandler extends BaseMessageHandler {
                 ClaudeNotifier.setWaiting(project);
             }
 
-context.getSession().send(prompt)
+            // 【FIX】Pass agent prompt directly to session instead of relying on global setting
+            context.getSession().send(finalPrompt, finalAgentPrompt)
                 .thenRun(() -> {
                     if (project != null) {
                         ClaudeNotifier.showSuccess(project, "Task completed");
@@ -111,7 +141,7 @@ context.getSession().send(prompt)
                         ClaudeNotifier.showError(project, "Task failed: " + ex.getMessage());
                     }
                     ApplicationManager.getApplication().invokeLater(() -> {
-                        callJavaScript("addErrorMessage", escapeJs("Failed to send: " + ex.getMessage()));
+                        callJavaScript("addErrorMessage", escapeJs("发送失败: " + ex.getMessage()));
                     });
                     return null;
                 });
@@ -119,7 +149,8 @@ context.getSession().send(prompt)
     }
 
     /**
-     * Send message with attachments.
+     * 发送带附件的消息
+     * 【FIX】Now extracts agent info from payload for per-tab agent selection
      */
     private void handleSendMessageWithAttachments(String content) {
         try {
@@ -146,22 +177,35 @@ context.getSession().send(prompt)
                     atts.add(new ClaudeSession.Attachment(fileName, mediaType, data));
                 }
             }
-            sendMessageWithAttachments(text, atts);
+
+            // 【FIX】Extract agent prompt from the payload for per-tab agent selection
+            String agentPrompt = null;
+            if (payload != null && payload.has("agent") && !payload.get("agent").isJsonNull()) {
+                JsonObject agent = payload.getAsJsonObject("agent");
+                if (agent.has("prompt") && !agent.get("prompt").isJsonNull()) {
+                    agentPrompt = agent.get("prompt").getAsString();
+                    String agentName = agent.has("name") ? agent.get("name").getAsString() : "Unknown";
+                    LOG.info("[SessionHandler] Using agent from attachment message: " + agentName);
+                }
+            }
+
+            sendMessageWithAttachments(text, atts, agentPrompt);
         } catch (Exception e) {
-            LOG.error("[SessionHandler] Failed to parse attachment payload: " + e.getMessage(), e);
+            LOG.error("[SessionHandler] 解析附件负载失败: " + e.getMessage(), e);
             handleSendMessage(content);
         }
     }
 
     /**
      * Send message with attachments to Claude
+     * 【FIX】Now accepts agent prompt parameter for per-tab agent selection
      */
-    private void sendMessageWithAttachments(String prompt, List<ClaudeSession.Attachment> attachments) {
+    private void sendMessageWithAttachments(String prompt, List<ClaudeSession.Attachment> attachments, String agentPrompt) {
         // Version check (consistent with handleSendMessage)
         String nodeVersion = context.getClaudeSDKBridge().getCachedNodeVersion();
         if (nodeVersion == null) {
             ApplicationManager.getApplication().invokeLater(() -> {
-                callJavaScript("addErrorMessage", escapeJs("No valid Node.js version detected. Please configure it in settings or reopen the tool window."));
+                callJavaScript("addErrorMessage", escapeJs("未检测到有效的 Node.js 版本，请在设置中配置或重新打开工具窗口。"));
             });
             return;
         }
@@ -169,10 +213,12 @@ context.getSession().send(prompt)
             int minVersion = NodeDetector.MIN_NODE_MAJOR_VERSION;
             ApplicationManager.getApplication().invokeLater(() -> {
                 callJavaScript("addErrorMessage", escapeJs(
-                    "Node.js version too low (" + nodeVersion + "). Plugin requires v" + minVersion + " or higher. Please configure the correct Node.js path in settings."));
+                    "Node.js 版本过低 (" + nodeVersion + ")，插件需要 v" + minVersion + " 或更高版本才能正常运行。请在设置中配置正确的 Node.js 路径。"));
             });
             return;
         }
+
+        final String finalAgentPrompt = agentPrompt;
 
         CompletableFuture.runAsync(() -> {
             String currentWorkingDir = determineWorkingDirectory();
@@ -182,13 +228,14 @@ context.getSession().send(prompt)
                 LOG.info("[SessionHandler] Updated working directory: " + currentWorkingDir);
             }
 
-// Capture project for use in async callbacks
+            // Capture project for use in async callbacks
             var project = context.getProject();
             if (project != null) {
                 ClaudeNotifier.setWaiting(project);
             }
 
-            context.getSession().send(prompt, attachments)
+            // 【FIX】Pass agent prompt directly to session instead of relying on global setting
+            context.getSession().send(prompt, attachments, finalAgentPrompt)
                 .thenRun(() -> {
                     if (project != null) {
                         ClaudeNotifier.showSuccess(project, "Task completed");
@@ -200,7 +247,7 @@ context.getSession().send(prompt)
                         ClaudeNotifier.showError(project, "Task failed: " + ex.getMessage());
                     }
                     ApplicationManager.getApplication().invokeLater(() -> {
-                        callJavaScript("addErrorMessage", escapeJs("Failed to send: " + ex.getMessage()));
+                        callJavaScript("addErrorMessage", escapeJs("发送失败: " + ex.getMessage()));
                     });
                     return null;
                 });
@@ -208,7 +255,7 @@ context.getSession().send(prompt)
     }
 
     /**
-     * Interrupt session.
+     * 中断会话
      */
     private void handleInterruptSession() {
         context.getSession().interrupt().thenRun(() -> {
@@ -217,7 +264,7 @@ context.getSession().send(prompt)
     }
 
     /**
-     * Restart session.
+     * 重启会话
      */
     private void handleRestartSession() {
         context.getSession().restart().thenRun(() -> {
@@ -226,32 +273,32 @@ context.getSession().send(prompt)
     }
 
     /**
-     * Determine appropriate working directory.
+     * 确定合适的工作目录
      */
     private String determineWorkingDirectory() {
         String projectPath = context.getProject().getBasePath();
 
-        // If project path is invalid, fall back to user home directory
+        // 如果项目路径无效，回退到用户主目录
         if (projectPath == null || !new File(projectPath).exists()) {
             String userHome = System.getProperty("user.home");
             LOG.warn("[SessionHandler] Using user home directory as fallback: " + userHome);
             return userHome;
         }
 
-        // Try to read custom working directory from config
+        // 尝试从配置中读取自定义工作目录
         try {
             com.github.claudecodegui.CodemossSettingsService settingsService =
                 new com.github.claudecodegui.CodemossSettingsService();
             String customWorkingDir = settingsService.getCustomWorkingDirectory(projectPath);
 
             if (customWorkingDir != null && !customWorkingDir.isEmpty()) {
-                // If relative path, append to project root
+                // 如果是相对路径，拼接到项目根路径
                 File workingDirFile = new File(customWorkingDir);
                 if (!workingDirFile.isAbsolute()) {
                     workingDirFile = new File(projectPath, customWorkingDir);
                 }
 
-                // Verify directory exists
+                // 验证目录是否存在
                 if (workingDirFile.exists() && workingDirFile.isDirectory()) {
                     String resolvedPath = workingDirFile.getAbsolutePath();
                     LOG.info("[SessionHandler] Using custom working directory: " + resolvedPath);
@@ -264,7 +311,7 @@ context.getSession().send(prompt)
             LOG.warn("[SessionHandler] Failed to read custom working directory: " + e.getMessage());
         }
 
-        // Default to project root path
+        // 默认使用项目根路径
         return projectPath;
     }
 }

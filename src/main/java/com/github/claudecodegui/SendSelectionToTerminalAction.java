@@ -69,7 +69,7 @@ public class SendSelectionToTerminalAction extends AnAction implements DumbAware
                 .submit(AppExecutorUtil.getAppExecutorService());
 
         } catch (Exception ex) {
-            showError(project, "Send failed: " + ex.getMessage());
+            showError(project, "发送失败: " + ex.getMessage());
             LOG.error("Error: " + ex.getMessage(), ex);
         }
     }
@@ -107,7 +107,7 @@ public class SendSelectionToTerminalAction extends AnAction implements DumbAware
         Editor editor = e.getData(CommonDataKeys.EDITOR);
 
         if (project == null || editor == null) {
-            showError(project, "Cannot get editor info");
+            showError(project, "无法获取编辑器信息");
             return null;
         }
 
@@ -116,14 +116,14 @@ public class SendSelectionToTerminalAction extends AnAction implements DumbAware
 
         // 检查是否有选中内容
         if (selectedText == null || selectedText.trim().isEmpty()) {
-            showInfo(project, "Please select code to send first");
+            showInfo(project, "请先选中要发送的代码");
             return null;
         }
 
         // 获取当前文件
         VirtualFile[] selectedFiles = FileEditorManager.getInstance(project).getSelectedFiles();
         if (selectedFiles.length == 0) {
-            showError(project, "Cannot get current file");
+            showError(project, "无法获取当前文件");
             return null;
         }
         VirtualFile virtualFile = selectedFiles[0];
@@ -131,7 +131,7 @@ public class SendSelectionToTerminalAction extends AnAction implements DumbAware
         // 获取相对项目路径
         String relativePath = getRelativePath(project, virtualFile);
         if (relativePath == null) {
-            showError(project, "Cannot determine file path");
+            showError(project, "无法确定文件路径");
             return null;
         }
 
@@ -176,7 +176,7 @@ public class SendSelectionToTerminalAction extends AnAction implements DumbAware
         try {
             // 获取插件的工具窗口
             ToolWindowManager toolWindowManager = ToolWindowManager.getInstance(project);
-            ToolWindow toolWindow = toolWindowManager.getToolWindow("Claude Code GUI");
+            ToolWindow toolWindow = toolWindowManager.getToolWindow("CCG");
 
             if (toolWindow != null) {
                 // 如果窗口未激活，先激活窗口，等待窗口打开后再发送内容
@@ -202,11 +202,11 @@ public class SendSelectionToTerminalAction extends AnAction implements DumbAware
                     LOG.info("聊天窗口已激活并发送内容到项目: " + project.getName());
                 }
             } else {
-                showError(project, "Cannot find Claude Code GUI tool window");
+                showError(project, "找不到 CCG 工具窗口");
             }
 
         } catch (Exception ex) {
-            showError(project, "Failed to send to chat window: " + ex.getMessage());
+            showError(project, "发送到聊天窗口失败: " + ex.getMessage());
             LOG.error("Error occurred", ex);
         }
     }
@@ -218,7 +218,7 @@ public class SendSelectionToTerminalAction extends AnAction implements DumbAware
         LOG.error(message);
         if (project != null) {
             ApplicationManager.getApplication().invokeLater(() -> {
-                com.intellij.openapi.ui.Messages.showErrorDialog(project, message, "Error");
+                com.intellij.openapi.ui.Messages.showErrorDialog(project, message, "错误");
             });
         }
     }
@@ -230,7 +230,7 @@ public class SendSelectionToTerminalAction extends AnAction implements DumbAware
         LOG.info(message);
         if (project != null) {
             ApplicationManager.getApplication().invokeLater(() -> {
-                com.intellij.openapi.ui.Messages.showInfoMessage(project, message, "Info");
+                com.intellij.openapi.ui.Messages.showInfoMessage(project, message, "提示");
             });
         }
     }
