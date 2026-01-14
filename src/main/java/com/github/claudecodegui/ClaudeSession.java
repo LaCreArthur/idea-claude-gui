@@ -31,6 +31,7 @@ public class ClaudeSession {
 
     private static final Logger LOG = Logger.getInstance(ClaudeSession.class);
     private final Gson gson = new Gson();
+    private final Project project;
 
     // 会话状态管理器
     private final com.github.claudecodegui.session.SessionState state;
@@ -95,6 +96,7 @@ public class ClaudeSession {
     }
 
     public ClaudeSession(Project project, ClaudeSDKBridge claudeSDKBridge, CodexSDKBridge codexSDKBridge) {
+        this.project = project;
         this.claudeSDKBridge = claudeSDKBridge;
         this.codexSDKBridge = codexSDKBridge;
 
@@ -441,6 +443,7 @@ public class ClaudeSession {
         state.setError(null);
         state.setBusy(true);
         state.setLoading(true);
+        com.github.claudecodegui.notifications.ClaudeNotifier.setWaiting(project);
         updateState();
     }
 
@@ -511,6 +514,7 @@ public class ClaudeSession {
         String agentPrompt
     ) {
         ClaudeMessageHandler handler = new ClaudeMessageHandler(
+            project,
             state,
             callbackHandler,
             messageParser,
@@ -664,6 +668,12 @@ public class ClaudeSession {
      */
     private void updateState() {
         callbackHandler.notifyStateChange(state.isBusy(), state.isLoading(), state.getError());
+        
+        // Show error in status bar
+        String error = state.getError();
+        if (error != null && !error.isEmpty()) {
+            com.github.claudecodegui.notifications.ClaudeNotifier.showError(project, error);
+        }
     }
 
     /**
