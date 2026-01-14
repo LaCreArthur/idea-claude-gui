@@ -49,6 +49,7 @@
     "usage": "Uso",
     "usagePercentage": "Uso: {{percentage}}",
     "noThinkingContent": "Sin contenido de pensamiento",
+    "parseError": "Error al analizar el contenido",
     "noMatchingFiles": "Sin archivos coincidentes",
     "noMatchingCommands": "Sin comandos coincidentes",
     "noAvailableAgents": "Sin agentes disponibles",
@@ -137,9 +138,6 @@
       "currentConfig": "Configuración actual de ClaudeCode",
       "loading": "Cargando...",
       "noConfig": "Sin información de configuración",
-      "noAuth": "Autenticación no configurada",
-      "loginHint": "Ejecute en terminal para autenticarse:",
-      "cliSession": "Sesión CLI (conectado via claude login)",
       "emptyProvider": "Ningún proveedor configurado",
       "notConfigured": "No configurado",
       "apiKey": "API Key",
@@ -203,8 +201,7 @@
         "remarkPlaceholder": "Opcional",
         "apiKey": "API Key",
         "apiKeyPlaceholder": "sk-ant-...",
-        "apiKeyHint": "Por favor ingrese su API Key.",
-        "apiKeyOptionalHint": "Opcional si ha iniciado sesión via `claude login`.",
+        "apiKeyHint": "Por favor ingrese su API Key",
         "apiUrl": "Dirección de solicitud (API Endpoint)",
         "apiUrlPlaceholder": "https://api.anthropic.com",
         "apiUrlHint": "Ingrese la dirección del endpoint del servicio compatible con Claude API",
@@ -305,6 +302,7 @@
     "allow": "Permitir una vez",
     "allowAlways": "Permitir siempre",
     "deny": "Denegar",
+    "userDenied": "El usuario denegó la solicitud de permiso",
     "fromExternalProcess": "Solicitud del proceso externo",
     "tools": {
       "Write": "Escribir archivo",
@@ -327,12 +325,6 @@
     "back": "Atrás",
     "next": "Siguiente",
     "submit": "Enviar"
-  },
-  "askUserQuestion": {
-    "title": "Claude necesita tu respuesta",
-    "submit": "Enviar",
-    "cancel": "Cancelar",
-    "otherPlaceholder": "Otro (escribe tu respuesta)"
   },
   "toast": {
     "switchSuccess": "Cambio exitoso",
@@ -529,8 +521,8 @@
     "diffButton": "Diff",
     "editPrefix": "Editar: {{fileName}}",
     "lineRange": "Líneas {{start}}-{{end}}",
-    "lineNumber": "Línea {{line}}",
-    "filePath": "Ruta del archivo:"
+    "filePath": "Ruta del archivo:",
+    "unknownTool": "Herramienta desconocida"
   },
   "skills": {
     "title": "Skills",
@@ -648,6 +640,9 @@
   "rewind": {
     "title": "Restaurar archivos al estado anterior",
     "tooltip": "Restaurar archivos a su estado en este mensaje",
+    "shortcut": "ESC ESC",
+    "selectTitle": "Seleccionar punto de restauración",
+    "noRewindableMessages": "No hay mensajes restaurables en esta sesión",
     "rewindTo": "Restaurar a",
     "impact": "Impacto",
     "willRestore": "Restaurará los archivos a su estado en este mensaje",
@@ -656,8 +651,11 @@
     "historyKept": "El historial de conversación se conservará",
     "cannotUndo": "Esta acción no se puede deshacer.",
     "restoreFiles": "Restaurar archivos",
-    "success": "Archivos restaurados correctamente",
+    "restoring": "Restaurando archivos...",
+    "success": "Reversión exitosa",
+    "successSimple": "Reversión exitosa",
     "failed": "Error al restaurar archivos",
-    "notAvailable": "Restauración no disponible para esta sesión"
+    "notAvailable": "Restauración no disponible para esta sesión",
+    "parseError": "Error al analizar el resultado"
   }
 }

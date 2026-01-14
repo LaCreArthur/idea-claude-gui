@@ -171,6 +171,17 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
         private JBCefBrowser browser;
         private ClaudeSession session;
 
+        // ===== 🔧 Streaming message update coalescing =====
+        private static final int STREAM_MESSAGE_UPDATE_INTERVAL_MS = 50;
+        private final Object streamMessageUpdateLock = new Object();
+        private final Alarm streamMessageUpdateAlarm = new Alarm(Alarm.ThreadToUse.SWING_THREAD);
+        private volatile boolean streamActive = false;
+        private volatile boolean streamMessageUpdateScheduled = false;
+        private volatile long lastStreamMessageUpdateAtMs = 0L;
+        private volatile long streamMessageUpdateSequence = 0L;
+        private volatile List<ClaudeSession.Message> pendingStreamMessages = null;
+        private volatile List<ClaudeSession.Message> lastMessagesSnapshot = null;
+
         private volatile boolean disposed = false;
         private volatile boolean initialized = false;
         private volatile boolean slashCommandsFetched = false;  // 标记是否已通过 API 获取了完整命令列表
@@ -353,19 +364,13 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
         private void setupPermissionService() {
             PermissionService permissionService = PermissionService.getInstance(project);
             permissionService.start();
-            // Use project registration mechanism for multi-window support
+            // 使用项目注册机制，支持多窗口场景
             permissionService.registerDialogShower(project, (toolName, inputs) ->
                 permissionHandler.showFrontendPermissionDialog(toolName, inputs));
-
-            // Register AskUserQuestion dialog shower
+            // 注册 AskUserQuestion 对话框显示器
             permissionService.registerAskUserQuestionDialogShower(project, (requestId, questionsData) ->
                 permissionHandler.showAskUserQuestionDialog(requestId, questionsData));
-
-            // Register PlanApproval dialog shower
-            permissionService.registerPlanApprovalDialogShower(project, (requestId, planData) ->
-                permissionHandler.showPlanApprovalDialog(requestId, planData));
-
-            LOG.info("Started permission service with frontend dialogs for project: " + project.getName());
+            LOG.info("Started permission service with frontend dialog and AskUserQuestion dialog for project: " + project.getName());
         }
 
         private void initializeHandlers() {
@@ -579,6 +584,13 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
                 }
             }
 
+            // Check JCEF support before creating browser
+            if (!JBCefBrowserFactory.isJcefSupported()) {
+                LOG.warn("JCEF is not supported in this environment");
+                showJcefNotSupportedPanel();
+                return;
+            }
+
             try {
                 browser = JBCefBrowserFactory.create();
                 handlerContext.setBrowser(browser);
@@ -734,6 +746,15 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
 
                 mainPanel.add(browserComponent, BorderLayout.CENTER);
 
+            } catch (IllegalStateException e) {
+                // JCEF-related errors typically throw IllegalStateException
+                if (e.getMessage() != null && e.getMessage().contains("JCEF")) {
+                    LOG.error("JCEF initialization failed: " + e.getMessage(), e);
+                    showJcefNotSupportedPanel();
+                } else {
+                    LOG.error("Failed to create UI components: " + e.getMessage(), e);
+                    showErrorPanel();
+                }
             } catch (Exception e) {
                 LOG.error("Failed to create UI components: " + e.getMessage(), e);
                 showErrorPanel();
@@ -741,15 +762,15 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
         }
 
         private void showErrorPanel() {
-            String message = "Node.js not found\n\n" +
-                "Please ensure:\n" +
-                "• Node.js is installed (run: node --version in terminal)\n\n" +
-                "If automatic Node.js detection fails, run this command to get the path:\n" +
+            String message = "无法找到 Node.js\n\n" +
+                "请确保:\n" +
+                "• Node.js 已安装 (可以在终端运行: node --version)\n\n" +
+                "如果自动检测 Node.js 失败，可以在终端运行以下命令获取 Node.js 路径:\n" +
                 "    node -p \"process.execPath\"\n\n" +
-                "Currently detected Node.js path: " + claudeSDKBridge.getNodeExecutable();
+                "当前检测到的 Node.js 路径: " + claudeSDKBridge.getNodeExecutable();
 
             JPanel errorPanel = ErrorPanelBuilder.build(
-                "Environment Check Failed",
+                "环境检查失败",
                 message,
                 claudeSDKBridge.getNodeExecutable(),
                 this::handleNodePathSave
@@ -759,14 +780,14 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
 
         private void showVersionErrorPanel(String currentVersion) {
             int minVersion = NodeDetector.MIN_NODE_MAJOR_VERSION;
-            String message = "Node.js version too low\n\n" +
-                "Current version: " + currentVersion + "\n" +
-                "Minimum required: v" + minVersion + "\n\n" +
-                "Please upgrade Node.js to v" + minVersion + " or higher.\n\n" +
-                "Currently detected Node.js path: " + claudeSDKBridge.getNodeExecutable();
+            String message = "Node.js 版本过低\n\n" +
+                "当前版本: " + currentVersion + "\n" +
+                "最低要求: v" + minVersion + "\n\n" +
+                "请升级 Node.js 到 v" + minVersion + " 或更高版本后重试。\n\n" +
+                "当前检测到的 Node.js 路径: " + claudeSDKBridge.getNodeExecutable();
 
             JPanel errorPanel = ErrorPanelBuilder.build(
-                "Node.js Version Requirements Not Met",
+                "Node.js 版本不满足要求",
                 message,
                 claudeSDKBridge.getNodeExecutable(),
                 this::handleNodePathSave
@@ -775,16 +796,67 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
         }
 
         private void showInvalidNodePathPanel(String path, String errMsg) {
-            String message = "Saved Node.js path is unavailable: " + path + "\n\n" +
+            String message = "保存的 Node.js 路径不可用: " + path + "\n\n" +
                 (errMsg != null ? errMsg + "\n\n" : "") +
-                "Please save the correct Node.js path below.";
+                "请在下方重新保存正确的 Node.js 路径。";
 
             JPanel errorPanel = ErrorPanelBuilder.build(
-                "Node.js Path Unavailable",
+                "Node.js 路径不可用",
                 message,
                 path,
                 this::handleNodePathSave
             );
+            mainPanel.add(errorPanel, BorderLayout.CENTER);
+        }
+
+        private void showJcefNotSupportedPanel() {
+            JPanel errorPanel = new JPanel(new BorderLayout());
+            errorPanel.setBackground(new Color(30, 30, 30));
+
+            JPanel centerPanel = new JPanel();
+            centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
+            centerPanel.setBackground(new Color(30, 30, 30));
+            centerPanel.setBorder(BorderFactory.createEmptyBorder(50, 50, 50, 50));
+
+            JLabel iconLabel = new JLabel("⚠️");
+            iconLabel.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 48));
+            iconLabel.setForeground(Color.WHITE);
+            iconLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+            JLabel titleLabel = new JLabel("JCEF 不可用");
+            titleLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 18));
+            titleLabel.setForeground(Color.WHITE);
+            titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+            JTextArea messageArea = new JTextArea();
+            messageArea.setText(
+                "当前环境不支持 JCEF (Java Chromium Embedded Framework)。\n\n" +
+                "可能的原因：\n" +
+                "• 使用了不支持 JCEF 的 IDE 版本或运行时\n" +
+                "• IDE 启动时使用了 -Dide.browser.jcef.enabled=false 参数\n" +
+                "• 系统环境缺少必要的依赖库\n\n" +
+                "解决方案：\n" +
+                "1. 确保使用支持 JCEF 的 IntelliJ IDEA 版本 (2020.2+)\n" +
+                "2. 检查 IDE 设置：Help → Find Action → Registry，\n" +
+                "   确保 ide.browser.jcef.enabled 为 true\n" +
+                "3. 尝试重启 IDE\n" +
+                "4. 如果使用 JetBrains Runtime，确保版本支持 JCEF"
+            );
+            messageArea.setEditable(false);
+            messageArea.setBackground(new Color(45, 45, 45));
+            messageArea.setForeground(new Color(200, 200, 200));
+            messageArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 13));
+            messageArea.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+            messageArea.setAlignmentX(Component.CENTER_ALIGNMENT);
+            messageArea.setMaximumSize(new Dimension(500, 300));
+
+            centerPanel.add(iconLabel);
+            centerPanel.add(Box.createVerticalStrut(15));
+            centerPanel.add(titleLabel);
+            centerPanel.add(Box.createVerticalStrut(20));
+            centerPanel.add(messageArea);
+
+            errorPanel.add(centerPanel, BorderLayout.CENTER);
             mainPanel.add(errorPanel, BorderLayout.CENTER);
         }
 
@@ -872,8 +944,8 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
 
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(mainPanel,
-                    "Error saving or applying Node.js path: " + ex.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
+                    "保存或应用 Node.js 路径时出错: " + ex.getMessage(),
+                    "错误", JOptionPane.ERROR_MESSAGE);
             }
         }
 
@@ -1044,7 +1116,7 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
             session.loadFromServer().thenRun(() -> ApplicationManager.getApplication().invokeLater(() -> {}))
                 .exceptionally(ex -> {
                     ApplicationManager.getApplication().invokeLater(() ->
-                        callJavaScript("addErrorMessage", JsUtils.escapeJs("Failed to load session: " + ex.getMessage())));
+                        callJavaScript("addErrorMessage", JsUtils.escapeJs("加载会话失败: " + ex.getMessage())));
                     return null;
                 });
         }
@@ -1053,6 +1125,13 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
             session.setCallback(new ClaudeSession.SessionCallback() {
                 @Override
                 public void onMessageUpdate(List<ClaudeSession.Message> messages) {
+                    lastMessagesSnapshot = messages;
+
+                    if (streamActive) {
+                        enqueueStreamMessageUpdate(messages);
+                        return;
+                    }
+
                     LOG.info("[ClaudeSDKToolWindow] onMessageUpdate called, message count: " + messages.size());
                     if (!messages.isEmpty()) {
                         ClaudeSession.Message first = messages.get(0);
@@ -1074,22 +1153,14 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
 
                 @Override
                 public void onStateChange(boolean busy, boolean loading, String error) {
-                    // long callbackTime = System.currentTimeMillis();
-                    // LOG.info("[PERF][" + callbackTime + "] onStateChange 回调: busy=" + busy + ", loading=" + loading);
-
                     ApplicationManager.getApplication().invokeLater(() -> {
-                        // long uiUpdateTime = System.currentTimeMillis();
-                        // LOG.info("[PERF][" + uiUpdateTime + "] invokeLater 执行，准备调用 showLoading(" + loading + ")，等待: " + (uiUpdateTime - callbackTime) + "ms");
-
                         callJavaScript("showLoading", String.valueOf(loading));
                         if (error != null) {
-                            callJavaScript("updateStatus", JsUtils.escapeJs("Error: " + error));
+                            callJavaScript("updateStatus", JsUtils.escapeJs("错误: " + error));
                         }
                         if (!busy && !loading) {
                             VirtualFileManager.getInstance().asyncRefresh(null);
                         }
-
-                        // LOG.info("[PERF][" + System.currentTimeMillis() + "] showLoading 调用完成");
                     });
                 }
 
@@ -1131,13 +1202,168 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
                     }
                 }
 
+                // ===== 🔧 流式传输回调方法 =====
+
                 @Override
-                public void onModeChanged(String newMode) {
-                    // Phase 4 of Plan Mode: Notify webview of mode change after ExitPlanMode approval
-                    LOG.info("Permission mode changed to: " + newMode);
-                    String jsCode = "if(window.onModeChanged) window.onModeChanged('" + newMode + "');";
-                    executeJavaScriptCode(jsCode);
+                public void onStreamStart() {
+                    synchronized (streamMessageUpdateLock) {
+                        streamActive = true;
+                        pendingStreamMessages = null;
+                        streamMessageUpdateAlarm.cancelAllRequests();
+                        streamMessageUpdateScheduled = false;
+                        lastStreamMessageUpdateAtMs = 0L;
+                        streamMessageUpdateSequence += 1;
+                    }
+                    ApplicationManager.getApplication().invokeLater(() -> {
+                        callJavaScript("onStreamStart");
+                        LOG.debug("Stream started - notified frontend");
+                    });
                 }
+
+                @Override
+                public void onStreamEnd() {
+                    synchronized (streamMessageUpdateLock) {
+                        streamActive = false;
+                    }
+                    flushStreamMessageUpdates(() -> {
+                        callJavaScript("onStreamEnd");
+                        LOG.debug("Stream ended - notified frontend");
+                    });
+                }
+
+                @Override
+                public void onContentDelta(String delta) {
+                    ApplicationManager.getApplication().invokeLater(() -> {
+                        callJavaScript("onContentDelta", JsUtils.escapeJs(delta));
+                    });
+                }
+
+                @Override
+                public void onThinkingDelta(String delta) {
+                    ApplicationManager.getApplication().invokeLater(() -> {
+                        callJavaScript("onThinkingDelta", JsUtils.escapeJs(delta));
+                    });
+                }
+            });
+        }
+
+        private void enqueueStreamMessageUpdate(List<ClaudeSession.Message> messages) {
+            if (disposed) {
+                return;
+            }
+            synchronized (streamMessageUpdateLock) {
+                pendingStreamMessages = messages;
+            }
+            scheduleStreamMessageUpdatePush();
+        }
+
+        private void scheduleStreamMessageUpdatePush() {
+            if (disposed) {
+                return;
+            }
+
+            final int delayMs;
+            final long sequence;
+            synchronized (streamMessageUpdateLock) {
+                if (!streamActive) {
+                    return;
+                }
+                if (streamMessageUpdateScheduled) {
+                    return;
+                }
+                long elapsed = System.currentTimeMillis() - lastStreamMessageUpdateAtMs;
+                delayMs = (int) Math.max(0L, STREAM_MESSAGE_UPDATE_INTERVAL_MS - elapsed);
+                streamMessageUpdateScheduled = true;
+                sequence = ++streamMessageUpdateSequence;
+            }
+
+            streamMessageUpdateAlarm.addRequest(() -> {
+                final List<ClaudeSession.Message> snapshot;
+                synchronized (streamMessageUpdateLock) {
+                    streamMessageUpdateScheduled = false;
+                    lastStreamMessageUpdateAtMs = System.currentTimeMillis();
+                    snapshot = pendingStreamMessages;
+                    pendingStreamMessages = null;
+                }
+
+                if (disposed) {
+                    return;
+                }
+
+                if (snapshot != null) {
+                    sendStreamMessagesToWebView(snapshot, sequence, null);
+                }
+
+                boolean hasPending;
+                synchronized (streamMessageUpdateLock) {
+                    hasPending = pendingStreamMessages != null;
+                }
+                if (hasPending && streamActive && !disposed) {
+                    scheduleStreamMessageUpdatePush();
+                }
+            }, delayMs);
+        }
+
+        private void flushStreamMessageUpdates(Runnable afterFlushOnEdt) {
+            if (disposed) {
+                return;
+            }
+
+            final List<ClaudeSession.Message> snapshot;
+            final long sequence;
+            synchronized (streamMessageUpdateLock) {
+                streamMessageUpdateAlarm.cancelAllRequests();
+                streamMessageUpdateScheduled = false;
+                snapshot = pendingStreamMessages != null ? pendingStreamMessages : lastMessagesSnapshot;
+                pendingStreamMessages = null;
+                sequence = ++streamMessageUpdateSequence;
+            }
+
+            if (snapshot == null) {
+                if (afterFlushOnEdt != null) {
+                    ApplicationManager.getApplication().invokeLater(afterFlushOnEdt);
+                }
+                return;
+            }
+
+            sendStreamMessagesToWebView(snapshot, sequence, afterFlushOnEdt);
+        }
+
+        private void sendStreamMessagesToWebView(
+            List<ClaudeSession.Message> messages,
+            long sequence,
+            Runnable afterSendOnEdt
+        ) {
+            ApplicationManager.getApplication().executeOnPooledThread(() -> {
+                final String escapedMessagesJson;
+                try {
+                    escapedMessagesJson = JsUtils.escapeJs(convertMessagesToJson(messages));
+                } catch (Exception e) {
+                    LOG.warn("Failed to serialize messages for streaming update: " + e.getMessage(), e);
+                    if (afterSendOnEdt != null) {
+                        ApplicationManager.getApplication().invokeLater(afterSendOnEdt);
+                    }
+                    return;
+                }
+
+                ApplicationManager.getApplication().invokeLater(() -> {
+                    if (disposed) {
+                        return;
+                    }
+
+                    synchronized (streamMessageUpdateLock) {
+                        if (sequence != streamMessageUpdateSequence) {
+                            return;
+                        }
+                    }
+
+                    callJavaScript("updateMessages", escapedMessagesJson);
+                    pushUsageUpdateFromMessages(messages);
+
+                    if (afterSendOnEdt != null) {
+                        afterSendOnEdt.run();
+                    }
+                });
             });
         }
 
@@ -1448,11 +1674,11 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
 
                 LOG.info("New session created successfully, working directory: " + workingDirectory);
 
-                // Update frontend status
+                // 更新前端状态
                 ApplicationManager.getApplication().invokeLater(() -> {
                     callJavaScript("updateStatus", JsUtils.escapeJs(ClaudeCodeGuiBundle.message("toast.newSessionCreatedReady")));
 
-                    // Reset token usage statistics
+                    // 重置 Token 使用统计
                     int maxTokens = SettingsHandler.getModelContextLimit(handlerContext.getCurrentModel());
                     JsonObject usageUpdate = new JsonObject();
                     usageUpdate.addProperty("percentage", 0);
@@ -1479,7 +1705,7 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
             }).exceptionally(ex -> {
                 LOG.error("Failed to create new session: " + ex.getMessage(), ex);
                 ApplicationManager.getApplication().invokeLater(() -> {
-                    callJavaScript("updateStatus", JsUtils.escapeJs("Failed to create new session: " + ex.getMessage()));
+                    callJavaScript("updateStatus", JsUtils.escapeJs("创建新会话失败: " + ex.getMessage()));
                 });
                 return null;
             });
@@ -1628,19 +1854,24 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
             if (contextUpdateAlarm != null) {
                 contextUpdateAlarm.dispose();
             }
+            try {
+                streamMessageUpdateAlarm.cancelAllRequests();
+                streamMessageUpdateAlarm.dispose();
+            } catch (Exception e) {
+                LOG.warn("Failed to dispose stream message update alarm: " + e.getMessage());
+            }
 
-            // Clean up slash command cache
+            // 清理斜杠命令缓存
             if (slashCommandCache != null) {
                 slashCommandCache.dispose();
                 slashCommandCache = null;
             }
 
-            // Unregister dialog showers to prevent memory leaks
+            // 注销权限服务的 dialogShower 和 askUserQuestionDialogShower，防止内存泄漏
             try {
                 PermissionService permissionService = PermissionService.getInstance(project);
                 permissionService.unregisterDialogShower(project);
                 permissionService.unregisterAskUserQuestionDialogShower(project);
-                permissionService.unregisterPlanApprovalDialogShower(project);
             } catch (Exception e) {
                 LOG.warn("Failed to unregister dialog showers: " + e.getMessage());
             }

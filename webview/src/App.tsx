@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import MarkdownBlock from './components/MarkdownBlock';
 import CollapsibleTextBlock from './components/CollapsibleTextBlock';
@@ -10,8 +10,8 @@ import type { SettingsTab } from './components/settings/SettingsSidebar';
 import ConfirmDialog from './components/ConfirmDialog';
 import PermissionDialog, { type PermissionRequest } from './components/PermissionDialog';
 import AskUserQuestionDialog, { type AskUserQuestionRequest } from './components/AskUserQuestionDialog';
-import PlanApprovalDialog, { type PlanApprovalRequest, type ExecutionMode } from './components/PlanApprovalDialog';
 import RewindDialog, { type RewindRequest } from './components/RewindDialog';
+import RewindSelectDialog, { type RewindableMessage } from './components/RewindSelectDialog';
 import { rewindFiles } from './utils/bridge';
 import { ChatInputBox } from './components/ChatInputBox';
 import { CLAUDE_MODELS, CODEX_MODELS } from './components/ChatInputBox/types';
@@ -49,6 +49,10 @@ const isTruthy = (value: unknown) => value === true || value === 'true';
 const sendBridgeMessage = (event: string, payload = '') => {
   if (window.sendToJava) {
     const message = `${event}:${payload}`;
+    // 对权限相关消息添加详细日志
+    if (event.includes('permission')) {
+      console.log('[PERM_DEBUG][BRIDGE] Sending to Java:', message);
+    }
     window.sendToJava(message);
   } else {
     console.warn('[Frontend] sendToJava is not ready yet');
@@ -73,6 +77,7 @@ const App = () => {
   const [loadingStartTime, setLoadingStartTime] = useState<number | null>(null);
   const [isThinking, setIsThinking] = useState(false);
   const [expandedThinking, setExpandedThinking] = useState<Record<string, boolean>>({});
+  const [streamingActive, setStreamingActive] = useState(false);
   const [currentView, setCurrentView] = useState<ViewMode>('chat');
   const [settingsInitialTab, setSettingsInitialTab] = useState<SettingsTab | undefined>(undefined);
   const [historyData, setHistoryData] = useState<HistoryData | null>(null);
@@ -80,6 +85,8 @@ const App = () => {
   const [showInterruptConfirm, setShowInterruptConfirm] = useState(false);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  // 输入框草稿内容（页面切换时保持）
+  const [draftInput, setDraftInput] = useState('');
   // 标志位：是否抑制下一次 updateStatus 触发的 toast（用于删除当前会话后自动创建新会话的场景）
   const suppressNextStatusToastRef = useRef(false);
 
@@ -90,25 +97,21 @@ const App = () => {
   const currentPermissionRequestRef = useRef<PermissionRequest | null>(null);
   const pendingPermissionRequestsRef = useRef<PermissionRequest[]>([]);
 
-  // AskUserQuestion dialog state
+  // AskUserQuestion 弹窗状态
   const [askUserQuestionDialogOpen, setAskUserQuestionDialogOpen] = useState(false);
   const [currentAskUserQuestionRequest, setCurrentAskUserQuestionRequest] = useState<AskUserQuestionRequest | null>(null);
   const askUserQuestionDialogOpenRef = useRef(false);
   const currentAskUserQuestionRequestRef = useRef<AskUserQuestionRequest | null>(null);
   const pendingAskUserQuestionRequestsRef = useRef<AskUserQuestionRequest[]>([]);
 
-  // PlanApproval dialog state
-  const [planApprovalDialogOpen, setPlanApprovalDialogOpen] = useState(false);
-  const [currentPlanApprovalRequest, setCurrentPlanApprovalRequest] = useState<PlanApprovalRequest | null>(null);
-  const planApprovalDialogOpenRef = useRef(false);
-  const currentPlanApprovalRequestRef = useRef<PlanApprovalRequest | null>(null);
-  const pendingPlanApprovalRequestsRef = useRef<PlanApprovalRequest[]>([]);
-
-  // Rewind dialog state
+  // Rewind 弹窗状态
   const [rewindDialogOpen, setRewindDialogOpen] = useState(false);
   const [currentRewindRequest, setCurrentRewindRequest] = useState<RewindRequest | null>(null);
+  const [isRewinding, setIsRewinding] = useState(false);
+  // Rewind 选择弹窗状态
+  const [rewindSelectDialogOpen, setRewindSelectDialogOpen] = useState(false);
 
-  // ChatInputBox state
+  // ChatInputBox 相关状态
   const [currentProvider, setCurrentProvider] = useState('claude');
   const [selectedClaudeModel, setSelectedClaudeModel] = useState(CLAUDE_MODELS[0].id);
   const [selectedCodexModel, setSelectedCodexModel] = useState(CODEX_MODELS[0].id);
@@ -121,9 +124,6 @@ const App = () => {
   const [activeProviderConfig, setActiveProviderConfig] = useState<ProviderConfig | null>(null);
   const [claudeSettingsAlwaysThinkingEnabled, setClaudeSettingsAlwaysThinkingEnabled] = useState(true);
   const [selectedAgent, setSelectedAgent] = useState<SelectedAgent | null>(null);
-
-  // Image preview state (replaces innerHTML-based preview for XSS safety)
-  const [imagePreviewSrc, setImagePreviewSrc] = useState<string | null>(null);
 
   // 使用 useRef 存储最新的 provider 值，避免回调中的闭包问题
   const currentProviderRef = useRef(currentProvider);
@@ -138,9 +138,37 @@ const App = () => {
   const selectedModel = currentProvider === 'codex' ? selectedCodexModel : selectedClaudeModel;
 
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const inputAreaRef = useRef<HTMLDivElement | null>(null);
   // 追踪用户是否在底部（用于判断是否需要自动滚动）
   const isUserAtBottomRef = useRef(true);
+  // 追踪上次按下 ESC 的时间（用于双击 ESC 快捷键）
+  const lastEscPressTimeRef = useRef<number>(0);
+
+  // 🔧 流式传输状态
+  // 使用 useRef 累积流式内容，避免频繁状态更新
+  const streamingContentRef = useRef('');
+  const isStreamingRef = useRef(false);
+  const useBackendStreamingRenderRef = useRef(false);
+  // 🔧 标记是否正在自动滚动（防止 scroll 事件误判）
+  const isAutoScrollingRef = useRef(false);
+  const autoExpandedThinkingKeysRef = useRef<Set<string>>(new Set());
+  // 🔧 流式文本：按“阶段”切分（工具调用前/后等）
+  const streamingTextSegmentsRef = useRef<string[]>([]);
+  const activeTextSegmentIndexRef = useRef<number>(-1);
+  // 🔧 流式思考：支持多段 thinking（例如工具调用前后多次思考）
+  const streamingThinkingSegmentsRef = useRef<string[]>([]);
+  const activeThinkingSegmentIndexRef = useRef<number>(-1);
+  // 🔧 工具调用计数：用于识别“新 tool_use”边界，避免重复重置分段
+  const seenToolUseCountRef = useRef(0);
+  // 🔧 真正的节流控制（分离 content 和 thinking，避免互相干扰）
+  // 🔧 追踪流式消息的索引，用于在 updateMessages 后仍能正确定位
+  const streamingMessageIndexRef = useRef<number>(-1);
+  const contentUpdateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const thinkingUpdateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastContentUpdateRef = useRef(0);  // 上次 content 更新时间
+  const lastThinkingUpdateRef = useRef(0); // 上次 thinking 更新时间
+  const THROTTLE_INTERVAL = 50; // 50ms 节流间隔
 
   useEffect(() => {
     permissionDialogOpenRef.current = permissionDialogOpen;
@@ -183,22 +211,6 @@ const App = () => {
       openAskUserQuestionDialog(next);
     }
   }, [askUserQuestionDialogOpen, currentAskUserQuestionRequest]);
-
-  const openPlanApprovalDialog = (request: PlanApprovalRequest) => {
-    currentPlanApprovalRequestRef.current = request;
-    planApprovalDialogOpenRef.current = true;
-    setCurrentPlanApprovalRequest(request);
-    setPlanApprovalDialogOpen(true);
-  };
-
-  useEffect(() => {
-    if (planApprovalDialogOpen) return;
-    if (currentPlanApprovalRequest) return;
-    const next = pendingPlanApprovalRequestsRef.current.shift();
-    if (next) {
-      openPlanApprovalDialog(next);
-    }
-  }, [planApprovalDialogOpen, currentPlanApprovalRequest]);
 
   const syncActiveProviderModelMapping = (provider?: ProviderConfig | null) => {
     if (typeof window === 'undefined' || !window.localStorage) return;
@@ -361,23 +373,6 @@ const App = () => {
     };
   }, []);
 
-  // 检查当前会话是否还存在（防止显示已删除的会话）
-  useEffect(() => {
-    if (currentView === 'chat' && historyData?.sessions) {
-      // 只有当 currentSessionId 存在且在历史记录中找不到时才清空
-      // 注意：currentSessionId 为 null 表示新会话，这是合法的，不应该清空
-      if (messages.length > 0 && currentSessionId) {
-        if (!historyData.sessions.some(s => s.sessionId === currentSessionId)) {
-          console.log('[App] 当前会话已被删除，清空聊天界面');
-          setMessages([]);
-          setCurrentSessionId(null);
-          setUsagePercentage(0);
-          setUsageUsedTokens(0);
-        }
-      }
-    }
-  }, [currentView, currentSessionId, historyData, messages.length]);
-
   // Toast helper functions
   const addToast = (message: string, type: ToastMessage['type'] = 'info') => {
     // Don't show toast for default status
@@ -448,17 +443,129 @@ const App = () => {
 
   const handleRewindConfirm = (sessionId: string, userMessageId: string) => {
     console.log('[Rewind] Confirming rewind:', { sessionId, userMessageId });
+    setIsRewinding(true);
     rewindFiles(sessionId, userMessageId);
-    setRewindDialogOpen(false);
-    setCurrentRewindRequest(null);
   };
 
   const handleRewindCancel = () => {
+    // Allow cancel even while rewinding (user can dismiss the dialog)
+    if (isRewinding) {
+      setIsRewinding(false);
+    }
     setRewindDialogOpen(false);
     setCurrentRewindRequest(null);
   };
 
+  // Open the rewind select dialog
+  const handleOpenRewindSelectDialog = () => {
+    setRewindSelectDialogOpen(true);
+  };
+
+  // Handle selection from the rewind select dialog
+  const handleRewindSelect = (item: RewindableMessage) => {
+    setRewindSelectDialogOpen(false);
+    // Trigger the confirmation dialog
+    handleRewindClick(item.messageIndex, item.message);
+  };
+
+  // Close the rewind select dialog
+  const handleRewindSelectCancel = () => {
+    setRewindSelectDialogOpen(false);
+  };
+
   useEffect(() => {
+    const findLastAssistantIndex = (list: ClaudeMessage[]) => {
+      for (let i = list.length - 1; i >= 0; i -= 1) {
+        if (list[i]?.type === 'assistant') return i;
+      }
+      return -1;
+    };
+
+    const extractRawBlocks = (raw: unknown): any[] => {
+      if (!raw || typeof raw !== 'object') return [];
+      const rawObj: any = raw;
+      const blocks = rawObj.content ?? rawObj.message?.content;
+      return Array.isArray(blocks) ? blocks : [];
+    };
+
+    const buildStreamingBlocks = (existingBlocks: any[]) => {
+      const toolUseBlocks = existingBlocks.filter((b) => b?.type === 'tool_use');
+      const otherBlocks = existingBlocks.filter(
+        (b) => b && b.type !== 'text' && b.type !== 'thinking' && b.type !== 'tool_use',
+      );
+
+      const textSegments = streamingTextSegmentsRef.current;
+      const thinkingSegments = streamingThinkingSegmentsRef.current;
+      const phasesCount = Math.max(textSegments.length, thinkingSegments.length, toolUseBlocks.length + 1);
+
+      const blocks: any[] = [];
+      for (let phase = 0; phase < phasesCount; phase += 1) {
+        const thinking = thinkingSegments[phase];
+        if (typeof thinking === 'string' && thinking.length > 0) {
+          // 🔧 更彻底地清理换行符：合并连续空白行，去除首尾空白
+          const normalizedThinking = thinking
+            .replace(/\r\n?/g, '\n')          // 统一换行符
+            .replace(/\n[ \t]*\n+/g, '\n')    // 移除空白行（包含仅空格/Tab 的行）
+            .replace(/^\n+/, '')              // 去除开头换行
+            .replace(/\n+$/, '');             // 去除结尾换行
+          if (normalizedThinking.length > 0) {
+            blocks.push({ type: 'thinking', thinking: normalizedThinking });
+          }
+        }
+        const text = textSegments[phase];
+        if (typeof text === 'string' && text.length > 0) {
+          blocks.push({ type: 'text', text });
+        }
+        if (phase < toolUseBlocks.length) {
+          blocks.push(toolUseBlocks[phase]);
+        }
+      }
+
+      if (otherBlocks.length > 0) {
+        blocks.push(...otherBlocks);
+      }
+      return blocks;
+    };
+
+    const getOrCreateStreamingAssistantIndex = (list: ClaudeMessage[]) => {
+      const currentIdx = streamingMessageIndexRef.current;
+      if (currentIdx >= 0 && currentIdx < list.length && list[currentIdx]?.type === 'assistant') {
+        return currentIdx;
+      }
+      const lastAssistantIdx = findLastAssistantIndex(list);
+      if (lastAssistantIdx >= 0) {
+        streamingMessageIndexRef.current = lastAssistantIdx;
+        return lastAssistantIdx;
+      }
+      // 没有 assistant：追加一个占位
+      streamingMessageIndexRef.current = list.length;
+      list.push({
+        type: 'assistant',
+        content: '',
+        isStreaming: true,
+        timestamp: new Date().toISOString(),
+        raw: { message: { content: [] } } as any,
+      });
+      return streamingMessageIndexRef.current;
+    };
+
+    const patchAssistantForStreaming = (assistant: ClaudeMessage) => {
+      const existingRaw = (assistant.raw && typeof assistant.raw === 'object') ? (assistant.raw as any) : { message: { content: [] } };
+      const existingBlocks = extractRawBlocks(existingRaw);
+      const newBlocks = buildStreamingBlocks(existingBlocks);
+
+      const rawPatched = existingRaw.message
+        ? { ...existingRaw, message: { ...(existingRaw.message || {}), content: newBlocks } }
+        : { ...existingRaw, content: newBlocks };
+
+      return {
+        ...assistant,
+        content: streamingContentRef.current,
+        raw: rawPatched,
+        isStreaming: true,
+      } as ClaudeMessage;
+    };
+
     window.updateMessages = (json) => {
       // const timestamp = Date.now();
       // const sendTime = (window as any).__lastMessageSendTime;
@@ -466,13 +573,70 @@ const App = () => {
       //   console.log(`[Frontend][${timestamp}][PERF] updateMessages 收到响应，距发送 ${timestamp - sendTime}ms`);
       // }
       try {
-        console.log('[Frontend] updateMessages received, json length:', json?.length);
         const parsed = JSON.parse(json) as ClaudeMessage[];
-        console.log('[Frontend] updateMessages parsed, count:', parsed.length, 'types:', parsed.map(m => m.type).join(','));
-        if (parsed.length > 0) {
-          console.log('[Frontend] First message:', JSON.stringify(parsed[0]).substring(0, 200));
-        }
-        setMessages(parsed);
+
+        // 🔧 禁用后端渲染模式，使用 onContentDelta 进行流式渲染
+        // 这样可以确保 Markdown 在流式输出时正确渲染
+        // if (isStreamingRef.current && currentProviderRef.current === 'claude') {
+        //   const lastAssistantIdx = findLastAssistantIndex(parsed);
+        //   if (lastAssistantIdx >= 0) {
+        //     const rawBlocks = normalizeBlocks(parsed[lastAssistantIdx].raw) || [];
+        //     const hasStreamingBlocks = rawBlocks.some(
+        //       (block) => block?.type === 'text' || block?.type === 'thinking',
+        //     );
+        //     if (hasStreamingBlocks) {
+        //       useBackendStreamingRenderRef.current = true;
+        //       streamingMessageIndexRef.current = lastAssistantIdx;
+        //     }
+        //   }
+        // }
+
+        setMessages((prev) => {
+          if (!isStreamingRef.current) {
+            return parsed;
+          }
+
+          if (useBackendStreamingRenderRef.current) {
+            return parsed;
+          }
+
+          const lastAssistantIdx = findLastAssistantIndex(parsed);
+          if (lastAssistantIdx < 0) {
+            return parsed;
+          }
+
+          const lastAssistant = parsed[lastAssistantIdx];
+          const lastAssistantBlocks = extractRawBlocks(lastAssistant.raw);
+          const toolUseCount = lastAssistantBlocks.filter((b) => b?.type === 'tool_use').length;
+          if (toolUseCount < seenToolUseCountRef.current) {
+            seenToolUseCountRef.current = toolUseCount;
+          }
+          const hasNewToolUse = toolUseCount > seenToolUseCountRef.current;
+          const hasToolUse = toolUseCount > 0;
+
+          // 工具调用是一个“阶段”边界：后续文本/思考应该进入新的段落
+          if (hasNewToolUse) {
+            seenToolUseCountRef.current = toolUseCount;
+            activeTextSegmentIndexRef.current = -1;
+            activeThinkingSegmentIndexRef.current = -1;
+          }
+
+          // 流式期间：仅当“没有新增消息且最后一条是 assistant 且不含 tool_use”时跳过，避免覆盖流式 UI
+          const isAssistantOnlyRefresh =
+            parsed.length === prev.length &&
+            parsed[parsed.length - 1]?.type === 'assistant' &&
+            !hasToolUse;
+          if (isAssistantOnlyRefresh) {
+            return prev;
+          }
+
+          const patched = [...parsed];
+          const targetIdx = getOrCreateStreamingAssistantIndex(patched);
+          if (targetIdx >= 0 && patched[targetIdx]?.type === 'assistant') {
+            patched[targetIdx] = patchAssistantForStreaming(patched[targetIdx]);
+          }
+          return patched;
+        });
       } catch (error) {
         console.error('[Frontend] Failed to parse messages:', error);
         console.error('[Frontend] Raw JSON:', json?.substring(0, 500));
@@ -491,25 +655,7 @@ const App = () => {
     };
     window.showLoading = (value) => {
       const isLoading = isTruthy(value);
-      // const timestamp = Date.now();
-      // const sendTime = (window as any).__lastMessageSendTime;
-
-      // if (isLoading) {
-      //   console.log(`[Frontend][${timestamp}][PERF] showLoading(true) - 开始加载`);
-      //   if (sendTime) {
-      //     console.log(`[Frontend][${timestamp}][PERF] 距消息发送 ${timestamp - sendTime}ms 后开始显示加载状态`);
-      //   }
-      // } else {
-      //   console.log(`[Frontend][${timestamp}][PERF] showLoading(false) - 加载完成`);
-      //   if (sendTime) {
-      //     console.log(`[Frontend][${timestamp}][PERF] >>> 总耗时: ${timestamp - sendTime}ms <<<`);
-      //     // 清除记录的发送时间
-      //     delete (window as any).__lastMessageSendTime;
-      //   }
-      // }
-
       setLoading(isLoading);
-      // 开始加载时记录时间，结束时清除
       if (isLoading) {
         setLoadingStartTime(Date.now());
       } else {
@@ -525,6 +671,249 @@ const App = () => {
     // 添加单条历史消息（用于 Codex 会话加载）
     window.addHistoryMessage = (message: ClaudeMessage) => {
       setMessages((prev) => [...prev, message]);
+    };
+
+    // 🔧 流式传输回调函数
+    // 流式开始时调用
+    window.onStreamStart = () => {
+      console.log('[Frontend] Stream started');
+      streamingContentRef.current = '';
+      isStreamingRef.current = true;
+      // Claude 流式：由后端通过 updateMessages 增量写入 raw blocks 进行渲染
+      useBackendStreamingRenderRef.current = currentProviderRef.current === 'claude';
+      autoExpandedThinkingKeysRef.current.clear();
+      setStreamingActive(true);
+      isUserAtBottomRef.current = true;
+      streamingTextSegmentsRef.current = [];
+      activeTextSegmentIndexRef.current = -1;
+      streamingThinkingSegmentsRef.current = [];
+      activeThinkingSegmentIndexRef.current = -1;
+      seenToolUseCountRef.current = 0;
+
+      // Claude 流式由后端通过 updateMessages 驱动，不需要前端占位消息
+      if (useBackendStreamingRenderRef.current) {
+        return;
+      }
+      // 添加一个占位的 assistant 消息用于流式更新
+      setMessages((prev) => {
+        // 检查最后一条消息是否已经是正在流式的 assistant 消息
+        const last = prev[prev.length - 1];
+        if (last?.type === 'assistant' && last?.isStreaming) {
+          // 🔧 记录流式消息索引
+          streamingMessageIndexRef.current = prev.length - 1;
+          return prev; // 已存在，不重复添加
+        }
+        // 🔧 记录新增的流式消息索引
+        streamingMessageIndexRef.current = prev.length;
+        return [...prev, {
+          type: 'assistant',
+          content: '',
+          isStreaming: true,
+          timestamp: new Date().toISOString()
+        }];
+      });
+    };
+
+    // 内容增量回调 - 🔧 使用索引定位流式消息，避免 isStreaming 被覆盖问题
+    window.onContentDelta = (delta: string) => {
+      if (!isStreamingRef.current) return;
+      streamingContentRef.current += delta;
+      // 收到内容输出，视为当前 thinking 段结束（后续 thinking_delta 将新开一段）
+      activeThinkingSegmentIndexRef.current = -1;
+
+      // 🔧 计算/创建当前文本段（工具调用后会从新段开始）
+      if (activeTextSegmentIndexRef.current < 0) {
+        activeTextSegmentIndexRef.current = streamingTextSegmentsRef.current.length;
+        streamingTextSegmentsRef.current.push('');
+      }
+      streamingTextSegmentsRef.current[activeTextSegmentIndexRef.current] += delta;
+
+      const now = Date.now();
+      const timeSinceLastUpdate = now - lastContentUpdateRef.current;
+
+      // 🔧 真正的节流：如果距上次更新超过阈值，立即更新
+      if (timeSinceLastUpdate >= THROTTLE_INTERVAL) {
+        lastContentUpdateRef.current = now;
+        const currentContent = streamingContentRef.current;
+        setMessages((prev) => {
+          const newMessages = [...prev];
+          // 🔧 使用索引定位，而不是检查 isStreaming 标志（避免被 updateMessages 覆盖）
+          const idx = getOrCreateStreamingAssistantIndex(newMessages);
+          if (idx >= 0 && newMessages[idx]?.type === 'assistant') {
+            newMessages[idx] = patchAssistantForStreaming({
+              ...newMessages[idx],
+              content: currentContent,
+              isStreaming: true,
+            });
+          }
+          return newMessages;
+        });
+      } else {
+        // 🔧 如果还没到阈值，确保在阈值到期时更新（不会丢失最后一次更新）
+        if (!contentUpdateTimeoutRef.current) {
+          const remainingTime = THROTTLE_INTERVAL - timeSinceLastUpdate;
+          contentUpdateTimeoutRef.current = setTimeout(() => {
+            contentUpdateTimeoutRef.current = null;
+            lastContentUpdateRef.current = Date.now();
+            const currentContent = streamingContentRef.current;
+            setMessages((prev) => {
+              const newMessages = [...prev];
+              const idx = getOrCreateStreamingAssistantIndex(newMessages);
+              if (idx >= 0 && newMessages[idx]?.type === 'assistant') {
+                newMessages[idx] = patchAssistantForStreaming({
+                  ...newMessages[idx],
+                  content: currentContent,
+                  isStreaming: true,
+                });
+              }
+              return newMessages;
+            });
+          }, remainingTime);
+        }
+      }
+    };
+
+    // 思考增量回调 - 🔧 使用索引定位流式消息
+    window.onThinkingDelta = (delta: string) => {
+      if (!isStreamingRef.current) return;
+      // 🔧 统一换行符，但不在这里做过度清理（累积后在 buildStreamingBlocks 中统一处理）
+      const normalizedDelta = delta.replace(/\r\n/g, '\n');
+      // 🔧 多段 thinking：按"阶段"聚合（工具调用前/后分别进入不同段）
+      if (activeThinkingSegmentIndexRef.current < 0) {
+        const phaseIndex = activeTextSegmentIndexRef.current >= 0
+          ? activeTextSegmentIndexRef.current
+          : streamingTextSegmentsRef.current.length; // 工具调用后但文本未开始时，应进入下一段
+        while (streamingThinkingSegmentsRef.current.length <= phaseIndex) {
+          streamingThinkingSegmentsRef.current.push('');
+        }
+        activeThinkingSegmentIndexRef.current = phaseIndex;
+      }
+      streamingThinkingSegmentsRef.current[activeThinkingSegmentIndexRef.current] += normalizedDelta;
+
+      const now = Date.now();
+      const timeSinceLastUpdate = now - lastThinkingUpdateRef.current;
+
+      // 更新 UI 的函数
+      const updateThinkingUI = () => {
+        setMessages((prev) => {
+          const newMessages = [...prev];
+          const idx = getOrCreateStreamingAssistantIndex(newMessages);
+          if (idx >= 0 && newMessages[idx]?.type === 'assistant') {
+            newMessages[idx] = patchAssistantForStreaming({
+              ...newMessages[idx],
+              isStreaming: true,
+            });
+
+            const rawBlocks = extractRawBlocks(newMessages[idx].raw);
+            let lastThinkingIndex = -1;
+            for (let i = rawBlocks.length - 1; i >= 0; i -= 1) {
+              if (rawBlocks[i]?.type === 'thinking') {
+                lastThinkingIndex = i;
+                break;
+              }
+            }
+            if (lastThinkingIndex >= 0) {
+              const thinkingKey = `${idx}_${lastThinkingIndex}`;
+              setExpandedThinking((prevExpanded) => ({ ...prevExpanded, [thinkingKey]: true }));
+            }
+          }
+          return newMessages;
+        });
+        setIsThinking(true);
+      };
+
+      // 🔧 真正的节流：如果距上次更新超过阈值，立即更新
+      if (timeSinceLastUpdate >= THROTTLE_INTERVAL) {
+        lastThinkingUpdateRef.current = now;
+        updateThinkingUI();
+      } else {
+        // 🔧 如果还没到阈值，确保在阈值到期时更新
+        if (!thinkingUpdateTimeoutRef.current) {
+          const remainingTime = THROTTLE_INTERVAL - timeSinceLastUpdate;
+          thinkingUpdateTimeoutRef.current = setTimeout(() => {
+            thinkingUpdateTimeoutRef.current = null;
+            lastThinkingUpdateRef.current = Date.now();
+            updateThinkingUI();
+          }, remainingTime);
+        }
+      }
+    };
+
+    // 流式结束回调
+    window.onStreamEnd = () => {
+      console.log('[Frontend] Stream ended');
+      const useBackendRender = useBackendStreamingRenderRef.current;
+      isStreamingRef.current = false;
+      useBackendStreamingRenderRef.current = false;
+      setStreamingActive(false);
+      activeThinkingSegmentIndexRef.current = -1;
+      activeTextSegmentIndexRef.current = -1;
+      seenToolUseCountRef.current = 0;
+
+      // 清除节流定时器
+      if (contentUpdateTimeoutRef.current) {
+        clearTimeout(contentUpdateTimeoutRef.current);
+        contentUpdateTimeoutRef.current = null;
+      }
+      if (thinkingUpdateTimeoutRef.current) {
+        clearTimeout(thinkingUpdateTimeoutRef.current);
+        thinkingUpdateTimeoutRef.current = null;
+      }
+
+      if (useBackendRender) {
+        const keysToCollapse = Array.from(autoExpandedThinkingKeysRef.current);
+        autoExpandedThinkingKeysRef.current.clear();
+        if (keysToCollapse.length > 0) {
+          setExpandedThinking((prevExpanded) => {
+            let changed = false;
+            const next = { ...prevExpanded };
+            for (const key of keysToCollapse) {
+              if (next[key]) {
+                next[key] = false;
+                changed = true;
+              }
+            }
+            return changed ? next : prevExpanded;
+          });
+        }
+
+        streamingContentRef.current = '';
+        streamingTextSegmentsRef.current = [];
+        streamingThinkingSegmentsRef.current = [];
+        streamingMessageIndexRef.current = -1;
+        setIsThinking(false);
+        return;
+      }
+
+      // 确保最终内容被写入
+      const finalContent = streamingContentRef.current;
+      // 🔧 捕获当前索引值
+      const targetIdx = streamingMessageIndexRef.current;
+
+      setMessages((prev) => {
+        const newMessages = [...prev];
+        const idx = targetIdx >= 0 && targetIdx < prev.length ? targetIdx : findLastAssistantIndex(newMessages);
+        if (idx >= 0 && newMessages[idx]?.type === 'assistant') {
+          const patched = patchAssistantForStreaming(newMessages[idx]);
+          const rawBlocks = extractRawBlocks(patched.raw);
+          for (let blockIndex = 0; blockIndex < rawBlocks.length; blockIndex += 1) {
+            if (rawBlocks[blockIndex]?.type === 'thinking') {
+              const thinkingKey = `${idx}_${blockIndex}`;
+              setExpandedThinking((prevExpanded) => ({ ...prevExpanded, [thinkingKey]: false }));
+            }
+          }
+          newMessages[idx] = { ...patched, content: finalContent, isStreaming: false };
+        }
+        return newMessages;
+      });
+
+      // 重置流式状态
+      streamingContentRef.current = '';
+      streamingTextSegmentsRef.current = [];
+      streamingThinkingSegmentsRef.current = [];
+      // 🔧 重置索引
+      streamingMessageIndexRef.current = -1;
+      setIsThinking(false);
     };
 
     // 设置当前会话 ID（用于 rewind 功能）
@@ -716,25 +1105,24 @@ const App = () => {
     };
     setTimeout(requestThinkingEnabled, 200);
 
-    // Permission dialog callback
+    // 权限弹窗回调
     window.showPermissionDialog = (json) => {
+      console.log('[PERM_DEBUG][FRONTEND] showPermissionDialog called');
+      console.log('[PERM_DEBUG][FRONTEND] Raw JSON:', json);
       try {
         const request = JSON.parse(json) as PermissionRequest;
-        setCurrentPermissionRequest(request);
-        setPermissionDialogOpen(true);
+        console.log('[PERM_DEBUG][FRONTEND] Parsed request:', request);
+        console.log('[PERM_DEBUG][FRONTEND] channelId:', request.channelId);
+        console.log('[PERM_DEBUG][FRONTEND] toolName:', request.toolName);
+        if (permissionDialogOpenRef.current || currentPermissionRequestRef.current) {
+          pendingPermissionRequestsRef.current.push(request);
+          console.log('[PERM_DEBUG][FRONTEND] Dialog busy, queued request. queueSize=', pendingPermissionRequestsRef.current.length);
+        } else {
+          openPermissionDialog(request);
+          console.log('[PERM_DEBUG][FRONTEND] Dialog state set to open');
+        }
       } catch (error) {
-        console.error('[Frontend] Failed to parse permission request:', error);
-      }
-    };
-
-    // AskUserQuestion dialog callback
-    window.showAskUserQuestionDialog = (json) => {
-      try {
-        const request = JSON.parse(json) as AskUserQuestionRequest;
-        setCurrentAskUserQuestionRequest(request);
-        setAskUserQuestionDialogOpen(true);
-      } catch (error) {
-        console.error('[Frontend] Failed to parse ask-user-question request:', error);
+        console.error('[PERM_DEBUG][FRONTEND] ERROR: Failed to parse permission request:', error);
       }
     };
 
@@ -756,26 +1144,6 @@ const App = () => {
         }
       } catch (error) {
         console.error('[ASK_USER_QUESTION][FRONTEND] ERROR: Failed to parse request:', error);
-      }
-    };
-
-    // PlanApproval dialog callback
-    window.showPlanApprovalDialog = (json) => {
-      console.log('[PLAN_APPROVAL][FRONTEND] showPlanApprovalDialog called');
-      console.log('[PLAN_APPROVAL][FRONTEND] Raw JSON:', json);
-      try {
-        const request = JSON.parse(json) as PlanApprovalRequest;
-        console.log('[PLAN_APPROVAL][FRONTEND] Parsed request:', request);
-        console.log('[PLAN_APPROVAL][FRONTEND] requestId:', request.requestId);
-        if (planApprovalDialogOpenRef.current || currentPlanApprovalRequestRef.current) {
-          pendingPlanApprovalRequestsRef.current.push(request);
-          console.log('[PLAN_APPROVAL][FRONTEND] Dialog busy, queued request. queueSize=', pendingPlanApprovalRequestsRef.current.length);
-        } else {
-          openPlanApprovalDialog(request);
-          console.log('[PLAN_APPROVAL][FRONTEND] Dialog state set to open');
-        }
-      } catch (error) {
-        console.error('[PLAN_APPROVAL][FRONTEND] ERROR: Failed to parse request:', error);
       }
     };
 
@@ -876,6 +1244,37 @@ const App = () => {
         console.error('[Frontend] Failed to parse selected agent changed:', error);
       }
     };
+
+    // Rewind result callback from Java
+    window.onRewindResult = (json: string) => {
+      console.log('[Frontend] onRewindResult:', json);
+      try {
+        const result = JSON.parse(json);
+        console.log('[Frontend] Parsed rewind result:', result);
+
+        setIsRewinding(false);
+        setRewindDialogOpen(false);
+        setCurrentRewindRequest(null);
+
+        if (result.success) {
+          window.addToast?.(
+            t('rewind.successSimple'),
+            'success'
+          );
+        } else {
+          window.addToast?.(
+            result.message || t('rewind.failed'),
+            'error'
+          );
+        }
+      } catch (error) {
+        console.error('[Frontend] Failed to parse rewind result:', error);
+        setIsRewinding(false);
+        setRewindDialogOpen(false);
+        setCurrentRewindRequest(null);
+        window.addToast?.(t('rewind.parseError'), 'error');
+      }
+    };
   }, []); // 移除 currentProvider 依赖，因为现在使用 ref 获取最新值
 
   useEffect(() => {
@@ -940,46 +1339,99 @@ const App = () => {
     if (!container) return;
 
     const handleScroll = () => {
-      // 计算距离底部的距离（容差 50 像素）
+      // 🔧 如果正在自动滚动，跳过判断（防止快速流式输出时误判）
+      if (isAutoScrollingRef.current) return;
+      // 计算距离底部的距离
       const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
-      // 如果距离底部小于 50 像素，认为用户在底部
-      isUserAtBottomRef.current = distanceFromBottom < 50;
+      // 如果距离底部小于 100 像素，认为用户在底部
+      isUserAtBottomRef.current = distanceFromBottom < 100;
     };
 
     container.addEventListener('scroll', handleScroll);
     return () => container.removeEventListener('scroll', handleScroll);
   }, [currentView]);
 
-  useEffect(() => {
-    // 只有当用户在底部时，才自动滚动到底部
-    if (messagesContainerRef.current && isUserAtBottomRef.current) {
-      // 使用 requestAnimationFrame 确保 DOM 已完全渲染
+  const scrollToBottom = useCallback(() => {
+    const endElement = messagesEndRef.current;
+    if (endElement) {
+      isAutoScrollingRef.current = true;
+      try {
+        endElement.scrollIntoView({ block: 'end', behavior: 'auto' });
+      } catch {
+        endElement.scrollIntoView(false);
+      }
       requestAnimationFrame(() => {
-        if (messagesContainerRef.current) {
-          messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
-        }
+        isAutoScrollingRef.current = false;
       });
+      return;
     }
-  }, [messages]);
+
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    isAutoScrollingRef.current = true;
+    container.scrollTop = container.scrollHeight;
+    requestAnimationFrame(() => {
+      isAutoScrollingRef.current = false;
+    });
+  }, []);
+
+  // 🔧 自动滚动：用户在底部时，跟随最新内容（包括流式/展开思考块/加载指示器等导致的高度变化）
+  useLayoutEffect(() => {
+    if (currentView !== 'chat') return;
+    if (!isUserAtBottomRef.current) return;
+    scrollToBottom();
+  }, [currentView, messages, expandedThinking, loading, streamingActive, scrollToBottom]);
 
   // 切换回聊天视图时，自动滚动到底部
   useEffect(() => {
-    if (currentView === 'chat' && messagesContainerRef.current) {
+    if (currentView === 'chat') {
       // 使用 setTimeout 确保视图完全渲染后再滚动
       const timer = setTimeout(() => {
-        if (messagesContainerRef.current) {
-          messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
-        }
+        scrollToBottom();
       }, 0);
       return () => clearTimeout(timer);
     }
-  }, [currentView]);
+  }, [currentView, scrollToBottom]);
+
+  // 双击 ESC 快捷键打开回滚弹窗
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+
+      // 如果有其他弹窗打开，不处理双击 ESC
+      if (permissionDialogOpen || askUserQuestionDialogOpen || rewindDialogOpen || rewindSelectDialogOpen) {
+        return;
+      }
+
+      // 只在 claude provider 且有消息时才触发
+      if (currentProvider !== 'claude' || messages.length === 0) {
+        return;
+      }
+
+      const now = Date.now();
+      const timeSinceLastEsc = now - lastEscPressTimeRef.current;
+
+      // 如果两次 ESC 间隔小于 400ms，触发回滚弹窗
+      if (timeSinceLastEsc < 400) {
+        e.preventDefault();
+        setRewindSelectDialogOpen(true);
+        lastEscPressTimeRef.current = 0; // 重置，避免连续触发
+      } else {
+        lastEscPressTimeRef.current = now;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [currentProvider, messages.length, permissionDialogOpen, askUserQuestionDialogOpen, rewindDialogOpen, rewindSelectDialogOpen]);
 
   /**
    * 处理消息发送（来自 ChatInputBox）
    */
   const handleSubmit = (content: string, attachments?: Attachment[]) => {
-    const text = content.trim();
+    // Remove zero-width spaces and other invisible characters
+    const text = content.replace(/[\u200B-\u200D\uFEFF]/g, '').trim();
     const hasAttachments = Array.isArray(attachments) && attachments.length > 0;
 
     if (!text && !hasAttachments) {
@@ -1005,7 +1457,7 @@ const App = () => {
           // 非图片附件显示文件名
           userContentBlocks.push({
             type: 'text',
-            text: `[Attachment: ${att.fileName}]`,
+            text: `[附件: ${att.fileName}]`,
           });
         }
       }
@@ -1022,7 +1474,7 @@ const App = () => {
     // 立即在前端添加用户消息（包含图片预览）
     const userMessage: ClaudeMessage = {
       type: 'user',
-      content: text || (hasAttachments ? '[Attachment uploaded]' : ''),
+      content: text || (hasAttachments ? '[已上传附件]' : ''),
       timestamp: new Date().toISOString(),
       raw: {
         message: {
@@ -1031,6 +1483,12 @@ const App = () => {
       },
     };
     setMessages((prev) => [...prev, userMessage]);
+
+    // 【FIX】立即设置 loading 状态，避免与后端回调的竞态条件
+    // 第二次发送消息时，后端的 channelId 已存在，响应可能非常快
+    // 如果等待后端回调设置 loading，可能会被 message_end 的 loading=false 覆盖
+    setLoading(true);
+    setLoadingStartTime(Date.now());
 
     // 发送消息后强制滚动到底部，确保用户能看到"正在生成响应"提示和新内容
     isUserAtBottomRef.current = true;
@@ -1219,104 +1677,106 @@ const App = () => {
   };
 
   /**
-   * Handle permission approval (allow once)
+   * 处理权限批准（允许一次）
    */
   const handlePermissionApprove = (channelId: string) => {
+    console.log('[PERM_DEBUG][FRONTEND] handlePermissionApprove called');
+    console.log('[PERM_DEBUG][FRONTEND] channelId:', channelId);
     const payload = JSON.stringify({
       channelId,
       allow: true,
       remember: false,
       rejectMessage: null,
     });
+    console.log('[PERM_DEBUG][FRONTEND] Sending decision payload:', payload);
     sendBridgeMessage('permission_decision', payload);
+    console.log('[PERM_DEBUG][FRONTEND] Decision sent, closing dialog');
+    permissionDialogOpenRef.current = false;
+    currentPermissionRequestRef.current = null;
     setPermissionDialogOpen(false);
     setCurrentPermissionRequest(null);
   };
 
   /**
-   * Handle permission approval (always allow)
+   * 处理权限批准（总是允许）
    */
   const handlePermissionApproveAlways = (channelId: string) => {
+    console.log('[PERM_DEBUG][FRONTEND] handlePermissionApproveAlways called');
+    console.log('[PERM_DEBUG][FRONTEND] channelId:', channelId);
     const payload = JSON.stringify({
       channelId,
       allow: true,
       remember: true,
       rejectMessage: null,
     });
+    console.log('[PERM_DEBUG][FRONTEND] Sending decision payload:', payload);
     sendBridgeMessage('permission_decision', payload);
+    console.log('[PERM_DEBUG][FRONTEND] Decision sent, closing dialog');
+    permissionDialogOpenRef.current = false;
+    currentPermissionRequestRef.current = null;
     setPermissionDialogOpen(false);
     setCurrentPermissionRequest(null);
   };
 
   /**
-   * Handle permission denial
+   * 处理 AskUserQuestion 提交
+   */
+  const handleAskUserQuestionSubmit = (requestId: string, answers: Record<string, string>) => {
+    console.log('[ASK_USER_QUESTION][FRONTEND] handleAskUserQuestionSubmit called');
+    console.log('[ASK_USER_QUESTION][FRONTEND] requestId:', requestId);
+    console.log('[ASK_USER_QUESTION][FRONTEND] answers:', answers);
+    const payload = JSON.stringify({
+      requestId,
+      answers,
+    });
+    console.log('[ASK_USER_QUESTION][FRONTEND] Sending response payload:', payload);
+    sendBridgeMessage('ask_user_question_response', payload);
+    console.log('[ASK_USER_QUESTION][FRONTEND] Response sent, closing dialog');
+    askUserQuestionDialogOpenRef.current = false;
+    currentAskUserQuestionRequestRef.current = null;
+    setAskUserQuestionDialogOpen(false);
+    setCurrentAskUserQuestionRequest(null);
+  };
+
+  /**
+   * 处理 AskUserQuestion 取消
+   */
+  const handleAskUserQuestionCancel = (requestId: string) => {
+    console.log('[ASK_USER_QUESTION][FRONTEND] handleAskUserQuestionCancel called');
+    console.log('[ASK_USER_QUESTION][FRONTEND] requestId:', requestId);
+    // 发送空答案表示用户取消
+    const payload = JSON.stringify({
+      requestId,
+      answers: {},
+    });
+    console.log('[ASK_USER_QUESTION][FRONTEND] Sending cancel payload:', payload);
+    sendBridgeMessage('ask_user_question_response', payload);
+    console.log('[ASK_USER_QUESTION][FRONTEND] Cancel sent, closing dialog');
+    askUserQuestionDialogOpenRef.current = false;
+    currentAskUserQuestionRequestRef.current = null;
+    setAskUserQuestionDialogOpen(false);
+    setCurrentAskUserQuestionRequest(null);
+  };
+
+  /**
+   * 处理权限拒绝
    */
   const handlePermissionSkip = (channelId: string) => {
+    console.log('[PERM_DEBUG][FRONTEND] handlePermissionSkip called');
+    console.log('[PERM_DEBUG][FRONTEND] channelId:', channelId);
     const payload = JSON.stringify({
       channelId,
       allow: false,
       remember: false,
-      rejectMessage: 'User denied the permission request',
+      rejectMessage: t('permission.userDenied'),
     });
+    console.log('[PERM_DEBUG][FRONTEND] Sending decision payload:', payload);
     sendBridgeMessage('permission_decision', payload);
+    console.log('[PERM_DEBUG][FRONTEND] Decision sent, closing dialog');
+    permissionDialogOpenRef.current = false;
+    currentPermissionRequestRef.current = null;
     setPermissionDialogOpen(false);
     setCurrentPermissionRequest(null);
-  };
-
-  /**
-   * Handle AskUserQuestion submit
-   */
-  const handleAskUserQuestionSubmit = (requestId: string, answers: Record<string, string>) => {
-    const payload = JSON.stringify({
-      requestId,
-      answers,
-      cancelled: false,
-    });
-    sendBridgeMessage('ask_user_question_response', payload);
-    setAskUserQuestionDialogOpen(false);
-    setCurrentAskUserQuestionRequest(null);
-  };
-
-  /**
-   * Handle AskUserQuestion cancel
-   */
-  const handleAskUserQuestionCancel = (requestId: string) => {
-    const payload = JSON.stringify({
-      requestId,
-      cancelled: true,
-    });
-    sendBridgeMessage('ask_user_question_response', payload);
-    setAskUserQuestionDialogOpen(false);
-    setCurrentAskUserQuestionRequest(null);
-  };
-
-  /**
-   * Handle PlanApproval approve
-   */
-  const handlePlanApprovalApprove = (requestId: string, newMode: ExecutionMode) => {
-    const payload = JSON.stringify({
-      requestId,
-      approved: true,
-      newMode,
-      cancelled: false,
-    });
-    sendBridgeMessage('plan_approval_response', payload);
-    setPlanApprovalDialogOpen(false);
-    setCurrentPlanApprovalRequest(null);
-  };
-
-  /**
-   * Handle PlanApproval reject
-   */
-  const handlePlanApprovalReject = (requestId: string) => {
-    const payload = JSON.stringify({
-      requestId,
-      approved: false,
-      cancelled: true,
-    });
-    sendBridgeMessage('plan_approval_response', payload);
-    setPlanApprovalDialogOpen(false);
-    setCurrentPlanApprovalRequest(null);
   };
 
   const toggleThinking = (messageIndex: number, blockIndex: number) => {
@@ -1365,7 +1825,7 @@ const App = () => {
       }
 
       // 显示成功提示
-      addToast('Session deleted', 'success');
+      addToast(t('history.sessionDeleted'), 'success');
     }
   };
 
@@ -1441,7 +1901,7 @@ const App = () => {
   // 文案本地化映射
   const localizeMessage = (text: string): string => {
     const messageMap: Record<string, string> = {
-      'Request interrupted by user': 'Request interrupted by user',
+      'Request interrupted by user': '请求已被用户中断',
     };
 
     // 检查是否有完全匹配的映射
@@ -1467,7 +1927,7 @@ const App = () => {
     } else {
       const raw = message.raw;
       if (!raw) {
-        return '(empty message)';
+        return `(${t('chat.emptyMessage')})`;
       }
       if (typeof raw === 'string') {
         text = raw;
@@ -1484,7 +1944,7 @@ const App = () => {
           .map((block) => block.text ?? '')
           .join('\n');
       } else {
-        return '(empty message)';
+        return `(${t('chat.emptyMessage')})`;
       }
     }
 
@@ -1495,7 +1955,6 @@ const App = () => {
   const shouldShowMessage = (message: ClaudeMessage) => {
     // 过滤 isMeta 消息（如 "Caveat: The messages below were generated..."）
     if (message.raw && typeof message.raw === 'object' && 'isMeta' in message.raw && message.raw.isMeta === true) {
-      console.log('[Frontend] shouldShowMessage: filtered isMeta message');
       return false;
     }
 
@@ -1508,11 +1967,9 @@ const App = () => {
       text.includes('<command-message>') ||
       text.includes('<command-args>')
     )) {
-      console.log('[Frontend] shouldShowMessage: filtered command message');
       return false;
     }
     if (message.type === 'user' && text === '[tool_result]') {
-      console.log('[Frontend] shouldShowMessage: filtered tool_result');
       return false;
     }
     if (message.type === 'assistant') {
@@ -1520,7 +1977,7 @@ const App = () => {
     }
     if (message.type === 'user' || message.type === 'error') {
       // 检查是否有有效的文本内容
-      if (text && text.trim() && text !== '(empty message)' && text !== '(unable to parse content)') {
+      if (text && text.trim() && text !== `(${t('chat.emptyMessage')})` && text !== `(${t('chat.parseError')})`) {
         return true;
       }
       // 检查是否有有效的内容块（如图片等）
@@ -1534,12 +1991,8 @@ const App = () => {
           // 图片、工具使用等其他类型的块都应该显示
           return true;
         });
-        if (!hasValidBlock) {
-          console.log('[Frontend] shouldShowMessage: user message filtered - no valid blocks', { type: message.type, text: text?.substring(0, 100), rawBlocks });
-        }
         return hasValidBlock;
       }
-      console.log('[Frontend] shouldShowMessage: user message filtered - empty content', { type: message.type, text: text?.substring(0, 100), hasRaw: !!message.raw });
       return false;
     }
     return true;
@@ -1586,7 +2039,7 @@ const App = () => {
           blocks.push({
             type: 'tool_use',
             id: typeof candidate.id === 'string' ? (candidate.id as string) : undefined,
-            name: typeof candidate.name === 'string' ? (candidate.name as string) : 'Unknown tool',
+            name: typeof candidate.name === 'string' ? (candidate.name as string) : t('tools.unknownTool'),
             input: (candidate.input as Record<string, unknown>) ?? {},
           });
         } else if (type === 'image') {
@@ -1662,6 +2115,13 @@ const App = () => {
   const getContentBlocks = (message: ClaudeMessage): ClaudeContentBlock[] => {
     const rawBlocks = normalizeBlocks(message.raw);
     if (rawBlocks && rawBlocks.length > 0) {
+      // 🔧 流式/工具场景：如果 raw 里没有 text，但 message.content 有文本，仍需要展示文本
+      const hasTextBlock = rawBlocks.some(
+        (block) => block.type === 'text' && typeof (block as any).text === 'string' && String((block as any).text).trim().length > 0,
+      );
+      if (!hasTextBlock && message.content && message.content.trim()) {
+        return [...rawBlocks, { type: 'text', text: localizeMessage(message.content) }];
+      }
       return rawBlocks;
     }
     if (message.content && message.content.trim()) {
@@ -1722,6 +2182,45 @@ const App = () => {
     return result;
   }, [messages]);
 
+// Claude 流式：思考块在输出中自动展开，输出结束自动折叠（见 onStreamEnd）
+  useEffect(() => {
+    if (currentProvider !== 'claude') return;
+    if (!streamingActive) return;
+
+    let lastAssistantIdx = -1;
+    for (let i = mergedMessages.length - 1; i >= 0; i -= 1) {
+      if (mergedMessages[i]?.type === 'assistant') {
+        lastAssistantIdx = i;
+        break;
+      }
+    }
+    if (lastAssistantIdx < 0) return;
+
+    const blocks = getContentBlocks(mergedMessages[lastAssistantIdx]);
+    if (!Array.isArray(blocks) || blocks.length === 0) return;
+
+    const keysToOpen: string[] = [];
+    for (let blockIndex = 0; blockIndex < blocks.length; blockIndex += 1) {
+      if (blocks[blockIndex]?.type === 'thinking') {
+        keysToOpen.push(`${lastAssistantIdx}_${blockIndex}`);
+      }
+    }
+    if (keysToOpen.length === 0) return;
+
+    setExpandedThinking((prevExpanded) => {
+      let changed = false;
+      const next = { ...prevExpanded };
+      for (const key of keysToOpen) {
+        if (!next[key]) {
+          next[key] = true;
+          autoExpandedThinkingKeysRef.current.add(key);
+          changed = true;
+        }
+      }
+      return changed ? next : prevExpanded;
+    });
+  }, [currentProvider, mergedMessages, streamingActive]);
+
   const canRewindFromMessageIndex = (userMessageIndex: number) => {
     if (userMessageIndex < 0 || userMessageIndex >= mergedMessages.length) {
       return false;
@@ -1749,7 +2248,8 @@ const App = () => {
           continue;
         }
         const toolName = (block.name ?? '').toLowerCase();
-        if (['edit', 'edit_file', 'replace_string', 'write_to_file'].includes(toolName)) {
+        // Include all file modification tools: write (create), edit, notebookedit, etc.
+        if (['write', 'edit', 'edit_file', 'replace_string', 'write_to_file', 'notebookedit', 'create_file'].includes(toolName)) {
           return true;
         }
       }
@@ -1757,6 +2257,36 @@ const App = () => {
 
     return false;
   };
+
+  // Calculate rewindable messages for the select dialog
+  const rewindableMessages = useMemo((): RewindableMessage[] => {
+    if (currentProvider !== 'claude') {
+      return [];
+    }
+
+    const result: RewindableMessage[] = [];
+
+    for (let i = 0; i < mergedMessages.length - 1; i++) {
+      if (!canRewindFromMessageIndex(i)) {
+        continue;
+      }
+
+      const message = mergedMessages[i];
+      const content = message.content || getMessageText(message);
+      const timestamp = message.timestamp ? formatTime(message.timestamp) : undefined;
+      const messagesAfterCount = mergedMessages.length - i - 1;
+
+      result.push({
+        messageIndex: i,
+        message,
+        displayContent: content,
+        timestamp,
+        messagesAfterCount,
+      });
+    }
+
+    return result;
+  }, [mergedMessages, currentProvider]);
 
   const findToolResult = useCallback((toolUseId?: string, messageIndex?: number): ToolResultBlock | null => {
     if (!toolUseId || typeof messageIndex !== 'number') {
@@ -1920,29 +2450,11 @@ const App = () => {
 
             return (
               <div key={messageIndex} className={`message ${message.type}`}>
-                {message.type === 'user' && (
+                {message.type === 'user' && message.timestamp && (
                   <div className="message-header-row">
-                    {message.timestamp && (
-                      <div className="message-timestamp-header">
-                        {formatTime(message.timestamp)}
-                      </div>
-                    )}
-                    {/* Rewind button - only show if not the last user message and has session */}
-                    {currentProvider === 'claude' &&
-                      currentSessionId &&
-                      messageIndex < mergedMessages.length - 1 &&
-                      canRewindFromMessageIndex(messageIndex) && (
-                      <button
-                        className="rewind-button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleRewindClick(messageIndex, message);
-                        }}
-                        title={t('rewind.tooltip')}
-                      >
-                        &#x21BA;
-                      </button>
-                    )}
+                    <div className="message-timestamp-header">
+                      {formatTime(message.timestamp)}
+                    </div>
                   </div>
                 )}
                 {message.type !== 'assistant' && message.type !== 'user' && (
@@ -1956,20 +2468,29 @@ const App = () => {
                   ) : (
                     getContentBlocks(message).map((block, blockIndex) => (
                       <div key={`${messageIndex}-${blockIndex}`} className="content-block">
-                        {block.type === 'text' && (
-                          message.type === 'user' ? (
-                            <CollapsibleTextBlock content={block.text ?? ''} />
-                          ) : (
-                            <MarkdownBlock content={block.text ?? ''} />
-                          )
-                        )}
+                         {block.type === 'text' && (
+                           message.type === 'user' ? (
+                             <CollapsibleTextBlock content={block.text ?? ''} />
+                           ) : (
+                            <MarkdownBlock
+                              content={block.text ?? ''}
+                              isStreaming={streamingActive && message.type === 'assistant' && messageIndex === mergedMessages.length - 1}
+                            />
+                           )
+                         )}
                         {block.type === 'image' && block.src && (
                           <div
                             className={`message-image-block ${message.type === 'user' ? 'user-image' : ''}`}
                             onClick={() => {
-                              // Open image preview using React state (XSS-safe)
-                              if (block.src) {
-                                setImagePreviewSrc(block.src);
+                              // 打开图片预览
+                              const previewRoot = document.getElementById('image-preview-root');
+                              if (previewRoot && block.src) {
+                                previewRoot.innerHTML = `
+                                  <div class="image-preview-overlay" onclick="this.remove()">
+                                    <img src="${block.src}" alt={t('chat.imagePreview')} class="image-preview-content" onclick="event.stopPropagation()" />
+                                    <div class="image-preview-close" onclick="this.parentElement.remove()">×</div>
+                                  </div>
+                                `;
                               }
                             }}
                             style={{ cursor: 'pointer' }}
@@ -1995,7 +2516,7 @@ const App = () => {
                               onClick={() => toggleThinking(messageIndex, blockIndex)}
                             >
                               <span className="thinking-title">
-                                {isThinking && messageIndex === messages.length - 1
+                                {isThinking && messageIndex === mergedMessages.length - 1
                                   ? t('common.thinking')
                                   : t('common.thinkingProcess')}
                               </span>
@@ -2005,7 +2526,10 @@ const App = () => {
                             </div>
                             {isThinkingExpanded(messageIndex, blockIndex) && (
                               <div className="thinking-content">
-                                {block.thinking ?? block.text ?? t('chat.noThinkingContent')}
+                                <MarkdownBlock
+                                  content={block.thinking ?? block.text ?? t('chat.noThinkingContent')}
+                                  isStreaming={streamingActive && message.type === 'assistant' && messageIndex === mergedMessages.length - 1}
+                                />
                               </div>
                             )}
                           </div>
@@ -2062,6 +2586,7 @@ const App = () => {
 
           {/* Loading indicator */}
           {loading && <WaitingIndicator startTime={loadingStartTime ?? undefined} />}
+          <div ref={messagesEndRef} />
         </div>
 
         {/* 滚动控制按钮 */}
@@ -2092,6 +2617,8 @@ const App = () => {
             showUsage={true}
             alwaysThinkingEnabled={activeProviderConfig?.settingsConfig?.alwaysThinkingEnabled ?? claudeSettingsAlwaysThinkingEnabled}
             placeholder={t('chat.inputPlaceholder')}
+            value={draftInput}
+            onInput={setDraftInput}
             onSubmit={handleSubmit}
             onStop={interruptSession}
             onModeSelect={handleModeSelect}
@@ -2111,30 +2638,13 @@ const App = () => {
               setSettingsInitialTab('agents');
               setCurrentView('settings');
             }}
+            hasMessages={messages.length > 0}
+            onRewind={handleOpenRewindSelectDialog}
           />
         </div>
       )}
 
-      {/* Image Preview Overlay - React-based for XSS safety */}
-      {imagePreviewSrc && (
-        <div
-          className="image-preview-overlay"
-          onClick={() => setImagePreviewSrc(null)}
-        >
-          <img
-            src={imagePreviewSrc}
-            alt={t('chat.imagePreview')}
-            className="image-preview-content"
-            onClick={(e) => e.stopPropagation()}
-          />
-          <div
-            className="image-preview-close"
-            onClick={() => setImagePreviewSrc(null)}
-          >
-            ×
-          </div>
-        </div>
-      )}
+      <div id="image-preview-root" />
 
       <ConfirmDialog
         isOpen={showNewSessionConfirm}
@@ -2171,16 +2681,17 @@ const App = () => {
         onCancel={handleAskUserQuestionCancel}
       />
 
-      <PlanApprovalDialog
-        isOpen={planApprovalDialogOpen}
-        request={currentPlanApprovalRequest}
-        onApprove={handlePlanApprovalApprove}
-        onReject={handlePlanApprovalReject}
+      <RewindSelectDialog
+        isOpen={rewindSelectDialogOpen}
+        rewindableMessages={rewindableMessages}
+        onSelect={handleRewindSelect}
+        onCancel={handleRewindSelectCancel}
       />
 
       <RewindDialog
         isOpen={rewindDialogOpen}
         request={currentRewindRequest}
+        isLoading={isRewinding}
         onConfirm={handleRewindConfirm}
         onCancel={handleRewindCancel}
       />

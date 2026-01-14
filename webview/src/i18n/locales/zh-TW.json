@@ -49,6 +49,7 @@
     "usage": "上下文",
     "usagePercentage": "上下文: {{percentage}}",
     "noThinkingContent": "無思考內容",
+    "parseError": "無法解析內容",
     "noMatchingFiles": "無匹配檔案",
     "noMatchingCommands": "無匹配指令",
     "noAvailableAgents": "無可用代理程式",
@@ -137,9 +138,6 @@
       "currentConfig": "目前ClaudeCode配置",
       "loading": "載入中...",
       "noConfig": "暫無配置資訊",
-      "noAuth": "未配置認證資訊",
-      "loginHint": "在終端運行以下命令進行認證：",
-      "cliSession": "CLI 會話（透過 claude login 登入）",
       "emptyProvider": "暫無供應商配置",
       "notConfigured": "未配置",
       "apiKey": "API Key",
@@ -203,8 +201,7 @@
         "remarkPlaceholder": "選填",
         "apiKey": "API Key",
         "apiKeyPlaceholder": "sk-ant-...",
-        "apiKeyHint": "請輸入您的 API Key。",
-        "apiKeyOptionalHint": "如果您已透過 `claude login` 登入，則此項可選。",
+        "apiKeyHint": "請輸入您的API Key",
         "apiUrl": "請求位址 (API Endpoint)",
         "apiUrlPlaceholder": "https://api.anthropic.com",
         "apiUrlHint": "填寫相容 Claude API 的服務端口位址",
@@ -305,6 +302,7 @@
     "allow": "允許一次",
     "allowAlways": "總是允許",
     "deny": "拒絕",
+    "userDenied": "使用者拒絕了權限請求",
     "fromExternalProcess": "來自外部處理程序的請求",
     "tools": {
       "Write": "寫入檔案",
@@ -327,12 +325,6 @@
     "back": "上一步",
     "next": "下一步",
     "submit": "提交"
-  },
-  "askUserQuestion": {
-    "title": "Claude 需要您的輸入",
-    "submit": "提交",
-    "cancel": "取消",
-    "otherPlaceholder": "其他（輸入您的答案）"
   },
   "toast": {
     "switchSuccess": "切換成功",
@@ -529,8 +521,8 @@
     "diffButton": "Diff",
     "editPrefix": "編輯: {{fileName}}",
     "lineRange": "第 {{start}}-{{end}} 行",
-    "lineNumber": "第 {{line}} 行",
-    "filePath": "檔案路徑："
+    "filePath": "檔案路徑：",
+    "unknownTool": "未知工具"
   },
   "skills": {
     "title": "Skills",
@@ -648,6 +640,9 @@
   "rewind": {
     "title": "回溯檔案到之前的狀態",
     "tooltip": "將檔案恢復到此訊息時的狀態",
+    "shortcut": "ESC ESC",
+    "selectTitle": "選擇回溯點",
+    "noRewindableMessages": "目前會話中沒有可回溯的訊息",
     "rewindTo": "回溯到",
     "impact": "影響",
     "willRestore": "將檔案恢復到此訊息時的狀態",
@@ -656,8 +651,11 @@
     "historyKept": "對話歷史將保留",
     "cannotUndo": "此操作無法撤銷。",
     "restoreFiles": "恢復檔案",
-    "success": "檔案恢復成功",
+    "restoring": "正在恢復檔案...",
+    "success": "回滾成功",
+    "successSimple": "回滾成功",
     "failed": "檔案恢復失敗",
-    "notAvailable": "目前會話不支援回溯"
+    "notAvailable": "目前會話不支援回溯",
+    "parseError": "解析結果失敗"
   }
 }

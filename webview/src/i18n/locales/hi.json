@@ -49,6 +49,7 @@
     "usage": "उपयोग",
     "usagePercentage": "उपयोग: {{percentage}}",
     "noThinkingContent": "कोई सोच सामग्री नहीं",
+    "parseError": "सामग्री पार्स करने में विफल",
     "noMatchingFiles": "कोई मेल खाने वाली फाइलें नहीं",
     "noMatchingCommands": "कोई मेल खाने वाली कमांड नहीं",
     "noAvailableAgents": "कोई उपलब्ध एजेंट नहीं",
@@ -137,9 +138,6 @@
       "currentConfig": "वर्तमान ClaudeCode कॉन्फ़िगरेशन",
       "loading": "लोड हो रहा है...",
       "noConfig": "कोई कॉन्फ़िगरेशन जानकारी नहीं",
-      "noAuth": "प्रमाणीकरण कॉन्फ़िगर नहीं किया गया",
-      "loginHint": "प्रमाणित करने के लिए टर्मिनल में चलाएं:",
-      "cliSession": "CLI सत्र (claude login के माध्यम से लॉग इन)",
       "emptyProvider": "कोई प्रदाता कॉन्फ़िगर नहीं",
       "notConfigured": "कॉन्फ़िगर नहीं किया गया",
       "apiKey": "API Key",
@@ -203,8 +201,7 @@
         "remarkPlaceholder": "वैकल्पिक",
         "apiKey": "API Key",
         "apiKeyPlaceholder": "sk-ant-...",
-        "apiKeyHint": "कृपया अपनी API Key दर्ज करें।",
-        "apiKeyOptionalHint": "यदि आपने `claude login` के माध्यम से लॉग इन किया है तो वैकल्पिक।",
+        "apiKeyHint": "कृपया अपनी API Key दर्ज करें",
         "apiUrl": "अनुरोध पता (API Endpoint)",
         "apiUrlPlaceholder": "https://api.anthropic.com",
         "apiUrlHint": "Claude API संगत सेवा endpoint पता भरें",
@@ -305,6 +302,7 @@
     "allow": "एक बार अनुमति दें",
     "allowAlways": "हमेशा अनुमति दें",
     "deny": "अस्वीकार करें",
+    "userDenied": "उपयोगकर्ता ने अनुमति अनुरोध अस्वीकार कर दिया",
     "fromExternalProcess": "बाहरी प्रक्रिया से अनुरोध",
     "tools": {
       "Write": "फ़ाइल लिखें",
@@ -327,12 +325,6 @@
     "back": "पीछे",
     "next": "आगे",
     "submit": "सबमिट करें"
-  },
-  "askUserQuestion": {
-    "title": "Claude को आपके इनपुट की आवश्यकता है",
-    "submit": "सबमिट करें",
-    "cancel": "रद्द करें",
-    "otherPlaceholder": "अन्य (अपना उत्तर टाइप करें)"
   },
   "toast": {
     "switchSuccess": "स्विच सफल",
@@ -529,8 +521,8 @@
     "diffButton": "Diff",
     "editPrefix": "संपादित करें: {{fileName}}",
     "lineRange": "पंक्तियाँ {{start}}-{{end}}",
-    "lineNumber": "पंक्ति {{line}}",
-    "filePath": "फ़ाइल पथ:"
+    "filePath": "फ़ाइल पथ:",
+    "unknownTool": "अज्ञात टूल"
   },
   "skills": {
     "title": "Skills",
@@ -648,6 +640,9 @@
   "rewind": {
     "title": "फ़ाइलों को पिछली स्थिति में पुनर्स्थापित करें",
     "tooltip": "इस संदेश पर फ़ाइलों को उनकी स्थिति में पुनर्स्थापित करें",
+    "shortcut": "ESC ESC",
+    "selectTitle": "पुनर्स्थापना बिंदु चुनें",
+    "noRewindableMessages": "इस सत्र में कोई पुनर्स्थापन योग्य संदेश नहीं है",
     "rewindTo": "पुनर्स्थापित करें",
     "impact": "प्रभाव",
     "willRestore": "इस संदेश पर फ़ाइलों को उनकी स्थिति में पुनर्स्थापित करेगा",
@@ -656,8 +651,11 @@
     "historyKept": "बातचीत का इतिहास रखा जाएगा",
     "cannotUndo": "इस क्रिया को पूर्ववत नहीं किया जा सकता।",
     "restoreFiles": "फ़ाइलें पुनर्स्थापित करें",
-    "success": "फ़ाइलें सफलतापूर्वक पुनर्स्थापित हुईं",
+    "restoring": "फ़ाइलें पुनर्स्थापित हो रही हैं...",
+    "success": "रिवाइंड सफल",
+    "successSimple": "रिवाइंड सफल",
     "failed": "फ़ाइलें पुनर्स्थापित करने में विफल",
-    "notAvailable": "इस सत्र के लिए पुनर्स्थापना उपलब्ध नहीं है"
+    "notAvailable": "इस सत्र के लिए पुनर्स्थापना उपलब्ध नहीं है",
+    "parseError": "परिणाम पार्स करने में विफल"
   }
 }

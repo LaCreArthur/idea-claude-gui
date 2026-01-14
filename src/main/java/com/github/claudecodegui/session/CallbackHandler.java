@@ -70,13 +70,41 @@ public class CallbackHandler {
         }
     }
 
+    // ===== 🔧 流式传输通知方法 =====
+
     /**
-     * 通知权限模式变化
-     * Notify mode change (after ExitPlanMode approval)
+     * 通知流式传输开始
      */
-    public void notifyModeChanged(String newMode) {
+    public void notifyStreamStart() {
         if (callback != null) {
-            callback.onModeChanged(newMode);
+            callback.onStreamStart();
+        }
+    }
+
+    /**
+     * 通知流式传输结束
+     */
+    public void notifyStreamEnd() {
+        if (callback != null) {
+            callback.onStreamEnd();
+        }
+    }
+
+    /**
+     * 通知内容增量（已在现有的 onContentDelta 中处理）
+     */
+    public void notifyContentDelta(String delta) {
+        if (callback != null) {
+            callback.onContentDelta(delta);
+        }
+    }
+
+    /**
+     * 通知思考增量
+     */
+    public void notifyThinkingDelta(String delta) {
+        if (callback != null) {
+            callback.onThinkingDelta(delta);
         }
     }
 }

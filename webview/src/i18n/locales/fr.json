@@ -49,6 +49,7 @@
     "usage": "Utilisation",
     "usagePercentage": "Utilisation: {{percentage}}",
     "noThinkingContent": "Pas de contenu de réflexion",
+    "parseError": "Échec de l'analyse du contenu",
     "noMatchingFiles": "Aucun fichier correspondant",
     "noMatchingCommands": "Aucune commande correspondante",
     "noAvailableAgents": "Aucun agent disponible",
@@ -137,9 +138,6 @@
       "currentConfig": "Configuration ClaudeCode actuelle",
       "loading": "Chargement...",
       "noConfig": "Aucune information de configuration",
-      "noAuth": "Authentification non configurée",
-      "loginHint": "Exécutez dans le terminal pour vous authentifier :",
-      "cliSession": "Session CLI (connecté via claude login)",
       "emptyProvider": "Aucun fournisseur configuré",
       "notConfigured": "Non configuré",
       "apiKey": "API Key",
@@ -203,8 +201,7 @@
         "remarkPlaceholder": "Optionnel",
         "apiKey": "API Key",
         "apiKeyPlaceholder": "sk-ant-...",
-        "apiKeyHint": "Veuillez entrer votre API Key.",
-        "apiKeyOptionalHint": "Optionnel si vous vous etes connecte via `claude login`.",
+        "apiKeyHint": "Veuillez entrer votre API Key",
         "apiUrl": "Adresse de requête (API Endpoint)",
         "apiUrlPlaceholder": "https://api.anthropic.com",
         "apiUrlHint": "Entrez l'adresse de l'endpoint du service compatible avec l'API Claude",
@@ -305,6 +302,7 @@
     "allow": "Autoriser une fois",
     "allowAlways": "Toujours autoriser",
     "deny": "Refuser",
+    "userDenied": "L'utilisateur a refusé la demande de permission",
     "fromExternalProcess": "Demande du processus externe",
     "tools": {
       "Write": "Écrire le fichier",
@@ -327,12 +325,6 @@
     "back": "Retour",
     "next": "Suivant",
     "submit": "Soumettre"
-  },
-  "askUserQuestion": {
-    "title": "Claude a besoin de votre réponse",
-    "submit": "Soumettre",
-    "cancel": "Annuler",
-    "otherPlaceholder": "Autre (tapez votre réponse)"
   },
   "toast": {
     "switchSuccess": "Changement réussi",
@@ -529,8 +521,8 @@
     "diffButton": "Diff",
     "editPrefix": "Modifier : {{fileName}}",
     "lineRange": "Lignes {{start}}-{{end}}",
-    "lineNumber": "Ligne {{line}}",
-    "filePath": "Chemin du fichier :"
+    "filePath": "Chemin du fichier :",
+    "unknownTool": "Outil inconnu"
   },
   "skills": {
     "title": "Skills",
@@ -648,6 +640,9 @@
   "rewind": {
     "title": "Restaurer les fichiers à l'état précédent",
     "tooltip": "Restaurer les fichiers à leur état à ce message",
+    "shortcut": "ESC ESC",
+    "selectTitle": "Sélectionner le point de restauration",
+    "noRewindableMessages": "Aucun message restaurable dans cette session",
     "rewindTo": "Restaurer à",
     "impact": "Impact",
     "willRestore": "Restaurera les fichiers à leur état à ce message",
@@ -656,8 +651,11 @@
     "historyKept": "L'historique de conversation sera conservé",
     "cannotUndo": "Cette action ne peut pas être annulée.",
     "restoreFiles": "Restaurer les fichiers",
-    "success": "Fichiers restaurés avec succès",
+    "restoring": "Restauration des fichiers...",
+    "success": "Retour en arrière réussi",
+    "successSimple": "Retour en arrière réussi",
     "failed": "Échec de la restauration des fichiers",
-    "notAvailable": "Restauration non disponible pour cette session"
+    "notAvailable": "Restauration non disponible pour cette session",
+    "parseError": "Échec de l'analyse du résultat"
   }
 }
