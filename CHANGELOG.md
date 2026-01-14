@@ -1,3 +1,23 @@
+##### **v0.2.3** (2026-01-14)
+
+**Upstream Sync Release** - Merged 88 commits from upstream in 11 batches.
+
+New Features (from upstream):
+- Rewind dialog with message selection and ESC shortcut support
+- Streaming transmission toggle for Claude Code
+- Status bar notifications for task completion
+- Async bridge extraction with progress indicator
+- MCP server status API
+- SDK lazy loading architecture
+- Enhanced permission handling
+
+Build Improvements:
+- Added Java plugin compile-time dependency for JavaContextCollector
+- Removed Python context collector (requires PyCharm)
+- System zip packaging preserving Unix permissions
+
+---
+
 ##### **2026年1月12日（v0.1.5-beta4）**
 
 English:

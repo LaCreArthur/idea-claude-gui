@@ -351,13 +351,14 @@ public class FileHandler extends BaseMessageHandler {
                             // 确保命令以 / 开头
                             String label = name.startsWith("/") ? name : "/" + name;
 
-                            // 应用过滤
+                            // Apply filter
                             if (finalQuery.isEmpty() || label.toLowerCase().contains(finalQuery.toLowerCase()) || description.toLowerCase().contains(finalQuery.toLowerCase())) {
                                 JsonObject cmdObj = new JsonObject();
                                 cmdObj.addProperty("label", label);
                                 cmdObj.addProperty("description", description);
                                 commands.add(cmdObj);
                             }
+                        }
 
                         LOG.info("[FileHandler] Got " + commands.size() + " commands from SDK (filtered from " + sdkCommands.size() + ")");
 
