@@ -227,19 +227,45 @@ tasks.register('packageAiBridge', Exec) {
     }
 
     // Use system zip command: -r recursive, -y preserve symlinks
+    // Exclude SDK packages (they will be installed by user on-demand to ~/.codemoss/dependencies/)
     if (System.getProperty('os.name').toLowerCase().contains('windows')) {
-        // Windows: Use PowerShell's Compress-Archive
+        // Windows: Use PowerShell to exclude SDK packages
+        // Compress-Archive doesn't support exclude patterns, so we copy to temp dir first
         // Use parameter array to prevent command injection
-        commandLine 'powershell', '-Command', 'Compress-Archive',
-            '-Path', '*',
-            '-DestinationPath', aiBridgeArchive.absolutePath,
-            '-Force'
+        commandLine 'powershell', '-Command', '''
+            $excludeDirs = @(
+                "node_modules\\.pnpm",
+                "node_modules\\@anthropic-ai",
+                "node_modules\\@openai"
+            )
+            $tempDir = Join-Path $env:TEMP "ai-bridge-temp-$(Get-Random)"
+            New-Item -ItemType Directory -Path $tempDir -Force | Out-Null
+            Get-ChildItem -Path . -Recurse | Where-Object {
+                $path = $_.FullName
+                -not ($excludeDirs | Where-Object { $path -like "*$_*" })
+            } | ForEach-Object {
+                $dest = Join-Path $tempDir $_.FullName.Substring((Get-Location).Path.Length + 1)
+                if ($_.PSIsContainer) {
+                    New-Item -ItemType Directory -Path $dest -Force | Out-Null
+                } else {
+                    $destDir = Split-Path $dest -Parent
+                    if (-not (Test-Path $destDir)) {
+                        New-Item -ItemType Directory -Path $destDir -Force | Out-Null
+                    }
+                    Copy-Item $_.FullName -Destination $dest -Force
+                }
+            }
+            Compress-Archive -Path "$tempDir\\*" -DestinationPath "''' + aiBridgeArchive.absolutePath + '''" -Force
+            Remove-Item -Path $tempDir -Recurse -Force
+        '''
     } else {
         // Unix/Linux/macOS: Use zip command to preserve permissions
+        // Exclude SDK package directories
         commandLine 'zip', '-r', '-y', aiBridgeArchive.absolutePath,
             '.',
             '-x', '*/node_modules/.pnpm/*',
-            '-x', '*/node_modules/@openai/codex-sdk/vendor/*'
+            '-x', '*/node_modules/@anthropic-ai/*',
+            '-x', '*/node_modules/@openai/*'
     }
 
     doLast {

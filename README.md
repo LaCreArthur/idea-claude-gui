@@ -141,8 +141,8 @@ Thanks to all contributors who help make IDEA-Claude-GUI better!
     <td align="center">
       <a href="https://github.com/zhukunpenglinyutong">
         <img src="https://avatars.githubusercontent.com/u/31264015?size=100" width="100" height="100" alt="zhukunpenglinyutong" style="border-radius: 50%; border: 3px solid #ff6b35; box-shadow: 0 0 15px rgba(255, 107, 53, 0.6);" />
-        <div>🔥🔥🔥</div>
       </a>
+      <div>🔥🔥🔥</div>
     </td>
     <td align="center">
       <a href="https://github.com/M1sury">
@@ -152,13 +152,14 @@ Thanks to all contributors who help make IDEA-Claude-GUI better!
     <td align="center">
       <a href="https://github.com/gadfly3173">
         <img src="https://avatars.githubusercontent.com/u/28685179?size=100" width="100" height="100" alt="gadfly3173" style="border-radius: 50%; border: 3px solid #ff6b35; box-shadow: 0 0 15px rgba(255, 107, 53, 0.6);" />
-        <div>🔥</div>
       </a>
+      <div>🔥</div>
     </td>
     <td align="center">
       <a href="https://github.com/song782360037">
         <img src="https://avatars.githubusercontent.com/u/66980578?size=100" width="100" height="100" alt="song782360037" style="border-radius: 50%;" />
       </a>
+      <div>🔥</div>
     </td>
     <td align="center">
       <a href="https://github.com/hpstream">

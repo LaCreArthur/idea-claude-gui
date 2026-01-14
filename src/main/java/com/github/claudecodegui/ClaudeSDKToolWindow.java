@@ -355,6 +355,10 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
 
         private void syncActiveProvider() {
             try {
+                if (settingsService.isLocalProviderActive()) {
+                    LOG.info("[ClaudeSDKToolWindow] Local provider active, skipping startup sync");
+                    return;
+                }
                 settingsService.applyActiveProviderToClaudeSettings();
             } catch (Exception e) {
                 LOG.warn("Failed to sync active provider on startup: " + e.getMessage());
@@ -402,6 +406,7 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
             messageDispatcher.registerHandler(new PromptEnhancerHandler(handlerContext));
             messageDispatcher.registerHandler(new AgentHandler(handlerContext));
             messageDispatcher.registerHandler(new RewindHandler(handlerContext));
+            messageDispatcher.registerHandler(new DependencyHandler(handlerContext));
 
             // 权限处理器（需要特殊回调）
             this.permissionHandler = new PermissionHandler(handlerContext);

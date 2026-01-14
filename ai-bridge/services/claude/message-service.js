@@ -1,12 +1,57 @@
 /**
- * Message sending service module
- * Handles message sending via Claude Agent SDK
+ * 消息发送服务模块
+ * 负责通过 Claude Agent SDK 发送消息
  */
 
-import { query } from '@anthropic-ai/claude-agent-sdk';
-import Anthropic from '@anthropic-ai/sdk';
-import { AnthropicBedrock } from '@anthropic-ai/bedrock-sdk';
+// SDK 动态加载 - 不再静态导入，而是按需加载
+import {
+    loadClaudeSdk,
+    loadAnthropicSdk,
+    loadBedrockSdk,
+    isClaudeSdkAvailable
+} from '../../utils/sdk-loader.js';
 import { randomUUID } from 'crypto';
+
+// SDK 缓存
+let claudeSdk = null;
+let anthropicSdk = null;
+let bedrockSdk = null;
+
+/**
+ * 确保 Claude SDK 已加载
+ */
+async function ensureClaudeSdk() {
+    if (!claudeSdk) {
+        if (!isClaudeSdkAvailable()) {
+            const error = new Error('Claude Code SDK not installed. Please install via Settings > Dependencies.');
+            error.code = 'SDK_NOT_INSTALLED';
+            error.provider = 'claude';
+            throw error;
+        }
+        claudeSdk = await loadClaudeSdk();
+    }
+    return claudeSdk;
+}
+
+/**
+ * 确保 Anthropic SDK 已加载
+ */
+async function ensureAnthropicSdk() {
+    if (!anthropicSdk) {
+        anthropicSdk = await loadAnthropicSdk();
+    }
+    return anthropicSdk;
+}
+
+/**
+ * 确保 Bedrock SDK 已加载
+ */
+async function ensureBedrockSdk() {
+    if (!bedrockSdk) {
+        bedrockSdk = await loadBedrockSdk();
+    }
+    return bedrockSdk;
+}
 import { existsSync } from 'fs';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
@@ -86,12 +131,12 @@ function createPreToolUseHook(permissionMode) {
 }
 
 /**
- * Send message (with session resume support)
- * @param {string} message - Message to send
- * @param {string} resumeSessionId - Session ID to resume
- * @param {string} cwd - Working directory
- * @param {string} permissionMode - Permission mode (optional)
- * @param {string} model - Model name (optional)
+ * 发送消息（支持会话恢复）
+ * @param {string} message - 要发送的消息
+ * @param {string} resumeSessionId - 要恢复的会话ID
+ * @param {string} cwd - 工作目录
+ * @param {string} permissionMode - 权限模式（可选）
+ * @param {string} model - 模型名称（可选）
  */
 	function buildConfigErrorPayload(error) {
 			  try {
@@ -99,8 +144,8 @@ function createPreToolUseHook(permissionMode) {
 			    const errorName = error?.name || 'Error';
 			    const errorStack = error?.stack || null;
 
-			    // Previously handled AbortError / timeout messages here
-			    // Now unified in error handling, but still recording timeout/abort errors in details for debugging
+			    // 之前这里对 AbortError / "Claude Code process aborted by user" 做了超时提示
+			    // 现在统一走错误处理逻辑，但仍然在 details 中记录是否为超时/中断类错误，方便排查
 			    const isAbortError =
 			      errorName === 'AbortError' ||
 			      rawError.includes('Claude Code process aborted by user') ||
@@ -121,8 +166,8 @@ function createPreToolUseHook(permissionMode) {
         ? env.ANTHROPIC_BASE_URL
         : null;
 
-    // Note: Config is only read from settings.json, no longer checks shell env vars
-    let keySource = 'Not configured';
+    // 注意：配置只从 settings.json 读取，不再检查 shell 环境变量
+    let keySource = '未配置';
     let rawKey = null;
 
     if (settingsApiKey !== null) {
@@ -137,28 +182,28 @@ function createPreToolUseHook(permissionMode) {
     }
 
     const keyPreview = rawKey && rawKey.length > 0
-      ? `${rawKey.substring(0, 10)}...（length ${rawKey.length} chars）`
-      : 'Not configured（empty or missing）';
+      ? `${rawKey.substring(0, 10)}...（长度 ${rawKey.length} 字符）`
+      : '未配置（值为空或缺失）';
 
 		    let baseUrl = settingsBaseUrl || 'https://api.anthropic.com';
 		    let baseUrlSource;
 		    if (settingsBaseUrl) {
 		      baseUrlSource = '~/.claude/settings.json: ANTHROPIC_BASE_URL';
 		    } else {
-		      baseUrlSource = 'Default (https://api.anthropic.com)';
+		      baseUrlSource = '默认值（https://api.anthropic.com）';
 		    }
 
 		    const heading = isAbortError
-		      ? 'Claude Code was interrupted (timeout or user cancellation):'
-		      : 'Claude Code error:';
+		      ? 'Claude Code 运行被中断（可能是响应超时或用户取消）：'
+		      : 'Claude Code 出现错误：';
 
 		    const userMessage = [
 	      heading,
-	      `- Error: ${rawError}`,
-	      `- API Key source: ${keySource}`,
-	      `- API Key preview: ${keyPreview}`,
-	      `- Base URL: ${baseUrl}（source: ${baseUrlSource}）`,
-	      `- Tip: This plugin only reads from settings.json. You can configure inPlugin右上角Set - 供应商管理Config下即可Use`,
+	      `- 错误信息: ${rawError}`,
+	      `- 当前 API Key 来源: ${keySource}`,
+	      `- 当前 API Key 预览: ${keyPreview}`,
+	      `- 当前 Base URL: ${baseUrl}（来源: ${baseUrlSource}）`,
+	      `- tip：cli可以读取 环境变量 或者 setting.json 两种方式；本插件为了避免产生问题，只支持读取setting.json 内容，您可以在 本插件右上角设置 - 供应商管理配置下即可使用`,
 	      ''
 	    ].join('\n');
 
@@ -190,26 +235,34 @@ function createPreToolUseHook(permissionMode) {
 }
 
 /**
- * Send message (with session resume and streaming support)
- * @param {string} message - Message to send
- * @param {string} resumeSessionId - Session ID to resume
- * @param {string} cwd - Working directory
- * @param {string} permissionMode - Permission mode (optional)
- * @param {string} model - Model name (optional)
- * @param {object} openedFiles - Opened files list (optional)
- * @param {string} agentPrompt - Agent prompt (optional)
- * @param {boolean} streaming - Enable streaming (optional, defaults to config)
+ * 发送消息（支持会话恢复和流式传输）
+ * @param {string} message - 要发送的消息
+ * @param {string} resumeSessionId - 要恢复的会话ID
+ * @param {string} cwd - 工作目录
+ * @param {string} permissionMode - 权限模式（可选）
+ * @param {string} model - 模型名称（可选）
+ * @param {object} openedFiles - 打开的文件列表（可选）
+ * @param {string} agentPrompt - 智能体提示词（可选）
+ * @param {boolean} streaming - 是否启用流式传输（可选，默认从配置读取）
  */
 export async function sendMessage(message, resumeSessionId = null, cwd = null, permissionMode = null, model = null, openedFiles = null, agentPrompt = null, streaming = null) {
 	  let timeoutId;
+	  // 🔧 BUG FIX: 提前声明这些变量，避免在 setupApiKey() 抛出错误时，catch 块访问未定义变量
+	  let streamingEnabled = false;
+	  let streamStarted = false;
+	  let streamEnded = false;
 	  try {
+    // 动态加载 Claude SDK
+    const sdk = await ensureClaudeSdk();
+    const { query } = sdk;
+
     process.env.CLAUDE_CODE_ENTRYPOINT = process.env.CLAUDE_CODE_ENTRYPOINT || 'sdk-ts';
     console.log('[DEBUG] CLAUDE_CODE_ENTRYPOINT:', process.env.CLAUDE_CODE_ENTRYPOINT);
 
-    // Setup API Key and get config info (including auth type)
+    // 设置 API Key 并获取配置信息（包含认证类型）
     const { baseUrl, authType, apiKeySource, baseUrlSource } = setupApiKey();
 
-    // Check if using custom Base URL
+    // 检测是否使用自定义 Base URL
     if (isCustomBaseUrl(baseUrl)) {
       console.log('[DEBUG] Custom Base URL detected:', baseUrl);
       console.log('[DEBUG] Will use system Claude CLI (not Anthropic SDK fallback)');
@@ -231,7 +284,7 @@ export async function sendMessage(message, resumeSessionId = null, cwd = null, p
     console.log('[MESSAGE_START]');
     console.log('[DEBUG] Calling query() with prompt:', message);
 
-    // Smart working directory detection
+    // 智能确定工作目录
     const workingDirectory = selectWorkingDirectory(cwd);
 
     console.log('[DEBUG] process.cwd() before chdir:', process.cwd());
@@ -243,19 +296,19 @@ export async function sendMessage(message, resumeSessionId = null, cwd = null, p
     }
     console.log('[DEBUG] process.cwd() after chdir:', process.cwd());
 
-    // Map model ID to SDK expected name
+    // 将模型 ID 映射为 SDK 期望的名称
     const sdkModelName = mapModelIdToSdkName(model);
     console.log('[DEBUG] Model mapping:', model, '->', sdkModelName);
 
 	    // Build systemPrompt.append content (for adding opened files context and agent prompt)
-	    // Build IDE context prompt using unified prompt management module
+	    // 使用统一的提示词管理模块构建 IDE 上下文提示词（包括智能体提示词）
 	    console.log('[Agent] message-service.sendMessage received agentPrompt:', agentPrompt ? `✓ (${agentPrompt.length} chars)` : '✗ null');
 	    const systemPromptAppend = buildIDEContextPrompt(openedFiles, agentPrompt);
 	    console.log('[Agent] systemPromptAppend built:', systemPromptAppend ? `✓ (${systemPromptAppend.length} chars)` : '✗ empty');
 
-	    // Prepare options
-	    // Note: Dont pass pathToClaudeCodeExecutable, let SDK use built-in cli.js
-	    // This avoids Windows CLI path issues (ENOENT errors)
+	    // 准备选项
+	    // 注意：不再传递 pathToClaudeCodeExecutable，让 SDK 自动使用内置 cli.js
+	    // 这样可以避免 Windows 下系统 CLI 路径问题（ENOENT 错误）
 	    const effectivePermissionMode = (!permissionMode || permissionMode === '') ? 'default' : permissionMode;
 	    const shouldUseCanUseTool = effectivePermissionMode === 'default';
 	    console.log('[PERM_DEBUG] permissionMode:', permissionMode);
@@ -263,24 +316,24 @@ export async function sendMessage(message, resumeSessionId = null, cwd = null, p
 	    console.log('[PERM_DEBUG] shouldUseCanUseTool:', shouldUseCanUseTool);
 	    console.log('[PERM_DEBUG] canUseTool function defined:', typeof canUseTool);
 
-    // 🔧 Read Extended Thinking config from settings.json
+    // 🔧 从 settings.json 读取 Extended Thinking 配置
     const settings = loadClaudeSettings();
     const alwaysThinkingEnabled = settings?.alwaysThinkingEnabled ?? true;
     const configuredMaxThinkingTokens = settings?.maxThinkingTokens
       || parseInt(process.env.MAX_THINKING_TOKENS || '0', 10)
       || 10000;
 
-    // 🔧 Read streaming config from settings.json
-    // streaming param takes priority, else from config, default off
-    // Note: != null handles both null and undefined
-    const streamingEnabled = streaming != null ? streaming : (settings?.streamingEnabled ?? false);
+    // 🔧 从 settings.json 读取流式传输配置
+    // streaming 参数优先，否则从配置读取，默认关闭（首次安装时为非流式）
+    // 注意：使用 != null 同时处理 null 和 undefined，避免 undefined 被当成"有值"
+    streamingEnabled = streaming != null ? streaming : (settings?.streamingEnabled ?? false);
     console.log('[STREAMING_DEBUG] streaming param:', streaming);
     console.log('[STREAMING_DEBUG] settings.streamingEnabled:', settings?.streamingEnabled);
     console.log('[STREAMING_DEBUG] streamingEnabled (final):', streamingEnabled);
 
-	    // Enable Extended Thinking based on config
-	    // - If alwaysThinkingEnabled is true, use configured maxThinkingTokens
-	    // - If false, dont set maxThinkingTokens (let SDK use default)
+	    // 根据配置决定是否启用 Extended Thinking
+	    // - 如果 alwaysThinkingEnabled 为 true，使用配置的 maxThinkingTokens 值
+	    // - 如果 alwaysThinkingEnabled 为 false，不设置 maxThinkingTokens（让 SDK 使用默认行为）
 	    const maxThinkingTokens = alwaysThinkingEnabled ? configuredMaxThinkingTokens : undefined;
 
 	    console.log('[THINKING_DEBUG] alwaysThinkingEnabled:', alwaysThinkingEnabled);
@@ -293,11 +346,11 @@ export async function sendMessage(message, resumeSessionId = null, cwd = null, p
 	      maxTurns: 100,
 	      // Enable file checkpointing for rewind feature
 	      enableFileCheckpointing: true,
-	      // Extended Thinking config (based on settings.json alwaysThinkingEnabled)
-	      // Thinking content output via [THINKING] tag for frontend
+	      // Extended Thinking 配置（根据 settings.json 的 alwaysThinkingEnabled 决定）
+	      // 思考内容会通过 [THINKING] 标签输出给前端展示
 	      ...(maxThinkingTokens !== undefined && { maxThinkingTokens }),
-	      // 🔧 Streaming config: enable includePartialMessages for incremental content
-	      // When streamingEnabled is true, SDK returns partial messages with incremental content
+	      // 🔧 流式传输配置：启用 includePartialMessages 以获取增量内容
+	      // 当 streamingEnabled 为 true 时，SDK 会返回包含增量内容的部分消息
 	      ...(streamingEnabled && { includePartialMessages: true }),
 	      additionalDirectories: Array.from(
 	        new Set(
@@ -310,11 +363,11 @@ export async function sendMessage(message, resumeSessionId = null, cwd = null, p
 	          hooks: [createPreToolUseHook(effectivePermissionMode)]
 	        }]
 	      },
-	      // Dont pass pathToClaudeCodeExecutable, SDK uses built-in cli.js
+	      // 不传递 pathToClaudeCodeExecutable，SDK 将自动使用内置 cli.js
 	      settingSources: ['user', 'project', 'local'],
-	      // Use Claude Code preset system prompt so Claude knows current working directory
-	      // Key fix for path issues: without systemPrompt Claude doesnt know cwd
-	      // If openedFiles exists, add context via append field
+	      // 使用 Claude Code 预设系统提示，让 Claude 知道当前工作目录
+	      // 这是修复路径问题的关键：没有 systemPrompt 时 Claude 不知道 cwd
+	      // 如果有 openedFiles，通过 append 字段添加打开文件的上下文
 	      systemPrompt: {
 	        type: 'preset',
 	        preset: 'claude_code',
@@ -325,7 +378,7 @@ export async function sendMessage(message, resumeSessionId = null, cwd = null, p
 	    console.log('[PERM_DEBUG] options.hooks:', options.hooks ? 'SET (PreToolUse)' : 'NOT SET');
 	    console.log('[STREAMING_DEBUG] options.includePartialMessages:', options.includePartialMessages ? 'SET' : 'NOT SET');
 
-		// Use AbortController for 60s timeout (disabled due to issues, keeping normal query logic)
+		// 使用 AbortController 实现 60 秒超时控制（已发现严重问题，暂时禁用自动超时，仅保留正常查询逻辑）
 		// const abortController = new AbortController();
 		// options.abortController = abortController;
 
@@ -333,7 +386,7 @@ export async function sendMessage(message, resumeSessionId = null, cwd = null, p
 
     console.log('[DEBUG] Options:', JSON.stringify(options, null, 2));
 
-    // If有 sessionId 且不为Emptychars串，Use resume Resume session
+    // 如果有 sessionId 且不为空字符串，使用 resume 恢复会话
     if (resumeSessionId && resumeSessionId !== '') {
       options.resume = resumeSessionId;
       console.log('[RESUMING]', resumeSessionId);
@@ -341,13 +394,13 @@ export async function sendMessage(message, resumeSessionId = null, cwd = null, p
 
 	    console.log('[DEBUG] Query started, waiting for messages...');
 
-	    // Call query Function
+	    // 调用 query 函数
 	    const result = query({
 	      prompt: message,
 	      options
 	    });
 
-		// Set 60 秒Timeout，Timeout后Via AbortController Cancel查询（已发现严重Issue，暂时Comment掉AutoTimeout逻辑）
+		// 设置 60 秒超时，超时后通过 AbortController 取消查询（已发现严重问题，暂时注释掉自动超时逻辑）
 		// timeoutId = setTimeout(() => {
 		//   console.log('[DEBUG] Query timeout after 60 seconds, aborting...');
 		//   abortController.abort();
@@ -357,14 +410,12 @@ export async function sendMessage(message, resumeSessionId = null, cwd = null, p
 
     let currentSessionId = resumeSessionId;
 
-    // 流式Output
+    // 流式输出
     let messageCount = 0;
-    // 🔧 StreamingStatus追踪
-    let streamStarted = false;
-    let streamEnded = false;
-    // 🔧 MarkYesNo收到了 stream_event（用于Avoid fallback diff 重复Output）
+    // 🔧 流式传输状态追踪（已在函数开头声明 streamingEnabled, streamStarted, streamEnded）
+    // 🔧 标记是否收到了 stream_event（用于避免 fallback diff 重复输出）
     let hasStreamEvents = false;
-    // 🔧 diff fallback: 追踪上次的 assistant Content，用于计算Incremental
+    // 🔧 diff fallback: 追踪上次的 assistant 内容，用于计算增量
     let lastAssistantContent = '';
     let lastThinkingContent = '';
 
@@ -373,36 +424,36 @@ export async function sendMessage(message, resumeSessionId = null, cwd = null, p
       messageCount++;
       console.log(`[DEBUG] Received message #${messageCount}, type: ${msg.type}`);
 
-      // 🔧 Streaming：Output流式StartMark（仅首次）
+      // 🔧 流式传输：输出流式开始标记（仅首次）
       if (streamingEnabled && !streamStarted) {
         console.log('[STREAM_START]');
         streamStarted = true;
       }
 
-      // 🔧 Streaming：Handle SDKPartialAssistantMessage（type: 'stream_event'）
-      // SDK Via includePartialMessages Return的流式Event
-      // 放宽识别条件：只要Yes stream_event 类型就TryHandle
+      // 🔧 流式传输：处理 SDKPartialAssistantMessage（type: 'stream_event'）
+      // SDK 通过 includePartialMessages 返回的流式事件
+      // 放宽识别条件：只要是 stream_event 类型就尝试处理
       if (streamingEnabled && msg.type === 'stream_event') {
         hasStreamEvents = true;
         const event = msg.event;
 
         if (event) {
-          // content_block_delta: 文本或 JSON Incremental
+          // content_block_delta: 文本或 JSON 增量
           if (event.type === 'content_block_delta' && event.delta) {
             if (event.delta.type === 'text_delta' && event.delta.text) {
-              // 🔧 Use JSON Encode，保留换行符等特殊chars
+              // 🔧 使用 JSON 编码，保留换行符等特殊字符
               console.log('[CONTENT_DELTA]', JSON.stringify(event.delta.text));
-              // Sync累积，Avoid后续 fallback diff 重复Output
+              // 同步累积，避免后续 fallback diff 重复输出
               lastAssistantContent += event.delta.text;
             } else if (event.delta.type === 'thinking_delta' && event.delta.thinking) {
-              // 🔧 Use JSON Encode，保留换行符等特殊chars
+              // 🔧 使用 JSON 编码，保留换行符等特殊字符
               console.log('[THINKING_DELTA]', JSON.stringify(event.delta.thinking));
               lastThinkingContent += event.delta.thinking;
             }
-            // input_json_delta 用于ToolCall，暂不Handle
+            // input_json_delta 用于工具调用，暂不处理
           }
 
-          // content_block_start: 新Content块Start（可用于识别 thinking 块）
+          // content_block_start: 新内容块开始（可用于识别 thinking 块）
           if (event.type === 'content_block_start' && event.content_block) {
             if (event.content_block.type === 'thinking') {
               console.log('[THINKING_START]');
@@ -410,15 +461,15 @@ export async function sendMessage(message, resumeSessionId = null, cwd = null, p
           }
         }
 
-        // 🔧 关键修复：stream_event 不Output [MESSAGE]，Avoid污染 Java 侧Parse链路
+        // 🔧 关键修复：stream_event 不输出 [MESSAGE]，避免污染 Java 侧解析链路
         // console.log('[STREAM_DEBUG]', JSON.stringify(msg));
-        continue; // 流式Event已Handle，Skip后续逻辑
+        continue; // 流式事件已处理，跳过后续逻辑
       }
 
-      // Output原始Message（方便 Java Parse）
-      // 🔧 Streaming mode下，assistant MessageNeed特殊Handle
-      // - If包含 tool_use，NeedOutput让前端ShowTool块
-      // - 纯文本 assistant Message不Output，AvoidOverride流式Status
+      // 输出原始消息（方便 Java 解析）
+      // 🔧 流式模式下，assistant 消息需要特殊处理
+      // - 如果包含 tool_use，需要输出让前端显示工具块
+      // - 纯文本 assistant 消息不输出，避免覆盖流式状态
       let shouldOutputMessage = true;
       if (streamingEnabled && msg.type === 'assistant') {
         const msgContent = msg.message?.content;
@@ -431,7 +482,7 @@ export async function sendMessage(message, resumeSessionId = null, cwd = null, p
         console.log('[MESSAGE]', JSON.stringify(msg));
       }
 
-      // 实时Output助手Content（非流式或完整Message）
+      // 实时输出助手内容（非流式或完整消息）
       if (msg.type === 'assistant') {
         const content = msg.message?.content;
 
@@ -439,7 +490,7 @@ export async function sendMessage(message, resumeSessionId = null, cwd = null, p
           for (const block of content) {
             if (block.type === 'text') {
               const currentText = block.text || '';
-              // 🔧 流式 fallback: IfEnable流式但 SDK 没给 stream_event，则用 diff 计算 delta
+              // 🔧 流式 fallback: 如果启用流式但 SDK 没给 stream_event，则用 diff 计算 delta
               if (streamingEnabled && !hasStreamEvents && currentText.length > lastAssistantContent.length) {
                 const delta = currentText.substring(lastAssistantContent.length);
                 if (delta) {
@@ -447,16 +498,16 @@ export async function sendMessage(message, resumeSessionId = null, cwd = null, p
                 }
                 lastAssistantContent = currentText;
               } else if (streamingEnabled && hasStreamEvents) {
-                // 已Via stream_event Output过Incremental，Avoid重复；仅做Status对齐
+                // 已通过 stream_event 输出过增量，避免重复；仅做状态对齐
                 if (currentText.length > lastAssistantContent.length) {
                   lastAssistantContent = currentText;
                 }
               } else if (!streamingEnabled) {
-                // 非Streaming mode：Output完整Content
+                // 非流式模式：输出完整内容
                 console.log('[CONTENT]', currentText);
               }
             } else if (block.type === 'thinking') {
-              // Output思考过程
+              // 输出思考过程
               const thinkingText = block.thinking || block.text || '';
               // 🔧 流式 fallback: thinking 也用 diff
               if (streamingEnabled && !hasStreamEvents && thinkingText.length > lastThinkingContent.length) {
@@ -477,7 +528,7 @@ export async function sendMessage(message, resumeSessionId = null, cwd = null, p
             }
           }
         } else if (typeof content === 'string') {
-          // 🔧 流式 fallback: chars串Content也用 diff
+          // 🔧 流式 fallback: 字符串内容也用 diff
           if (streamingEnabled && !hasStreamEvents && content.length > lastAssistantContent.length) {
             const delta = content.substring(lastAssistantContent.length);
             if (delta) {
@@ -494,20 +545,20 @@ export async function sendMessage(message, resumeSessionId = null, cwd = null, p
         }
       }
 
-      // 实时OutputToolCall结果（user Message中的 tool_result）
+      // 实时输出工具调用结果（user 消息中的 tool_result）
       if (msg.type === 'user') {
         const content = msg.message?.content;
         if (Array.isArray(content)) {
           for (const block of content) {
             if (block.type === 'tool_result') {
-              // OutputToolCall结果，前端Can实时UpdateToolStatus
+              // 输出工具调用结果，前端可以实时更新工具状态
               console.log('[TOOL_RESULT]', JSON.stringify(block));
             }
           }
         }
       }
 
-      // 捕获并Save session_id
+      // 捕获并保存 session_id
       if (msg.type === 'system' && msg.session_id) {
         currentSessionId = msg.session_id;
         console.log('[SESSION_ID]', msg.session_id);
@@ -516,13 +567,13 @@ export async function sendMessage(message, resumeSessionId = null, cwd = null, p
         activeQueryResults.set(msg.session_id, result);
         console.log('[REWIND_DEBUG] Stored query result for session:', msg.session_id);
 
-        // Output slash_commands（IfExists）
+        // 输出 slash_commands（如果存在）
         if (msg.subtype === 'init' && Array.isArray(msg.slash_commands)) {
           // console.log('[SLASH_COMMANDS]', JSON.stringify(msg.slash_commands));
         }
       }
 
-      // CheckYesNo收到Incorrect结果Message（FastDetect API Key Incorrect）
+      // 检查是否收到错误结果消息（快速检测 API Key 错误）
       if (msg.type === 'result' && msg.is_error) {
         console.error('[DEBUG] Received error result message:', JSON.stringify(msg));
         const errorText = msg.result || msg.message || 'API request failed';
@@ -530,11 +581,11 @@ export async function sendMessage(message, resumeSessionId = null, cwd = null, p
       }
     }
     } catch (loopError) {
-      // 捕获 for await Loop中的Incorrect（Including SDK 内部 spawn 子进程Failed等）
+      // 捕获 for await 循环中的错误（包括 SDK 内部 spawn 子进程失败等）
       console.error('[DEBUG] Error in message loop:', loopError.message);
       console.error('[DEBUG] Error name:', loopError.name);
       console.error('[DEBUG] Error stack:', loopError.stack);
-      // CheckYesNoYes子进程RelatedIncorrect
+      // 检查是否是子进程相关错误
       if (loopError.code) {
         console.error('[DEBUG] Error code:', loopError.code);
       }
@@ -550,12 +601,12 @@ export async function sendMessage(message, resumeSessionId = null, cwd = null, p
       if (loopError.spawnargs) {
         console.error('[DEBUG] Error spawnargs:', JSON.stringify(loopError.spawnargs));
       }
-      throw loopError; // 重新抛出让外层 catch Handle
+      throw loopError; // 重新抛出让外层 catch 处理
     }
 
     console.log(`[DEBUG] Message loop completed. Total messages: ${messageCount}`);
 
-    // 🔧 Streaming：Output流式EndMark
+    // 🔧 流式传输：输出流式结束标记
     if (streamingEnabled && streamStarted) {
       console.log('[STREAM_END]');
       streamEnded = true;
@@ -568,7 +619,7 @@ export async function sendMessage(message, resumeSessionId = null, cwd = null, p
 	    }));
 
 	  } catch (error) {
-	    // 🔧 Streaming：Exception时也要End流式，Avoid前端卡在 streaming Status
+	    // 🔧 流式传输：异常时也要结束流式，避免前端卡在 streaming 状态
 	    if (streamingEnabled && streamStarted && !streamEnded) {
 	      console.log('[STREAM_END]');
 	      streamEnded = true;
@@ -582,37 +633,44 @@ export async function sendMessage(message, resumeSessionId = null, cwd = null, p
 	}
 
 /**
- * Use Anthropic SDK SendMessage（用于第三方 API Proxy的回退方案）
+ * 使用 Anthropic SDK 发送消息（用于第三方 API 代理的回退方案）
  */
 export async function sendMessageWithAnthropicSDK(message, resumeSessionId, cwd, permissionMode, model, apiKey, baseUrl, authType) {
   try {
+    // 动态加载 Anthropic SDK
+    const anthropicModule = await ensureAnthropicSdk();
+    const Anthropic = anthropicModule.default || anthropicModule.Anthropic || anthropicModule;
+
     const workingDirectory = selectWorkingDirectory(cwd);
     try { process.chdir(workingDirectory); } catch {}
 
     const sessionId = (resumeSessionId && resumeSessionId !== '') ? resumeSessionId : randomUUID();
     const modelId = model || 'claude-sonnet-4-5';
 
-    // According toAuth类型UseCorrect的 SDK Parameter
-    // authType = 'auth_token': Use authToken Parameter（Bearer Auth）
-    // authType = 'api_key': Use apiKey Parameter（x-api-key Auth）
+    // 根据认证类型使用正确的 SDK 参数
+    // authType = 'auth_token': 使用 authToken 参数（Bearer 认证）
+    // authType = 'api_key': 使用 apiKey 参数（x-api-key 认证）
     let client;
     if (authType === 'auth_token') {
       console.log('[DEBUG] Using Bearer authentication (ANTHROPIC_AUTH_TOKEN)');
-      // Use authToken Parameter（Bearer Auth）并Clear apiKey
+      // 使用 authToken 参数（Bearer 认证）并清除 apiKey
       client = new Anthropic({
         authToken: apiKey,
-        apiKey: null,  // 明确Set为 null AvoidUse x-api-key header
+        apiKey: null,  // 明确设置为 null 避免使用 x-api-key header
         baseURL: baseUrl || undefined
       });
-      // 优先Use Bearer（ANTHROPIC_AUTH_TOKEN），Avoid继续Send x-api-key
+      // 优先使用 Bearer（ANTHROPIC_AUTH_TOKEN），避免继续发送 x-api-key
       delete process.env.ANTHROPIC_API_KEY;
       process.env.ANTHROPIC_AUTH_TOKEN = apiKey;
     } else if (authType === 'aws_bedrock') {
         console.log('[DEBUG] Using AWS_BEDROCK authentication (AWS_BEDROCK)');
+        // 动态加载 Bedrock SDK
+        const bedrockModule = await ensureBedrockSdk();
+        const AnthropicBedrock = bedrockModule.AnthropicBedrock || bedrockModule.default || bedrockModule;
         client = new AnthropicBedrock();
     } else {
       console.log('[DEBUG] Using API Key authentication (ANTHROPIC_API_KEY)');
-      // Use apiKey Parameter（x-api-key Auth）
+      // 使用 apiKey 参数（x-api-key 认证）
       client = new Anthropic({
         apiKey,
         baseURL: baseUrl || undefined
@@ -672,7 +730,7 @@ export async function sendMessageWithAnthropicSDK(message, resumeSessionId, cwd,
 
       const errorContent = [{
         type: 'text',
-        text: `API Incorrect: ${errorMsg}\n\nMaybe的原因:\n1. API Key Config不Correct\n2. 第三方ProxyServiceConfigIssue\n3. 请Check ~/.claude/settings.json 中的Config`
+        text: `API 错误: ${errorMsg}\n\n可能的原因:\n1. API Key 配置不正确\n2. 第三方代理服务配置问题\n3. 请检查 ~/.claude/settings.json 中的配置`
       }];
 
       const assistantMsg = {
@@ -778,14 +836,18 @@ export async function sendMessageWithAnthropicSDK(message, resumeSessionId, cwd,
 }
 
 /**
- * Use Claude Agent SDK Send带附件的Message（多模态）
+ * 使用 Claude Agent SDK 发送带附件的消息（多模态）
  */
 export async function sendMessageWithAttachments(message, resumeSessionId = null, cwd = null, permissionMode = null, model = null, stdinData = null) {
 	  let timeoutId;
+	  // 🔧 BUG FIX: 提前声明这些变量，避免在 setupApiKey() 抛出错误时，catch 块访问未定义变量
+	  let streamingEnabled = false;
+	  let streamStarted = false;
+	  let streamEnded = false;
 	  try {
     process.env.CLAUDE_CODE_ENTRYPOINT = process.env.CLAUDE_CODE_ENTRYPOINT || 'sdk-ts';
 
-    // Setup API Key and get config info (including auth type)
+    // 设置 API Key 并获取配置信息（包含认证类型）
     const { baseUrl, authType } = setupApiKey();
 
     console.log('[MESSAGE_START]');
@@ -797,23 +859,23 @@ export async function sendMessageWithAttachments(message, resumeSessionId = null
       console.error('[WARNING] Failed to change process.cwd():', chdirError.message);
     }
 
-    // Load附件
+    // 加载附件
     const attachments = await loadAttachments(stdinData);
 
-    // 提取Open的FileList和AgentTip词（从 stdinData）
+    // 提取打开的文件列表和智能体提示词（从 stdinData）
     const openedFiles = stdinData?.openedFiles || null;
     const agentPrompt = stdinData?.agentPrompt || null;
     console.log('[Agent] message-service.sendMessageWithAttachments received agentPrompt:', agentPrompt ? `✓ (${agentPrompt.length} chars)` : '✗ null');
 
     // Build systemPrompt.append content (for adding opened files context and agent prompt)
-    // Build IDE context prompt using unified prompt management module
+    // 使用统一的提示词管理模块构建 IDE 上下文提示词（包括智能体提示词）
     const systemPromptAppend = buildIDEContextPrompt(openedFiles, agentPrompt);
     console.log('[Agent] systemPromptAppend built (with attachments):', systemPromptAppend ? `✓ (${systemPromptAppend.length} chars)` : '✗ empty');
 
-    // 构建UserMessageContent块
+    // 构建用户消息内容块
     const contentBlocks = buildContentBlocks(attachments, message);
 
-    // 构建 SDKUserMessage Format
+    // 构建 SDKUserMessage 格式
     const userMessage = {
       type: 'user',
       session_id: '',
@@ -825,47 +887,48 @@ export async function sendMessageWithAttachments(message, resumeSessionId = null
     };
 
     const sdkModelName = mapModelIdToSdkName(model);
-    // 不再FindSystem CLI，Use SDK 内置 cli.js
+    // 不再查找系统 CLI，使用 SDK 内置 cli.js
     console.log('[DEBUG] (withAttachments) Using SDK built-in Claude CLI (cli.js)');
 
-    // Create输入流并放入UserMessage
+    // 创建输入流并放入用户消息
     const inputStream = new AsyncStream();
     inputStream.enqueue(userMessage);
     inputStream.done();
 
-    // 规范化 permissionMode：Emptychars串或 null 都视为 'default'
+    // 规范化 permissionMode：空字符串或 null 都视为 'default'
     // 参见 docs/multimodal-permission-bug.md
     const normalizedPermissionMode = (!permissionMode || permissionMode === '') ? 'default' : permissionMode;
     console.log('[PERM_DEBUG] (withAttachments) permissionMode:', permissionMode);
     console.log('[PERM_DEBUG] (withAttachments) normalizedPermissionMode:', normalizedPermissionMode);
 
-    // PreToolUse hook 用于Permission控制（替代 canUseTool，Because在 AsyncIterable Mode下 canUseTool 不被Call）
+    // PreToolUse hook 用于权限控制（替代 canUseTool，因为在 AsyncIterable 模式下 canUseTool 不被调用）
     // 参见 docs/multimodal-permission-bug.md
     const preToolUseHook = createPreToolUseHook(normalizedPermissionMode);
 
-    // Note：According to SDK Doc，If不指定 matcher，则该 Hook 会MatchAllTool
-    // Here统一Use一个全局 PreToolUse Hook，由 Hook 内部决定哪些ToolAuto放行
+    // 注意：根据 SDK 文档，如果不指定 matcher，则该 Hook 会匹配所有工具
+    // 这里统一使用一个全局 PreToolUse Hook，由 Hook 内部决定哪些工具自动放行
 
-    // 🔧 Read Extended Thinking config from settings.json
+    // 🔧 从 settings.json 读取 Extended Thinking 配置
     const settings = loadClaudeSettings();
     const alwaysThinkingEnabled = settings?.alwaysThinkingEnabled ?? true;
     const configuredMaxThinkingTokens = settings?.maxThinkingTokens
       || parseInt(process.env.MAX_THINKING_TOKENS || '0', 10)
       || 10000;
 
-    // 🔧 从 stdinData 或 settings.json ReadStreamingConfig
-    // Note：Use != null MeanwhileHandle null 和 undefined
+    // 🔧 从 stdinData 或 settings.json 读取流式传输配置
+    // 注意：使用 != null 同时处理 null 和 undefined
+    // 注意：变量已在 try 块外部声明，这里只赋值
     const streamingParam = stdinData?.streaming;
-    const streamingEnabled = streamingParam != null
+    streamingEnabled = streamingParam != null
       ? streamingParam
       : (settings?.streamingEnabled ?? false);
     console.log('[STREAMING_DEBUG] (withAttachments) stdinData.streaming:', streamingParam);
     console.log('[STREAMING_DEBUG] (withAttachments) settings.streamingEnabled:', settings?.streamingEnabled);
     console.log('[STREAMING_DEBUG] (withAttachments) streamingEnabled (final):', streamingEnabled);
 
-    // Enable Extended Thinking based on config
-    // - If alwaysThinkingEnabled is true, use configured maxThinkingTokens
-    // - If false, dont set maxThinkingTokens (let SDK use default)
+    // 根据配置决定是否启用 Extended Thinking
+    // - 如果 alwaysThinkingEnabled 为 true，使用配置的 maxThinkingTokens 值
+    // - 如果 alwaysThinkingEnabled 为 false，不设置 maxThinkingTokens（让 SDK 使用默认行为）
     const maxThinkingTokens = alwaysThinkingEnabled ? configuredMaxThinkingTokens : undefined;
 
     console.log('[THINKING_DEBUG] (withAttachments) alwaysThinkingEnabled:', alwaysThinkingEnabled);
@@ -878,29 +941,29 @@ export async function sendMessageWithAttachments(message, resumeSessionId = null
       maxTurns: 100,
       // Enable file checkpointing for rewind feature
       enableFileCheckpointing: true,
-      // Extended Thinking config (based on settings.json alwaysThinkingEnabled)
-      // Thinking content output via [THINKING] tag for frontend
+      // Extended Thinking 配置（根据 settings.json 的 alwaysThinkingEnabled 决定）
+      // 思考内容会通过 [THINKING] 标签输出给前端展示
       ...(maxThinkingTokens !== undefined && { maxThinkingTokens }),
-      // 🔧 Streaming config: enable includePartialMessages for incremental content
+      // 🔧 流式传输配置：启用 includePartialMessages 以获取增量内容
       ...(streamingEnabled && { includePartialMessages: true }),
       additionalDirectories: Array.from(
         new Set(
           [workingDirectory, process.env.IDEA_PROJECT_PATH, process.env.PROJECT_PATH].filter(Boolean)
         )
       ),
-      // MeanwhileSet canUseTool 和 hooks，Ensure至少一个生效
-      // 在 AsyncIterable Mode下 canUseTool Maybe不被Call，SoMustConfig PreToolUse hook
+      // 同时设置 canUseTool 和 hooks，确保至少一个生效
+      // 在 AsyncIterable 模式下 canUseTool 可能不被调用，所以必须配置 PreToolUse hook
       canUseTool: normalizedPermissionMode === 'default' ? canUseTool : undefined,
       hooks: {
         PreToolUse: [{
           hooks: [preToolUseHook]
         }]
       },
-      // Dont pass pathToClaudeCodeExecutable, SDK uses built-in cli.js
+      // 不传递 pathToClaudeCodeExecutable，SDK 将自动使用内置 cli.js
       settingSources: ['user', 'project', 'local'],
-      // Use Claude Code preset system prompt so Claude knows current working directory
-      // Key fix for path issues: without systemPrompt Claude doesnt know cwd
-      // If openedFiles exists, add context via append field
+      // 使用 Claude Code 预设系统提示，让 Claude 知道当前工作目录
+      // 这是修复路径问题的关键：没有 systemPrompt 时 Claude 不知道 cwd
+      // 如果有 openedFiles，通过 append 字段添加打开文件的上下文
       systemPrompt: {
         type: 'preset',
         preset: 'claude_code',
@@ -912,9 +975,9 @@ export async function sendMessageWithAttachments(message, resumeSessionId = null
     console.log('[PERM_DEBUG] (withAttachments) options.permissionMode:', options.permissionMode);
     console.log('[STREAMING_DEBUG] (withAttachments) options.includePartialMessages:', options.includePartialMessages ? 'SET' : 'NOT SET');
 
-	    // BeforeHereVia AbortController + 30 秒AutoTimeout来Interrupt带附件的Request
-	    // 这会导致在ConfigCorrect的情况下仍然出现 "Claude Code process aborted by user" 的误导性Incorrect
-	    // 为保持与纯文本 sendMessage 一致，Here暂时DisableAutoTimeout逻辑，改由 IDE 侧Interrupt控制
+	    // 之前这里通过 AbortController + 30 秒自动超时来中断带附件的请求
+	    // 这会导致在配置正确的情况下仍然出现 "Claude Code process aborted by user" 的误导性错误
+	    // 为保持与纯文本 sendMessage 一致，这里暂时禁用自动超时逻辑，改由 IDE 侧中断控制
 	    // const abortController = new AbortController();
 	    // options.abortController = abortController;
 
@@ -923,42 +986,44 @@ export async function sendMessageWithAttachments(message, resumeSessionId = null
 	      console.log('[RESUMING]', resumeSessionId);
 	    }
 
+		    // 动态加载 Claude SDK
+		    const sdk = await ensureClaudeSdk();
+		    const { query } = sdk;
+
 		    const result = query({
 		      prompt: inputStream,
 		      options
 		    });
 
-	    // 如需再次EnableAutoTimeout，可在此处Via AbortController Implementation，并Ensure给出Clear的"ResponseTimeout"Tip
+	    // 如需再次启用自动超时，可在此处通过 AbortController 实现，并确保给出清晰的"响应超时"提示
 	    // timeoutId = setTimeout(() => {
 	    //   console.log('[DEBUG] Query with attachments timeout after 30 seconds, aborting...');
 	    //   abortController.abort();
 	    // }, 30000);
 
 		    let currentSessionId = resumeSessionId;
-		    // 🔧 StreamingStatus追踪
-		    let streamStarted = false;
-		    let streamEnded = false;
+		    // 🔧 流式传输状态追踪（已在函数开头声明 streamingEnabled, streamStarted, streamEnded）
 		    let hasStreamEvents = false;
-		    // 🔧 diff fallback: 追踪上次的 assistant Content，用于计算Incremental
+		    // 🔧 diff fallback: 追踪上次的 assistant 内容，用于计算增量
 		    let lastAssistantContent = '';
 		    let lastThinkingContent = '';
 
 		    try {
 		    for await (const msg of result) {
-		      // 🔧 Streaming：Output流式StartMark（仅首次）
+		      // 🔧 流式传输：输出流式开始标记（仅首次）
 		      if (streamingEnabled && !streamStarted) {
 		        console.log('[STREAM_START]');
 		        streamStarted = true;
 		      }
 
-		      // 🔧 Streaming：Handle SDKPartialAssistantMessage（type: 'stream_event'）
-		      // 放宽识别条件：只要Yes stream_event 类型就TryHandle
+		      // 🔧 流式传输：处理 SDKPartialAssistantMessage（type: 'stream_event'）
+		      // 放宽识别条件：只要是 stream_event 类型就尝试处理
 		      if (streamingEnabled && msg.type === 'stream_event') {
 		        hasStreamEvents = true;
 		        const event = msg.event;
 
 		        if (event) {
-		          // content_block_delta: 文本或 JSON Incremental
+		          // content_block_delta: 文本或 JSON 增量
 		          if (event.type === 'content_block_delta' && event.delta) {
 		            if (event.delta.type === 'text_delta' && event.delta.text) {
 		              console.log('[CONTENT_DELTA]', event.delta.text);
@@ -969,7 +1034,7 @@ export async function sendMessageWithAttachments(message, resumeSessionId = null
 		            }
 		          }
 
-		          // content_block_start: 新Content块Start
+		          // content_block_start: 新内容块开始
 		          if (event.type === 'content_block_start' && event.content_block) {
 		            if (event.content_block.type === 'thinking') {
 		              console.log('[THINKING_START]');
@@ -977,12 +1042,12 @@ export async function sendMessageWithAttachments(message, resumeSessionId = null
 		          }
 		        }
 
-		        // 🔧 关键修复：stream_event 不Output [MESSAGE]
+		        // 🔧 关键修复：stream_event 不输出 [MESSAGE]
 		        // console.log('[STREAM_DEBUG]', JSON.stringify(msg));
 		        continue;
 		      }
 
-	    	      // 🔧 Streaming mode下，assistant MessageNeed特殊Handle
+	    	      // 🔧 流式模式下，assistant 消息需要特殊处理
 	    	      let shouldOutputMessage2 = true;
 	    	      if (streamingEnabled && msg.type === 'assistant') {
 	    	        const msgContent2 = msg.message?.content;
@@ -995,7 +1060,7 @@ export async function sendMessageWithAttachments(message, resumeSessionId = null
 	    	        console.log('[MESSAGE]', JSON.stringify(msg));
 	    	      }
 
-	    	      // Handle完整的助手Message
+	    	      // 处理完整的助手消息
 	    	      if (msg.type === 'assistant') {
 	    	        const content = msg.message?.content;
 
@@ -1003,7 +1068,7 @@ export async function sendMessageWithAttachments(message, resumeSessionId = null
 	    	          for (const block of content) {
 	    	            if (block.type === 'text') {
 	    	              const currentText = block.text || '';
-	    	              // 🔧 流式 fallback: IfEnable流式但 SDK 没给 stream_event，则用 diff 计算 delta
+	    	              // 🔧 流式 fallback: 如果启用流式但 SDK 没给 stream_event，则用 diff 计算 delta
 	    	              if (streamingEnabled && !hasStreamEvents && currentText.length > lastAssistantContent.length) {
 	    	                const delta = currentText.substring(lastAssistantContent.length);
 	    	                if (delta) {
@@ -1040,7 +1105,7 @@ export async function sendMessageWithAttachments(message, resumeSessionId = null
 	    	            }
 	    	          }
 	    	        } else if (typeof content === 'string') {
-	    	          // 🔧 流式 fallback: chars串Content也用 diff
+	    	          // 🔧 流式 fallback: 字符串内容也用 diff
 	    	          if (streamingEnabled && !hasStreamEvents && content.length > lastAssistantContent.length) {
 	    	            const delta = content.substring(lastAssistantContent.length);
 	    	            if (delta) {
@@ -1057,13 +1122,13 @@ export async function sendMessageWithAttachments(message, resumeSessionId = null
 	    	        }
 	    	      }
 
-	    	      // 实时OutputToolCall结果（user Message中的 tool_result）
+	    	      // 实时输出工具调用结果（user 消息中的 tool_result）
 	    	      if (msg.type === 'user') {
 	    	        const content = msg.message?.content;
 	    	        if (Array.isArray(content)) {
 	    	          for (const block of content) {
 	    	            if (block.type === 'tool_result') {
-	    	              // OutputToolCall结果，前端Can实时UpdateToolStatus
+	    	              // 输出工具调用结果，前端可以实时更新工具状态
 	    	              console.log('[TOOL_RESULT]', JSON.stringify(block));
 	    	            }
 	    	          }
@@ -1079,7 +1144,7 @@ export async function sendMessageWithAttachments(message, resumeSessionId = null
 	    	        console.log('[REWIND_DEBUG] (withAttachments) Stored query result for session:', msg.session_id);
 	    	      }
 
-	    	      // CheckYesNo收到Incorrect结果Message（FastDetect API Key Incorrect）
+	    	      // 检查是否收到错误结果消息（快速检测 API Key 错误）
 	    	      if (msg.type === 'result' && msg.is_error) {
 	    	        console.error('[DEBUG] (withAttachments) Received error result message:', JSON.stringify(msg));
 	    	        const errorText = msg.result || msg.message || 'API request failed';
@@ -1087,7 +1152,7 @@ export async function sendMessageWithAttachments(message, resumeSessionId = null
 	    	      }
 	    	    }
 	    	    } catch (loopError) {
-	    	      // 捕获 for await Loop中的Incorrect
+	    	      // 捕获 for await 循环中的错误
 	    	      console.error('[DEBUG] Error in message loop (withAttachments):', loopError.message);
 	    	      console.error('[DEBUG] Error name:', loopError.name);
 	    	      console.error('[DEBUG] Error stack:', loopError.stack);
@@ -1099,7 +1164,7 @@ export async function sendMessageWithAttachments(message, resumeSessionId = null
 	    	      throw loopError;
 	    	    }
 
-	    // 🔧 Streaming：Output流式EndMark
+	    // 🔧 流式传输：输出流式结束标记
 	    if (streamingEnabled && streamStarted) {
 	      console.log('[STREAM_END]');
 	      streamEnded = true;
@@ -1112,7 +1177,7 @@ export async function sendMessageWithAttachments(message, resumeSessionId = null
 	    }));
 
 	  } catch (error) {
-	    // 🔧 Streaming：Exception时也要End流式，Avoid前端卡在 streaming Status
+	    // 🔧 流式传输：异常时也要结束流式，避免前端卡在 streaming 状态
 	    if (streamingEnabled && streamStarted && !streamEnded) {
 	      console.log('[STREAM_END]');
 	      streamEnded = true;
@@ -1126,24 +1191,24 @@ export async function sendMessageWithAttachments(message, resumeSessionId = null
 	}
 
 /**
- * Get斜杠命令List
- * Via SDK 的 supportedCommands() MethodGet完整的命令List
- * 这个Method不NeedSendMessage，Can在Plugin启动时Call
+ * 获取斜杠命令列表
+ * 通过 SDK 的 supportedCommands() 方法获取完整的命令列表
+ * 这个方法不需要发送消息，可以在插件启动时调用
  */
 export async function getSlashCommands(cwd = null) {
   try {
     process.env.CLAUDE_CODE_ENTRYPOINT = process.env.CLAUDE_CODE_ENTRYPOINT || 'sdk-ts';
 
-    // Set API Key
+    // 设置 API Key
     setupApiKey();
 
-    // Ensure HOME EnvironmentVariableSetCorrect
+    // 确保 HOME 环境变量设置正确
     if (!process.env.HOME) {
       const os = await import('os');
       process.env.HOME = os.homedir();
     }
 
-    // Smart working directory detection
+    // 智能确定工作目录
     const workingDirectory = selectWorkingDirectory(cwd);
     try {
       process.chdir(workingDirectory);
@@ -1151,25 +1216,25 @@ export async function getSlashCommands(cwd = null) {
       console.error('[WARNING] Failed to change process.cwd():', chdirError.message);
     }
 
-    // Create一个Empty的输入流
+    // 创建一个空的输入流
     const inputStream = new AsyncStream();
 
-    // Call query Function，UseEmpty输入流
-    // 这样不会SendAnyMessage，只YesInitialize SDK 以GetConfig
+    // 调用 query 函数，使用空输入流
+    // 这样不会发送任何消息，只是初始化 SDK 以获取配置
     const result = query({
       prompt: inputStream,
       options: {
         cwd: workingDirectory,
         permissionMode: 'default',
-        maxTurns: 0,  // 不Need进行Any轮次
+        maxTurns: 0,  // 不需要进行任何轮次
         canUseTool: async () => ({
           behavior: 'deny',
           message: 'Config loading only'
         }),
-        // 明确EnableDefaultTool集
+        // 明确启用默认工具集
         tools: { type: 'preset', preset: 'claude_code' },
         settingSources: ['user', 'project', 'local'],
-        // 捕获 SDK stderr DebugLog，帮助定位 CLI InitializeIssue
+        // 捕获 SDK stderr 调试日志，帮助定位 CLI 初始化问题
         stderr: (data) => {
           if (data && data.trim()) {
             console.log(`[SDK-STDERR] ${data.trim()}`);
@@ -1178,17 +1243,17 @@ export async function getSlashCommands(cwd = null) {
       }
     });
 
-    // 立即Close输入流，告诉 SDK 我们NoneMessage要Send
+    // 立即关闭输入流，告诉 SDK 我们没有消息要发送
     inputStream.done();
 
-    // GetSupport的命令List
-    // SDK Return的FormatYes SlashCommand[]，包含 name 和 description
+    // 获取支持的命令列表
+    // SDK 返回的格式是 SlashCommand[]，包含 name 和 description
     const slashCommands = await result.supportedCommands?.() || [];
 
     // 清理资源
     await result.return?.();
 
-    // Output命令List（包含 name 和 description）
+    // 输出命令列表（包含 name 和 description）
     console.log('[SLASH_COMMANDS]', JSON.stringify(slashCommands));
 
     console.log(JSON.stringify({
@@ -1207,24 +1272,24 @@ export async function getSlashCommands(cwd = null) {
 }
 
 /**
- * Get MCP Service器ConnectStatus
- * Via SDK 的 mcpServerStatus() MethodGetAllConfig的 MCP Service器的ConnectStatus
- * @param {string} cwd - Working directory（Optional）
+ * 获取 MCP 服务器连接状态
+ * 通过 SDK 的 mcpServerStatus() 方法获取所有配置的 MCP 服务器的连接状态
+ * @param {string} cwd - 工作目录（可选）
  */
 export async function getMcpServerStatus(cwd = null) {
   try {
     process.env.CLAUDE_CODE_ENTRYPOINT = process.env.CLAUDE_CODE_ENTRYPOINT || 'sdk-ts';
 
-    // Set API Key
+    // 设置 API Key
     setupApiKey();
 
-    // Ensure HOME EnvironmentVariableSetCorrect
+    // 确保 HOME 环境变量设置正确
     if (!process.env.HOME) {
       const os = await import('os');
       process.env.HOME = os.homedir();
     }
 
-    // Smart working directory detection
+    // 智能确定工作目录
     const workingDirectory = selectWorkingDirectory(cwd);
     try {
       process.chdir(workingDirectory);
@@ -1232,10 +1297,10 @@ export async function getMcpServerStatus(cwd = null) {
       console.error('[WARNING] Failed to change process.cwd():', chdirError.message);
     }
 
-    // Create一个Empty的输入流
+    // 创建一个空的输入流
     const inputStream = new AsyncStream();
 
-    // Call query Function，UseEmpty输入流
+    // 调用 query 函数，使用空输入流
     const result = query({
       prompt: inputStream,
       options: {
@@ -1256,17 +1321,17 @@ export async function getMcpServerStatus(cwd = null) {
       }
     });
 
-    // 立即Close输入流
+    // 立即关闭输入流
     inputStream.done();
 
-    // Get MCP Service器Status
-    // SDK Return的FormatYes McpServerStatus[]，包含 name, status, serverInfo
+    // 获取 MCP 服务器状态
+    // SDK 返回的格式是 McpServerStatus[]，包含 name, status, serverInfo
     const mcpStatus = await result.mcpServerStatus?.() || [];
 
     // 清理资源
     await result.return?.();
 
-    // Output MCP Service器Status
+    // 输出 MCP 服务器状态
     console.log('[MCP_SERVER_STATUS]', JSON.stringify(mcpStatus));
 
     console.log(JSON.stringify({

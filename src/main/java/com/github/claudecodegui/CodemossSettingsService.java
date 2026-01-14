@@ -402,7 +402,11 @@ public class CodemossSettingsService {
         return providerManager.saveProviders(providers);
     }
 
-    // ==================== MCP Server Management ====================
+    public boolean isLocalProviderActive() {
+        return providerManager.isLocalProviderActive();
+    }
+
+    // ==================== MCP Server 管理 ====================
 
     public List<JsonObject> getMcpServers() throws IOException {
         return mcpServerManager.getMcpServers();
