@@ -183,6 +183,11 @@ interface Window {
   updateStreamingEnabled?: (json: string) => void;
 
   /**
+   * Update send shortcut setting
+   */
+  updateSendShortcut?: (json: string) => void;
+
+  /**
    * Update current Claude config
    */
   updateCurrentClaudeConfig?: (json: string) => void;

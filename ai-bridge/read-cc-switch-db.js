@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 /**
- * 读取 cc-switch SQLite 数据库中的 Claude 供应商配置
- * 使用 sql.js (纯 JavaScript 实现，跨平台兼容)
+ * Read Claude provider configuration from cc-switch SQLite database.
+ * Uses sql.js (pure JavaScript implementation, cross-platform compatible)
  *
- * 用法: node read-cc-switch-db.js <数据库文件路径>
- * 输出: JSON 格式的供应商列表
+ * Usage: node read-cc-switch-db.js <database file path>
+ * Output: JSON format provider list
  */
 
 import initSqlJs from 'sql.js';
