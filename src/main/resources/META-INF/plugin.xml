@@ -1,65 +1,81 @@
 <idea-plugin>
-    <id>com.lacrearthur.idea-claude-gui</id>
-    <name>Claude GUI</name>
-    <vendor>Arthur Scheidel</vendor>
+    <id>com.github.idea-claude-code-gui</id>
+    <name>Claude Code GUI</name>
+    <vendor>CodeMossAI</vendor>
 
     <!-- Resource bundle for i18n -->
     <resource-bundle>messages.ClaudeCodeGuiBundle</resource-bundle>
 
     <description><![CDATA[
-        <p><strong>Claude Code GUI</strong> - A powerful AI assistant and productivity tool that brings Claude Code capabilities with an intuitive graphical interface directly into IntelliJ IDEA.</p>
+        <p><strong>Claude Code GUI</strong> - A powerful visual interface plugin that brings <strong>Claude Code</strong> and <strong>OpenAI Codex</strong> dual AI tools directly into IntelliJ IDEA, making AI-assisted programming more efficient and intuitive.</p>
 
-        <h2>🔐 Zero-Config Authentication</h2>
-        <p>Already logged in to Claude Code? <strong>You're ready to go.</strong></p>
+        <h2>Dual AI Engine Support</h2>
         <ul>
-            <li><strong>Claude Subscription</strong>: The plugin automatically detects your existing <code>claude login</code> session. No copy-pasting, no re-authentication—just open the plugin and start coding.</li>
-            <li><strong>API Key</strong>: Prefer direct API access? Enter your Anthropic API key in settings.</li>
-        </ul>
-        <p><em>Your credentials stay local and secure—never transmitted to third parties.</em></p>
-
-        <h2>Features:</h2>
-        <ul>
-            <li><strong>AI-Powered Code Generation</strong>: Leverage Claude AI for intelligent code generation and refactoring</li>
-            <li><strong>Smart Assistant</strong>: Context-aware AI coding assistant that understands your project</li>
-            <li><strong>Integrated Claude Code CLI</strong>: Full Claude Code functionality with an easy-to-use GUI interface</li>
-            <li><strong>Direct Code Analysis</strong>: Send selected code to Claude for instant AI-powered analysis and suggestions</li>
-            <li><strong>Productivity Boost</strong>: Seamless integration that enhances your coding workflow</li>
+            <li><strong>Claude Code</strong> - Anthropic's official AI programming assistant (Opus 4.5 and more)</li>
+            <li><strong>OpenAI Codex</strong> - OpenAI's powerful code generation engine</li>
         </ul>
 
-        <br/>
+        <h2>Key Features</h2>
+        <ul>
+            <li><strong>Context-aware AI Assistant</strong>: Intelligent coding assistant with @file reference support</li>
+            <li><strong>Image Support</strong>: Send images for visual requirement description</li>
+            <li><strong>Agent System</strong>: Built-in agents for automated complex tasks</li>
+            <li><strong>Skills Commands</strong>: Slash command system (/init, /review, etc.)</li>
+            <li><strong>MCP Server</strong>: Extend AI capabilities with MCP protocol</li>
+            <li><strong>Code DIFF</strong>: Visual code comparison and file navigation</li>
+            <li><strong>Conversation Rewind</strong>: Flexible history adjustment</li>
+            <li><strong>Session Management</strong>: History, favorites, search, and export</li>
+            <li><strong>Theme Support</strong>: Dark/Light themes with IDE font sync</li>
+            <li><strong>Permission Control</strong>: Comprehensive security management</li>
+            <li><strong>Provider Management</strong>: cc-switch compatible</li>
+        </ul>
 
-        <h2>How to Use:</h2>
+        <h2>How to Use</h2>
         <ul>
             <li>Open the Claude Code GUI tool window from the right sidebar</li>
-            <li>Select code and use <kbd>Ctrl+Alt+K</kbd> (Win/Linux) or <kbd>Cmd+Alt+K</kbd> (Mac) to send to Claude</li>
-            <li>Get instant AI-powered code assistance, generation, and intelligent suggestions</li>
+            <li>Select code and use <kbd>Ctrl+Alt+K</kbd> (Win/Linux) or <kbd>Cmd+Alt+K</kbd> (Mac) to send to AI</li>
+            <li>Get instant AI-powered code assistance and intelligent suggestions</li>
         </ul>
 
-        <p><em>Keywords: Claude, AI Assistant, Code Generation, AI Coding, Productivity, Claude Code, Intelligent Code Assistant</em></p>
+        <hr/>
+
+        <p><strong>Claude Code GUI</strong> - 一个功能强大的可视化界面插件，将 <strong>Claude Code</strong> 和 <strong>OpenAI Codex</strong> 双 AI 工具直接集成到 IntelliJ IDEA 中，让 AI 辅助编程变得更加高效和直观。</p>
+
+        <h2>双 AI 引擎支持</h2>
+        <ul>
+            <li><strong>Claude Code</strong> - Anthropic 官方 AI 编程助手（支持 Opus 4.5 等多模型）</li>
+            <li><strong>OpenAI Codex</strong> - OpenAI 强大的代码生成引擎</li>
+        </ul>
+
+        <h2>核心功能</h2>
+        <ul>
+            <li><strong>上下文感知助手</strong>：智能编程助手，支持 @文件引用</li>
+            <li><strong>图片支持</strong>：发送图片可视化描述需求</li>
+            <li><strong>Agent 系统</strong>：内置智能体自动化执行复杂任务</li>
+            <li><strong>Skills 命令</strong>：斜杠命令系统（/init, /review 等）</li>
+            <li><strong>MCP 服务器</strong>：通过 MCP 协议扩展 AI 能力</li>
+            <li><strong>代码 DIFF</strong>：可视化代码对比和文件导航</li>
+            <li><strong>对话回退</strong>：灵活调整对话历史</li>
+            <li><strong>会话管理</strong>：历史记录、收藏、搜索和导出</li>
+            <li><strong>主题支持</strong>：深色/浅色主题，支持 IDE 字体同步</li>
+            <li><strong>权限控制</strong>：完善的安全管理</li>
+            <li><strong>供应商管理</strong>：兼容 cc-switch</li>
+        </ul>
+
+        <h2>使用方法</h2>
+        <ul>
+            <li>从右侧边栏打开 Claude Code GUI 工具窗口</li>
+            <li>选中代码后使用 <kbd>Ctrl+Alt+K</kbd>（Win/Linux）或 <kbd>Cmd+Alt+K</kbd>（Mac）发送给 AI</li>
+            <li>即时获得 AI 驱动的代码辅助和智能建议</li>
+        </ul>
+
+        <p><em>Keywords: Claude, Claude Code, Codex, OpenCode, Gemini, AI Assistant, Code Generation, AI Coding, Productivity, Intelligent Code Assistant</em></p>
     ]]></description>
-
-    <change-notes><![CDATA[
-        <h3>v0.2.1 - Feature Update (January 4, 2026)</h3>
-        <ul>
-            <li><strong>MCP Toggle Enhancements</strong>: Project-level tracking, smart refresh, visual indicators for disabled servers</li>
-            <li><strong>AskUserQuestion Tool</strong>: Full Claude AskUserQuestion support with interactive dialogs and multi-select</li>
-            <li><strong>Code Quality</strong>: Removed Bedrock SDK, added test infrastructure, fixed reliability issues</li>
-        </ul>
-
-        <h3>v0.2.0 - Fork Release (January 3, 2026)</h3>
-        <ul>
-            <li><strong>Complete English Localization</strong>: All user-facing UI translated — dialogs, buttons, toasts, tooltips, error messages, MCP settings, and tool blocks</li>
-            <li><strong>Seamless CLI Auth</strong>: Auto-detects existing <code>claude login</code> session — no API key re-entry needed for Claude subscribers</li>
-            <li><strong>New Plugin Identity</strong>: Fresh icon for JetBrains Marketplace recognition</li>
-            <li><strong>Compatibility</strong>: IntelliJ IDEA 2023.3 – 2026.3, Gradle 8.x</li>
-        </ul>
-        <p>Full changelog: <a href="https://github.com/LaCreArthur/idea-claude-gui/blob/main/CHANGELOG.md">GitHub</a></p>
-    ]]></change-notes>
 
     <depends>com.intellij.modules.platform</depends>
 
     <extensions defaultExtensionNs="com.intellij">
-        <!-- Claude Code GUI tool window (includes history) -->
+        <!-- Claude Code GUI 工具窗口（包含历史记录功能） -->
         <toolWindow id="Claude Code GUI"
                     anchor="right"
                     factoryClass="com.github.claudecodegui.ClaudeSDKToolWindow"
@@ -77,13 +93,11 @@
     </extensions>
 
     <actions>
-        <!-- Send selected code to Claude Code GUI action -->
+        <!-- 发送选中代码到终端的Action -->
         <action id="ClaudeCodeGUI.SendSelectionToTerminalAction"
                 class="com.github.claudecodegui.SendSelectionToTerminalAction"
-                text="Send Selection to Claude Code GUI"
-                description="Send the current selection's code and path to Claude Code GUI"
                 icon="/icons/send-to-terminal.svg">
-            <!-- Add to editor right-click menu (at the top) -->
+            <!-- 添加到编辑器右键菜单（显示在最上面） -->
             <add-to-group group-id="EditorPopupMenu" anchor="first"/>
             <keyboard-shortcut keymap="$default" first-keystroke="ctrl alt K"/>
             <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta alt K"/>
