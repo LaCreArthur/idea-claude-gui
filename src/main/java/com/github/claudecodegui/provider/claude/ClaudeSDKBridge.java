@@ -177,14 +177,14 @@ public class ClaudeSDKBridge extends BaseSDKBridge {
      * Set claude-bridge directory path manually.
      */
     public void setSdkTestDir(String path) {
-        directoryResolver.setSdkDir(path);
+        getDirectoryResolver().setSdkDir(path);
     }
 
     /**
      * Get current claude-bridge directory.
      */
     public File getSdkTestDir() {
-        return directoryResolver.getSdkDir();
+        return getDirectoryResolver().getSdkDir();
     }
 
     // ============================================================================
@@ -219,7 +219,7 @@ public class ClaudeSDKBridge extends BaseSDKBridge {
             command.add(NODE_SCRIPT);
 
             ProcessBuilder pb = new ProcessBuilder(command);
-            File workDir = directoryResolver.findSdkDir();
+            File workDir = getDirectoryResolver().findSdkDir();
             pb.directory(workDir);
             pb.redirectErrorStream(true);
             envConfigurator.updateProcessEnvironment(pb, node);
@@ -335,7 +335,7 @@ public class ClaudeSDKBridge extends BaseSDKBridge {
                 Set<String> existingTempMarkers = processManager.snapshotClaudeCwdFiles(processTempDir);
 
                 ProcessBuilder pb = new ProcessBuilder(command);
-                File workDir = directoryResolver.findSdkDir();
+                File workDir = getDirectoryResolver().findSdkDir();
                 pb.directory(workDir);
                 pb.redirectErrorStream(true);
 
@@ -503,7 +503,7 @@ public class ClaudeSDKBridge extends BaseSDKBridge {
                 }
 
                 String node = nodeDetector.findNodeExecutable();
-                File workDir = directoryResolver.findSdkDir();
+                File workDir = getDirectoryResolver().findSdkDir();
 
                 // Diagnostics
                 LOG.info("[ClaudeSDKBridge] Environment diagnostics:");
@@ -548,10 +548,10 @@ public class ClaudeSDKBridge extends BaseSDKBridge {
                     if (userWorkDir.exists() && userWorkDir.isDirectory()) {
                         pb.directory(userWorkDir);
                     } else {
-                        pb.directory(directoryResolver.findSdkDir());
+                        pb.directory(getDirectoryResolver().findSdkDir());
                     }
                 } else {
-                    pb.directory(directoryResolver.findSdkDir());
+                    pb.directory(getDirectoryResolver().findSdkDir());
                 }
 
                 Map<String, String> env = pb.environment();
@@ -748,7 +748,7 @@ public class ClaudeSDKBridge extends BaseSDKBridge {
             command.add(cwd != null ? cwd : "");
 
             ProcessBuilder pb = new ProcessBuilder(command);
-            File workDir = directoryResolver.findSdkDir();
+            File workDir = getDirectoryResolver().findSdkDir();
             pb.directory(workDir);
             pb.redirectErrorStream(true);
             envConfigurator.updateProcessEnvironment(pb, node);
@@ -815,7 +815,7 @@ public class ClaudeSDKBridge extends BaseSDKBridge {
 
                 List<String> command = new ArrayList<>();
                 command.add(node);
-                File bridgeDir = directoryResolver.findSdkDir();
+                File bridgeDir = getDirectoryResolver().findSdkDir();
                 command.add(new File(bridgeDir, CHANNEL_SCRIPT).getAbsolutePath());
                 command.add("claude");
                 command.add("getSlashCommands");
@@ -943,7 +943,7 @@ public class ClaudeSDKBridge extends BaseSDKBridge {
 
                 List<String> command = new ArrayList<>();
                 command.add(node);
-                File bridgeDir = directoryResolver.findSdkDir();
+                File bridgeDir = getDirectoryResolver().findSdkDir();
                 command.add(new File(bridgeDir, CHANNEL_SCRIPT).getAbsolutePath());
                 command.add("claude");
                 command.add("getMcpServerStatus");
