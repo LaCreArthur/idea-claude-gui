@@ -80,6 +80,7 @@ const providerHandlers = {
     // Dispatch based on provider
     const handler = providerHandlers[provider];
     await handler(command, args, stdinData);
+    process.exit(0);
 
   } catch (error) {
     console.error('[COMMAND_ERROR]', error.message);

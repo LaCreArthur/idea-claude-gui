@@ -765,5 +765,20 @@
     "execute": "执行计划",
     "planRejected": "计划已拒绝",
     "planApproved": "计划已批准，开始执行"
+  },
+  "rewind": {
+    "title": "回溯文件到之前的状态",
+    "tooltip": "将文件恢复到此消息时的状态",
+    "rewindTo": "回溯到",
+    "impact": "影响",
+    "willRestore": "将文件恢复到此消息时的状态",
+    "changesLost": "此消息之后的更改将丢失",
+    "messagesAffected": "条消息受影响",
+    "historyKept": "对话历史将保留",
+    "cannotUndo": "此操作无法撤销。",
+    "restoreFiles": "恢复文件",
+    "success": "文件恢复成功",
+    "failed": "文件恢复失败",
+    "notAvailable": "当前会话不支持回溯"
   }
 }

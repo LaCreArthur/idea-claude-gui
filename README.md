@@ -78,6 +78,12 @@ If you've used the Claude Code CLI before (`claude login`), the plugin **detects
 For full changelog, see [CHANGELOG.md](CHANGELOG.md)
 ---
 
+### Collaborative Contributing
+
+For contributing guidelines, please read [CONTRIBUTING.md](CONTRIBUTING.md)
+
+---
+
 
 ## Local Development and Debugging
 
@@ -202,9 +208,8 @@ Thanks to all contributors who help make IDEA-Claude-GUI better!
       </a>
     </td>
     <td align="center">
-      <a href="https://github.com/LaCreArthur">
-        <img src="https://github.com/LaCreArthur.png?size=100" width="100" height="100" alt="LaCreArthur" style="border-radius: 50%;" />
-        <div>🔥</div>
+      <a href="https://github.com/magic5295">
+        <img src="https://avatars.githubusercontent.com/u/157901486?size=100" width="100" height="100" alt="magic5295" style="border-radius: 50%;" />
       </a>
     </td>
   </tr>

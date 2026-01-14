@@ -396,6 +396,7 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
             messageDispatcher.registerHandler(new DiffHandler(handlerContext));
             messageDispatcher.registerHandler(new PromptEnhancerHandler(handlerContext));
             messageDispatcher.registerHandler(new AgentHandler(handlerContext));
+            messageDispatcher.registerHandler(new RewindHandler(handlerContext));
 
             // 权限处理器（需要特殊回调）
             this.permissionHandler = new PermissionHandler(handlerContext);
@@ -1093,6 +1094,10 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
                 @Override
                 public void onSessionIdReceived(String sessionId) {
                     LOG.info("Session ID: " + sessionId);
+                    // Send sessionId to frontend for rewind feature
+                    ApplicationManager.getApplication().invokeLater(() -> {
+                        callJavaScript("setSessionId", JsUtils.escapeJs(sessionId));
+                    });
                 }
 
                 @Override
