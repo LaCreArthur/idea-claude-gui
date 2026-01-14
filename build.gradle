@@ -179,6 +179,7 @@ tasks.named('runIde') {
 def aiBridgeDir = file("ai-bridge")
 def aiBridgePackDir = layout.buildDirectory.dir('ai-bridge-pack').get().asFile
 def aiBridgeArchive = new File(aiBridgePackDir, 'ai-bridge.zip')
+def aiBridgeHashFile = new File(aiBridgePackDir, 'ai-bridge.hash')
 
 // Auto-build webview
 def webviewDir = file('webview')
@@ -209,15 +210,59 @@ tasks.named('processResources') {
     mustRunAfter('buildWebview')
 }
 
-tasks.register('packageAiBridge', Zip) {
+// Package ai-bridge using system zip command to preserve file permissions
+tasks.register('packageAiBridge', Exec) {
     onlyIf { aiBridgeDir.exists() }
-    archiveFileName = 'ai-bridge.zip'
-    destinationDirectory = aiBridgePackDir
-    from(aiBridgeDir)
-    exclude('node_modules/.pnpm/**')
-    // Exclude codex-sdk multi-platform binaries (~310MB), runtime will auto-download platform-specific versions
-    exclude('node_modules/@openai/codex-sdk/vendor/**')
-    includeEmptyDirs = true
+
+    // Change to ai-bridge directory to avoid including top-level directory
+    workingDir aiBridgeDir
+
+    // Ensure output directory exists
+    doFirst {
+        aiBridgePackDir.mkdirs()
+        // Delete old zip file
+        if (aiBridgeArchive.exists()) {
+            aiBridgeArchive.delete()
+        }
+    }
+
+    // Use system zip command: -r recursive, -y preserve symlinks
+    if (System.getProperty('os.name').toLowerCase().contains('windows')) {
+        // Windows: Use PowerShell's Compress-Archive
+        // Use parameter array to prevent command injection
+        commandLine 'powershell', '-Command', 'Compress-Archive',
+            '-Path', '*',
+            '-DestinationPath', aiBridgeArchive.absolutePath,
+            '-Force'
+    } else {
+        // Unix/Linux/macOS: Use zip command to preserve permissions
+        commandLine 'zip', '-r', '-y', aiBridgeArchive.absolutePath,
+            '.',
+            '-x', '*/node_modules/.pnpm/*',
+            '-x', '*/node_modules/@openai/codex-sdk/vendor/*'
+    }
+
+    doLast {
+        if (aiBridgeArchive.exists()) {
+            println "ai-bridge.zip created: ${aiBridgeArchive.absolutePath}"
+            println "  Size: ${aiBridgeArchive.length() / 1024 / 1024} MB"
+
+            // Generate ai-bridge.hash file (SHA-256)
+            def digest = java.security.MessageDigest.getInstance('SHA-256')
+            aiBridgeArchive.withInputStream { is ->
+                byte[] buffer = new byte[8192]
+                int read
+                while ((read = is.read(buffer)) != -1) {
+                    digest.update(buffer, 0, read)
+                }
+            }
+            def hashHex = digest.digest().collect { String.format('%02x', it) }.join('')
+            aiBridgeHashFile.text = hashHex
+            println "ai-bridge.hash created: ${hashHex}"
+        } else {
+            throw new GradleException("Packaging failed: ai-bridge.zip not generated")
+        }
+    }
 }
 
 // Extract plugin name
@@ -226,9 +271,13 @@ def pluginName = project.name
 tasks.matching { it.name.startsWith('prepareSandbox') }.configureEach {
     dependsOn('buildWebview', 'packageAiBridge')
     def sandboxRootProvider = layout.buildDirectory.dir('idea-sandbox')
+    // 在配置阶段捕获需要的文件引用
+    def archiveSource = aiBridgeArchive
+    def hashSource = aiBridgeHashFile
+    def bridgeDir = aiBridgeDir
 
     doLast {
-        if (!aiBridgeDir.exists() && !aiBridgeArchive.exists()) {
+        if (!bridgeDir.exists() && !archiveSource.exists()) {
             throw new GradleException('ai-bridge directory not found. Please ensure it has been pulled and dependencies installed.')
         }
         def sandboxRoot = sandboxRootProvider.get().asFile
@@ -236,11 +285,15 @@ tasks.matching { it.name.startsWith('prepareSandbox') }.configureEach {
 
         def extractedDir = new File(pluginDir, 'ai-bridge')
         def archiveTarget = new File(pluginDir, 'ai-bridge.zip')
-        project.delete(extractedDir)
-        project.delete(archiveTarget)
-        project.copy {
-            from(aiBridgeArchive)
-            into(pluginDir)
+        def hashTarget = new File(pluginDir, 'ai-bridge.hash')
+
+        // 使用 ant 任务删除和复制，避免使用 project.* 方法
+        ant.delete(dir: extractedDir, failonerror: false)
+        ant.delete(file: archiveTarget, failonerror: false)
+        ant.delete(file: hashTarget, failonerror: false)
+        ant.copy(file: archiveSource, todir: pluginDir)
+        if (hashSource.exists()) {
+            ant.copy(file: hashSource, todir: pluginDir)
         }
     }
 }
@@ -254,7 +307,7 @@ tasks.named('buildPlugin') {
     dependsOn('packageAiBridge', 'checkstyleMain')
 
     doLast {
-        // Extract plugin zip, add ai-bridge.zip, then repack
+        // Extract plugin zip, add ai-bridge.zip and ai-bridge.hash, then repack
         def distributionFile = archiveFile.get().asFile
         if (distributionFile.exists() && aiBridgeArchive.exists()) {
             def tempDir = file("${layout.buildDirectory.get()}/tmp/plugin-repack")
@@ -266,11 +319,12 @@ tasks.named('buildPlugin') {
                 into tempDir
             }
 
-            // Find plugin directory and add ai-bridge.zip
+            // Find plugin directory and add ai-bridge.zip and ai-bridge.hash
             def pluginDir = new File(tempDir, pluginName)
             if (pluginDir.exists()) {
                 copy {
                     from aiBridgeArchive
+                    from aiBridgeHashFile
                     into pluginDir
                 }
 
@@ -287,7 +341,7 @@ tasks.named('buildPlugin') {
                 ant.zip(destfile: distributionFile) {
                     fileset(dir: tempDir)
                 }
-                println "Added ai-bridge.zip to plugin package and removed searchableOptions jar"
+                println "Added ai-bridge.zip and ai-bridge.hash to plugin package and removed searchableOptions jar"
             }
 
             delete(tempDir)
