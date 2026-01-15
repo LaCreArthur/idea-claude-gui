@@ -121,19 +121,19 @@ Each iteration:
 
 ## Section 12: Replace Translations in React Components (Batch 6 - Remaining)
 
-- [ ] Remove i18n from `webview/src/components/MarkdownBlock.tsx`
-- [ ] Remove i18n from `webview/src/components/PermissionDialog.tsx`
-- [ ] Remove i18n from `webview/src/components/ConfirmDialog.tsx`
-- [ ] Remove i18n from `webview/src/components/ProviderDialog.tsx`
-- [ ] Remove i18n from `webview/src/components/AgentDialog.tsx`
-- [ ] Remove i18n from `webview/src/components/AskUserQuestionDialog.tsx`
-- [ ] Remove i18n from `webview/src/components/PlanApprovalDialog.tsx`
-- [ ] Remove i18n from `webview/src/components/RewindDialog.tsx`
-- [ ] Remove i18n from `webview/src/components/RewindSelectDialog.tsx`
-- [ ] Remove i18n from `webview/src/components/ScrollControl.tsx`
-- [ ] Remove i18n from `webview/src/components/WaitingIndicator.tsx`
-- [ ] Remove i18n from `webview/src/components/BlinkingLogo/index.tsx`
-- [ ] Remove i18n from `webview/src/components/UsageStatisticsSection.tsx`
+- [x] Remove i18n from `webview/src/components/MarkdownBlock.tsx` ✓
+- [x] Remove i18n from `webview/src/components/PermissionDialog.tsx` ✓
+- [x] Remove i18n from `webview/src/components/ConfirmDialog.tsx` ✓ (already clean - uses props)
+- [x] Remove i18n from `webview/src/components/ProviderDialog.tsx` ✓
+- [x] Remove i18n from `webview/src/components/AgentDialog.tsx` ✓
+- [x] Remove i18n from `webview/src/components/AskUserQuestionDialog.tsx` ✓
+- [x] Remove i18n from `webview/src/components/PlanApprovalDialog.tsx` ✓
+- [x] Remove i18n from `webview/src/components/RewindDialog.tsx` ✓
+- [x] Remove i18n from `webview/src/components/RewindSelectDialog.tsx` ✓
+- [x] Remove i18n from `webview/src/components/ScrollControl.tsx` ✓
+- [x] Remove i18n from `webview/src/components/WaitingIndicator.tsx` ✓
+- [x] Remove i18n from `webview/src/components/BlinkingLogo/index.tsx` ✓ (also simplified to Claude-only)
+- [x] Remove i18n from `webview/src/components/UsageStatisticsSection.tsx` ✓
 
 ## Section 13: Remove Codex from Types
 

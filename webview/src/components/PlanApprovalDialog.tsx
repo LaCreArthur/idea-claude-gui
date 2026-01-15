@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import ReactMarkdown from 'react-markdown';
 import './PlanApprovalDialog.css';
 
@@ -23,7 +22,6 @@ const PlanApprovalDialog = ({
   onApprove,
   onReject,
 }: PlanApprovalDialogProps) => {
-  const { t } = useTranslation();
   const [selectedMode, setSelectedMode] = useState<ExecutionMode>('default');
 
   useEffect(() => {
@@ -53,21 +51,18 @@ const PlanApprovalDialog = ({
     onReject(request.requestId);
   };
 
-  const modeOptions: { id: ExecutionMode; labelKey: string; descKey: string }[] = [
+  const modeOptions: { id: ExecutionMode; label: string }[] = [
     {
       id: 'default',
-      labelKey: 'planApproval.modeDefault',
-      descKey: 'Default (confirm each action)',
+      label: 'Default (confirm each action)',
     },
     {
       id: 'acceptEdits',
-      labelKey: 'planApproval.modeAcceptEdits',
-      descKey: 'Accept Edits (auto-approve file changes)',
+      label: 'Accept Edits (auto-approve file changes)',
     },
     {
       id: 'bypassPermissions',
-      labelKey: 'planApproval.modeBypass',
-      descKey: 'Full Auto (bypass all permissions)',
+      label: 'Full Auto (bypass all permissions)',
     },
   ];
 
@@ -78,13 +73,13 @@ const PlanApprovalDialog = ({
         <div className="plan-approval-dialog-header">
           <span className="codicon codicon-tasklist plan-approval-icon"></span>
           <h3 className="plan-approval-dialog-title">
-            {t('planApproval.title', 'Plan Ready for Review')}
+            Plan Ready for Review
           </h3>
         </div>
 
         {/* Subtitle */}
         <div className="plan-approval-dialog-subtitle">
-          {t('planApproval.subtitle', 'Claude has created a plan. Review and approve to start execution.')}
+          Claude has created a plan. Review and approve to start execution.
         </div>
 
         {/* Plan content */}
@@ -97,7 +92,7 @@ const PlanApprovalDialog = ({
         {/* Mode selector */}
         <div className="plan-approval-dialog-mode-section">
           <div className="plan-approval-mode-label">
-            {t('planApproval.executeWith', 'Execute with mode:')}
+            Execute with mode:
           </div>
           <div className="plan-approval-mode-options">
             {modeOptions.map((option) => (
@@ -108,7 +103,7 @@ const PlanApprovalDialog = ({
               >
                 <span className={`codicon codicon-${selectedMode === option.id ? 'circle-filled' : 'circle-outline'}`} />
                 <span className="mode-option-text">
-                  {t(option.labelKey, option.descKey)}
+                  {option.label}
                 </span>
               </button>
             ))}
@@ -121,7 +116,7 @@ const PlanApprovalDialog = ({
             className="action-button secondary"
             onClick={handleReject}
           >
-            {t('planApproval.reject', 'Reject')}
+            Reject
           </button>
 
           <button
@@ -129,7 +124,7 @@ const PlanApprovalDialog = ({
             onClick={handleApprove}
           >
             <span className="codicon codicon-play"></span>
-            {t('planApproval.execute', 'Execute Plan')}
+            Execute Plan
           </button>
         </div>
       </div>

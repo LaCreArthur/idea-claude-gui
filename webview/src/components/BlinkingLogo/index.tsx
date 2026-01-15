@@ -1,6 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Claude, OpenAI, Gemini } from '@lobehub/icons';
+import { Claude } from '@lobehub/icons';
 import styles from './style.module.less';
 import { AVAILABLE_PROVIDERS } from '../ChatInputBox/types';
 
@@ -9,24 +8,10 @@ interface BlinkingLogoProps {
   onProviderChange?: (providerId: string) => void;
 }
 
-const ProviderIcon = ({ providerId, size = 16, colored = false }: { providerId: string; size?: number; colored?: boolean }) => {
-  switch (providerId) {
-    case 'claude':
-      return colored ? <Claude.Color size={size} /> : <Claude.Avatar size={size} />;
-    case 'codex':
-      return <OpenAI.Avatar size={size} />;
-    case 'gemini':
-      return colored ? <Gemini.Color size={size} /> : <Gemini.Avatar size={size} />;
-    default:
-      return colored ? <Claude.Color size={size} /> : <Claude.Avatar size={size} />;
-  }
-};
-
 export const BlinkingLogo = ({ provider, onProviderChange }: BlinkingLogoProps) => {
-  const { t } = useTranslation();
   const [displayProvider, setDisplayProvider] = useState(provider);
   const [animationState, setAnimationState] = useState<'idle' | 'closing' | 'opening'>('idle');
-  
+
   // Dropdown state
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -46,7 +31,7 @@ export const BlinkingLogo = ({ provider, onProviderChange }: BlinkingLogoProps) 
 
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>;
-    
+
     if (animationState === 'closing') {
       timer = setTimeout(() => {
         setDisplayProvider(provider);
@@ -96,25 +81,26 @@ export const BlinkingLogo = ({ provider, onProviderChange }: BlinkingLogoProps) 
     setIsOpen(false);
   };
 
+  // Provider labels - Claude only
+  const PROVIDER_LABELS: Record<string, string> = {
+    claude: 'Claude Code',
+  };
+
   const getProviderLabel = (providerId: string) => {
-    return t(`providers.${providerId}.label`);
+    return PROVIDER_LABELS[providerId] || providerId;
   };
 
   return (
     <div style={{ position: 'relative', display: 'inline-flex', flexDirection: 'column', alignItems: 'center' }}>
-      <div 
+      <div
         ref={containerRef}
         className={`${styles.container} ${styles[animationState]}`}
         onClick={handleToggle}
         style={{ cursor: onProviderChange ? 'pointer' : 'default' }}
       >
-        {displayProvider === 'codex' ? (
-          <OpenAI.Avatar size={64} />
-        ) : (
-          <Claude.Color size={58} />
-        )}
+        <Claude.Color size={58} />
       </div>
-      
+
       {isOpen && (
         <div
           ref={dropdownRef}
@@ -128,7 +114,7 @@ export const BlinkingLogo = ({ provider, onProviderChange }: BlinkingLogoProps) 
             zIndex: 10000,
           }}
         >
-          {AVAILABLE_PROVIDERS.map((p) => (
+          {AVAILABLE_PROVIDERS.filter(p => p.id === 'claude').map((p) => (
             <div
               key={p.id}
               className={`selector-option ${p.id === provider ? 'selected' : ''} ${!p.enabled ? 'disabled' : ''}`}
@@ -141,7 +127,7 @@ export const BlinkingLogo = ({ provider, onProviderChange }: BlinkingLogoProps) 
                 cursor: p.enabled ? 'pointer' : 'not-allowed',
               }}
             >
-              <ProviderIcon providerId={p.id} size={16} colored={true} />
+              <Claude.Color size={16} />
               <span>{getProviderLabel(p.id)}</span>
               {p.id === provider && (
                 <span className="codicon codicon-check check-mark" />

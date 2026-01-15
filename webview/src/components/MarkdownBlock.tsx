@@ -1,12 +1,11 @@
 import { marked } from 'marked';
 import { useMemo, useState, useRef } from 'react';
-import { useTranslation } from 'react-i18next';
 import { openBrowser, openFile } from '../utils/bridge';
 import hljs from 'highlight.js';
 import 'highlight.js/styles/github-dark.css';
 import { markedHighlight } from 'marked-highlight';
 
-// 配置 marked 使用语法高亮
+// Configure marked to use syntax highlighting
 marked.use(
   markedHighlight({
     highlight(code: string, lang: string) {
@@ -29,15 +28,14 @@ marked.setOptions({
 
 interface MarkdownBlockProps {
   content?: string;
-  isStreaming?: boolean; // App.tsx 传递的属性，MarkdownBlock 不使用
+  isStreaming?: boolean;
 }
 
 const MarkdownBlock = ({ content = '' }: MarkdownBlockProps) => {
   const [previewSrc, setPreviewSrc] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const { t, i18n } = useTranslation();
 
-  // 复制图标 SVG
+  // Copy icon SVG
   const copyIconSvg = `
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M4 4l0 8a2 2 0 0 0 2 2l8 0a2 2 0 0 0 2 -2l0 -8a2 2 0 0 0 -2 -2l-8 0a2 2 0 0 0 -2 2zm2 0l8 0l0 8l-8 0l0 -8z" fill="currentColor" fill-opacity="0.9"/>
@@ -45,7 +43,7 @@ const MarkdownBlock = ({ content = '' }: MarkdownBlockProps) => {
     </svg>
   `;
 
-  // 复制功能实现
+  // Copy to clipboard implementation
   const copyToClipboard = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -73,9 +71,9 @@ const MarkdownBlock = ({ content = '' }: MarkdownBlockProps) => {
 
   const html = useMemo(() => {
     try {
-      // 去除内容末尾的换行符，避免产生额外空白
+      // Remove trailing newlines to avoid extra whitespace
       const trimmedContent = content.replace(/[\r\n]+$/, '');
-      // marked.parse 返回的 HTML 末尾可能有换行符，也需要去除
+      // marked.parse may return HTML with trailing newlines, remove them too
       const parsed = marked.parse(trimmedContent);
       const rawHtml = typeof parsed === 'string' ? parsed.trim() : String(parsed);
 
@@ -85,8 +83,6 @@ const MarkdownBlock = ({ content = '' }: MarkdownBlockProps) => {
 
       const doc = new DOMParser().parseFromString(rawHtml, 'text/html');
       const pres = doc.querySelectorAll('pre');
-      const copySuccessText = t('markdown.copySuccess');
-      const copyCodeTitle = t('markdown.copyCode');
 
       pres.forEach((pre) => {
         const parent = pre.parentElement;
@@ -103,8 +99,8 @@ const MarkdownBlock = ({ content = '' }: MarkdownBlockProps) => {
         const btn = doc.createElement('button');
         btn.type = 'button';
         btn.className = 'copy-code-btn';
-        btn.title = copyCodeTitle;
-        btn.setAttribute('aria-label', copyCodeTitle);
+        btn.title = 'Copy code';
+        btn.setAttribute('aria-label', 'Copy code');
 
         const iconSpan = doc.createElement('span');
         iconSpan.className = 'copy-icon';
@@ -112,7 +108,7 @@ const MarkdownBlock = ({ content = '' }: MarkdownBlockProps) => {
 
         const tooltipSpan = doc.createElement('span');
         tooltipSpan.className = 'copy-tooltip';
-        tooltipSpan.textContent = copySuccessText;
+        tooltipSpan.textContent = 'Copied!';
 
         btn.appendChild(iconSpan);
         btn.appendChild(tooltipSpan);
@@ -125,7 +121,7 @@ const MarkdownBlock = ({ content = '' }: MarkdownBlockProps) => {
       console.error('[MarkdownBlock] Failed to parse markdown', error);
       return content;
     }
-  }, [content, i18n.language, t]);
+  }, [content]);
 
   const handleClick = async (event: React.MouseEvent<HTMLDivElement>) => {
     const target = event.target as HTMLElement;
@@ -195,7 +191,7 @@ const MarkdownBlock = ({ content = '' }: MarkdownBlockProps) => {
           <button
             className="image-preview-close"
             onClick={() => setPreviewSrc(null)}
-            title={t('chat.closePreview')}
+            title="Close preview"
           >
             ×
           </button>

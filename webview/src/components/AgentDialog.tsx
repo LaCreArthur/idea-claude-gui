@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
 import type { AgentConfig } from '../types/agent';
 
 interface AgentDialogProps {
   isOpen: boolean;
-  agent?: AgentConfig | null; // null 表示添加模式
+  agent?: AgentConfig | null;
   onClose: () => void;
   onSave: (data: { name: string; prompt: string }) => void;
 }
@@ -15,22 +14,21 @@ export default function AgentDialog({
   onClose,
   onSave,
 }: AgentDialogProps) {
-  const { t } = useTranslation();
   const isAdding = !agent;
 
   const [name, setName] = useState('');
   const [prompt, setPrompt] = useState('');
   const [nameError, setNameError] = useState('');
 
-  // 初始化表单
+  // Initialize form
   useEffect(() => {
     if (isOpen) {
       if (agent) {
-        // 编辑模式
+        // Edit mode
         setName(agent.name || '');
         setPrompt(agent.prompt || '');
       } else {
-        // 添加模式
+        // Add mode
         setName('');
         setPrompt('');
       }
@@ -38,7 +36,7 @@ export default function AgentDialog({
     }
   }, [isOpen, agent]);
 
-  // ESC 键关闭
+  // ESC key to close
   useEffect(() => {
     if (isOpen) {
       const handleEscape = (e: KeyboardEvent) => {
@@ -49,11 +47,11 @@ export default function AgentDialog({
       window.addEventListener('keydown', handleEscape);
       return () => window.removeEventListener('keydown', handleEscape);
     }
-  }, [isOpen]); // Remove onClose from dependencies - it's stable from props
+  }, [isOpen]);
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    // 限制最多20字符
+    // Limit to 20 characters
     if (value.length <= 20) {
       setName(value);
       setNameError('');
@@ -62,16 +60,16 @@ export default function AgentDialog({
 
   const handlePromptChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
-    // 限制最多10000字符
+    // Limit to 10000 characters
     if (value.length <= 10000) {
       setPrompt(value);
     }
   };
 
   const handleSave = () => {
-    // 验证名称
+    // Validate name
     if (!name.trim()) {
-      setNameError(t('settings.agent.dialog.nameRequired'));
+      setNameError('Please enter agent name');
       return;
     }
 
@@ -89,7 +87,7 @@ export default function AgentDialog({
     <div className="dialog-overlay">
       <div className="dialog agent-dialog">
         <div className="dialog-header">
-          <h3>{isAdding ? t('settings.agent.dialog.addTitle') : t('settings.agent.dialog.editTitle')}</h3>
+          <h3>{isAdding ? 'Create Agent' : 'Edit Agent'}</h3>
           <button className="close-btn" onClick={onClose}>
             <span className="codicon codicon-close"></span>
           </button>
@@ -98,7 +96,7 @@ export default function AgentDialog({
         <div className="dialog-body">
           <div className="form-group">
             <label htmlFor="agentName">
-              {t('settings.agent.dialog.name')}
+              Name
               <span className="required">*</span>
             </label>
             <div className="input-with-counter">
@@ -106,7 +104,7 @@ export default function AgentDialog({
                 id="agentName"
                 type="text"
                 className={`form-input ${nameError ? 'has-error' : ''}`}
-                placeholder={t('settings.agent.dialog.namePlaceholder')}
+                placeholder="Enter agent name"
                 value={name}
                 onChange={handleNameChange}
                 maxLength={20}
@@ -123,13 +121,13 @@ export default function AgentDialog({
 
           <div className="form-group">
             <label htmlFor="agentPrompt">
-              {t('settings.agent.dialog.prompt')}
+              Prompt
             </label>
             <div className="textarea-with-counter">
               <textarea
                 id="agentPrompt"
                 className="form-textarea"
-                placeholder={t('settings.agent.dialog.promptPlaceholder')}
+                placeholder="Enter the agent's role, tone, workflow, tool preferences and rules. (Optional)"
                 value={prompt}
                 onChange={handlePromptChange}
                 maxLength={10000}
@@ -137,7 +135,7 @@ export default function AgentDialog({
               />
               <span className="char-counter">{prompt.length}/10000</span>
             </div>
-            <small className="form-hint">{t('settings.agent.dialog.promptHint')}</small>
+            <small className="form-hint">The prompt will be sent to AI as system instructions at the start of conversation</small>
           </div>
         </div>
 
@@ -145,11 +143,11 @@ export default function AgentDialog({
           <div className="footer-actions" style={{ marginLeft: 'auto' }}>
             <button className="btn btn-secondary" onClick={onClose}>
               <span className="codicon codicon-close" />
-              {t('common.cancel')}
+              Cancel
             </button>
             <button className="btn btn-primary" onClick={handleSave}>
               <span className="codicon codicon-save" />
-              {isAdding ? t('settings.agent.dialog.confirmAdd') : t('settings.agent.dialog.saveChanges')}
+              {isAdding ? 'Create' : 'Save'}
             </button>
           </div>
         </div>

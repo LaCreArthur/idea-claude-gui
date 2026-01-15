@@ -1,5 +1,4 @@
 import { useEffect, useMemo } from 'react';
-import { useTranslation } from 'react-i18next';
 import type { ClaudeMessage } from '../types';
 
 export interface RewindableMessage {
@@ -23,8 +22,6 @@ const RewindSelectDialog = ({
   onSelect,
   onCancel,
 }: RewindSelectDialogProps) => {
-  const { t } = useTranslation();
-
   useEffect(() => {
     if (isOpen) {
       const handleEscape = (e: KeyboardEvent) => {
@@ -59,13 +56,13 @@ const RewindSelectDialog = ({
       <div className="confirm-dialog rewind-select-dialog" onClick={(e) => e.stopPropagation()}>
         <div className="confirm-dialog-header">
           <h3 className="confirm-dialog-title">
-            <span className="rewind-icon">&#x21BA;</span> {t('rewind.selectTitle', '选择回溯点')}
+            <span className="rewind-icon">&#x21BA;</span> Select Rewind Point
           </h3>
         </div>
         <div className="confirm-dialog-body rewind-select-body">
           {sortedMessages.length === 0 ? (
             <div className="rewind-select-empty">
-              {t('rewind.noRewindableMessages', '当前会话中没有可回溯的消息')}
+              No rewindable messages in this session
             </div>
           ) : (
             <div className="rewind-select-list">
@@ -83,7 +80,7 @@ const RewindSelectDialog = ({
                   </div>
                   <div className="rewind-select-item-meta">
                     <span className="rewind-select-affected">
-                      {item.messagesAfterCount} {t('rewind.messagesAffected', '条消息受影响')}
+                      {item.messagesAfterCount} messages affected
                     </span>
                   </div>
                 </div>
@@ -93,7 +90,7 @@ const RewindSelectDialog = ({
         </div>
         <div className="confirm-dialog-footer">
           <button className="confirm-dialog-button cancel-button" onClick={onCancel}>
-            {t('common.cancel', 'Cancel')}
+            Cancel
           </button>
         </div>
       </div>

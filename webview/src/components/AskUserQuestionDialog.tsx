@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import './AskUserQuestionDialog.css';
 
 export interface QuestionOption {
@@ -33,7 +32,6 @@ const AskUserQuestionDialog = ({
   onSubmit,
   onCancel,
 }: AskUserQuestionDialogProps) => {
-  const { t } = useTranslation();
   // Store answers for each question: question -> selectedLabel(s)
   const [answers, setAnswers] = useState<Record<string, Set<string>>>({});
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -56,7 +54,7 @@ const AskUserQuestionDialog = ({
       window.addEventListener('keydown', handleKeyDown);
       return () => window.removeEventListener('keydown', handleKeyDown);
     }
-  }, [isOpen]); // Remove 'request' from dependencies to prevent re-registering listeners
+  }, [isOpen]);
 
   if (!isOpen || !request) {
     return null;
@@ -129,13 +127,10 @@ const AskUserQuestionDialog = ({
       <div className="ask-user-question-dialog">
         {/* Title area */}
         <h3 className="ask-user-question-dialog-title">
-          {t('askUserQuestion.title', 'Claude has some questions for you')}
+          Claude has some questions for you
         </h3>
         <div className="ask-user-question-dialog-progress">
-          {t('askUserQuestion.progress', 'Question {{current}} / {{total}}', {
-            current: currentQuestionIndex + 1,
-            total: request.questions.length,
-          })}
+          Question {currentQuestionIndex + 1} / {request.questions.length}
         </div>
 
         {/* Question area */}
@@ -174,7 +169,7 @@ const AskUserQuestionDialog = ({
           {/* Hint text */}
           {currentQuestion.multiSelect && (
             <p className="question-hint">
-              {t('askUserQuestion.multiSelectHint', 'You can select multiple options')}
+              You can select multiple options
             </p>
           )}
         </div>
@@ -185,7 +180,7 @@ const AskUserQuestionDialog = ({
             className="action-button secondary"
             onClick={handleCancel}
           >
-            {t('askUserQuestion.cancel', 'Cancel')}
+            Cancel
           </button>
 
           <div className="action-buttons-right">
@@ -194,7 +189,7 @@ const AskUserQuestionDialog = ({
                 className="action-button secondary"
                 onClick={handleBack}
               >
-                {t('askUserQuestion.back', 'Back')}
+                Back
               </button>
             )}
 
@@ -203,9 +198,7 @@ const AskUserQuestionDialog = ({
               onClick={handleNext}
               disabled={!canProceed}
             >
-              {isLastQuestion
-                ? t('askUserQuestion.submit', 'Submit')
-                : t('askUserQuestion.next', 'Next')}
+              {isLastQuestion ? 'Submit' : 'Next'}
             </button>
           </div>
         </div>

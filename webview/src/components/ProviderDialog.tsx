@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
 import type { ProviderConfig } from '../types/provider';
 
 interface ProviderDialogProps {
   isOpen: boolean;
-  provider?: ProviderConfig | null; // null 表示添加模式
+  provider?: ProviderConfig | null;
   onClose: () => void;
   onSave: (data: {
     providerName: string;
@@ -27,9 +26,8 @@ export default function ProviderDialog({
   canDelete: _canDelete = true,
   addToast: _addToast,
 }: ProviderDialogProps) {
-  const { t } = useTranslation();
   const isAdding = !provider;
-  
+
   const [providerName, setProviderName] = useState('');
   const [remark, setRemark] = useState('');
   const [apiKey, setApiKey] = useState('');
@@ -64,26 +62,25 @@ export default function ProviderDialog({
     }
   };
 
-  // 格式化 JSON
+  // Format JSON
   const handleFormatJson = () => {
     try {
       const parsed = JSON.parse(jsonConfig);
       setJsonConfig(JSON.stringify(parsed, null, 2));
       setJsonError('');
     } catch (err) {
-      setJsonError(t('settings.provider.dialog.jsonError'));
+      setJsonError('Invalid JSON format');
     }
   };
 
-  // 初始化表单
+  // Initialize form
   useEffect(() => {
     if (isOpen) {
       if (provider) {
-        // 编辑模式
+        // Edit mode
         setProviderName(provider.name || '');
         setRemark(provider.remark || provider.websiteUrl || '');
         setApiKey(provider.settingsConfig?.env?.ANTHROPIC_AUTH_TOKEN || provider.settingsConfig?.env?.ANTHROPIC_API_KEY || '');
-        // 编辑模式下不填充默认值，避免覆盖用户实际使用的第三方代理 URL
         setApiUrl(provider.settingsConfig?.env?.ANTHROPIC_BASE_URL || '');
         const env = provider.settingsConfig?.env || {};
 
@@ -103,7 +100,7 @@ export default function ProviderDialog({
         };
         setJsonConfig(JSON.stringify(config, null, 2));
       } else {
-        // 添加模式
+        // Add mode
         setProviderName('');
         setRemark('');
         setApiKey('');
@@ -129,7 +126,7 @@ export default function ProviderDialog({
     }
   }, [isOpen, provider]);
 
-  // ESC 键关闭
+  // ESC key to close
   useEffect(() => {
     if (isOpen) {
       const handleEscape = (e: KeyboardEvent) => {
@@ -154,8 +151,6 @@ export default function ProviderDialog({
     updateEnvField('ANTHROPIC_BASE_URL', newApiUrl);
   };
 
-
-
   const handleHaikuModelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setHaikuModel(value);
@@ -177,7 +172,7 @@ export default function ProviderDialog({
   const handleJsonChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newJson = e.target.value;
     setJsonConfig(newJson);
-    
+
     try {
       const config = JSON.parse(newJson);
       const env = config.env || {};
@@ -195,8 +190,6 @@ export default function ProviderDialog({
       } else {
         setApiUrl('');
       }
-
-
 
       if (Object.prototype.hasOwnProperty.call(env, 'ANTHROPIC_DEFAULT_HAIKU_MODEL')) {
         setHaikuModel(env.ANTHROPIC_DEFAULT_HAIKU_MODEL || '');
@@ -217,7 +210,7 @@ export default function ProviderDialog({
       }
       setJsonError('');
     } catch (err) {
-      setJsonError(t('settings.provider.dialog.jsonError'));
+      setJsonError('Invalid JSON format');
     }
   };
 
@@ -239,7 +232,7 @@ export default function ProviderDialog({
     <div className="dialog-overlay">
       <div className="dialog provider-dialog">
         <div className="dialog-header">
-          <h3>{isAdding ? t('settings.provider.dialog.addTitle') : t('settings.provider.dialog.editTitle', { name: provider?.name })}</h3>
+          <h3>{isAdding ? 'Add Provider' : `Edit Provider: ${provider?.name}`}</h3>
           <button className="close-btn" onClick={onClose}>
             <span className="codicon codicon-close"></span>
           </button>
@@ -247,31 +240,31 @@ export default function ProviderDialog({
 
         <div className="dialog-body">
           <p className="dialog-desc">
-            {isAdding ? t('settings.provider.dialog.addDescription') : t('settings.provider.dialog.editDescription')}
+            {isAdding ? 'Configure new provider information' : 'Changes will be applied immediately to the current provider.'}
           </p>
 
           <div className="form-group">
             <label htmlFor="providerName">
-              {t('settings.provider.dialog.providerName')}
-              <span className="required">{t('settings.provider.dialog.required')}</span>
+              Provider Name
+              <span className="required">*</span>
             </label>
             <input
               id="providerName"
               type="text"
               className="form-input"
-              placeholder={t('settings.provider.dialog.providerNamePlaceholder')}
+              placeholder="e.g., Claude Official"
               value={providerName}
               onChange={(e) => setProviderName(e.target.value)}
             />
           </div>
 
           <div className="form-group">
-            <label htmlFor="remark">{t('settings.provider.dialog.remark')}</label>
+            <label htmlFor="remark">Remark</label>
             <input
               id="remark"
               type="text"
               className="form-input"
-              placeholder={t('settings.provider.dialog.remarkPlaceholder')}
+              placeholder="Optional"
               value={remark}
               onChange={(e) => setRemark(e.target.value)}
             />
@@ -279,14 +272,14 @@ export default function ProviderDialog({
 
           <div className="form-group">
             <label htmlFor="apiKey">
-              {t('settings.provider.dialog.apiKey')}
+              API Key
             </label>
             <div className="input-with-visibility">
               <input
                 id="apiKey"
                 type={showApiKey ? 'text' : 'password'}
                 className="form-input"
-                placeholder={t('settings.provider.dialog.apiKeyPlaceholder')}
+                placeholder="sk-ant-..."
                 value={apiKey}
                 onChange={handleApiKeyChange}
               />
@@ -294,106 +287,94 @@ export default function ProviderDialog({
                 type="button"
                 className="visibility-toggle"
                 onClick={() => setShowApiKey(!showApiKey)}
-                title={showApiKey ? t('settings.provider.dialog.hideApiKey') : t('settings.provider.dialog.showApiKey')}
+                title={showApiKey ? 'Hide' : 'Show'}
               >
                 <span className={`codicon ${showApiKey ? 'codicon-eye-closed' : 'codicon-eye'}`} />
               </button>
             </div>
             <small className="form-hint">
-              {t('settings.provider.dialog.apiKeyHint')} {t('settings.provider.dialog.apiKeyOptionalHint')}
+              Please enter your API Key. Optional if you've logged in via `claude login`.
             </small>
           </div>
 
           <div className="form-group">
             <label htmlFor="apiUrl">
-              {t('settings.provider.dialog.apiUrl')}
-              <span className="required">{t('settings.provider.dialog.required')}</span>
+              API Endpoint
+              <span className="required">*</span>
             </label>
             <input
               id="apiUrl"
               type="text"
               className="form-input"
-              placeholder={t('settings.provider.dialog.apiUrlPlaceholder')}
+              placeholder="https://api.anthropic.com"
               value={apiUrl}
               onChange={handleApiUrlChange}
             />
             <small className="form-hint">
               <span className="codicon codicon-info" style={{ fontSize: '12px', marginRight: '4px' }} />
-              {t('settings.provider.dialog.apiUrlHint')}
+              Enter Claude API compatible service endpoint address
             </small>
           </div>
 
           <div className="form-group">
-            <label>{t('settings.provider.dialog.modelMapping')}</label>
+            <label>Model Mapping (will be injected into JSON env)</label>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div>
-                <label htmlFor="sonnetModel">{t('settings.provider.dialog.sonnetModel')}</label>
+                <label htmlFor="sonnetModel">Sonnet Default Model</label>
                 <input
                   id="sonnetModel"
                   type="text"
                   className="form-input"
-                  placeholder={t('settings.provider.dialog.sonnetModelPlaceholder')}
+                  placeholder="e.g., claude-sonnet-4-5"
                   value={sonnetModel}
                   onChange={handleSonnetModelChange}
                 />
               </div>
               <div>
-                <label htmlFor="opusModel">{t('settings.provider.dialog.opusModel')}</label>
+                <label htmlFor="opusModel">Opus Default Model</label>
                 <input
                   id="opusModel"
                   type="text"
                   className="form-input"
-                  placeholder={t('settings.provider.dialog.opusModelPlaceholder')}
+                  placeholder="e.g., claude-opus-4-5-20251101"
                   value={opusModel}
                   onChange={handleOpusModelChange}
                 />
               </div>
               <div>
-                <label htmlFor="haikuModel">{t('settings.provider.dialog.haikuModel')}</label>
+                <label htmlFor="haikuModel">Haiku Default Model</label>
                 <input
                   id="haikuModel"
                   type="text"
                   className="form-input"
-                  placeholder={t('settings.provider.dialog.haikuModelPlaceholder')}
+                  placeholder="e.g., claude-haiku-4-5"
                   value={haikuModel}
                   onChange={handleHaikuModelChange}
                 />
               </div>
             </div>
-            <small className="form-hint">{t('settings.provider.dialog.modelMappingHint')}</small>
+            <small className="form-hint">Optional: Specify default Claude models to use. Leave empty for system defaults.</small>
           </div>
-
-          {/* 高级选项 - 暂时隐藏，后续会使用 */}
-          {/* <details className="advanced-section">
-            <summary className="advanced-toggle">
-              <span className="codicon codicon-chevron-right" />
-              高级选项
-            </summary>
-            <div style={{ padding: '10px 0', color: '#858585', fontSize: '13px' }}>
-              暂无高级选项
-            </div>
-          </details> */}
 
           <details className="advanced-section" open>
             <summary className="advanced-toggle">
               <span className="codicon codicon-chevron-right" />
-              {t('settings.provider.dialog.jsonConfig')}
+              JSON Configuration
             </summary>
             <div className="json-config-section">
               <p className="section-desc" style={{ marginBottom: '12px', fontSize: '12px', color: '#999' }}>
-                {t('settings.provider.dialog.jsonConfigDescription')}
+                Configure complete settings.json content here, supporting all fields (e.g., model, alwaysThinkingEnabled, ccSwitchProviderId, codemossProviderId, etc.)
               </p>
 
-              {/* 工具栏 */}
               <div className="json-toolbar">
                 <button
                   type="button"
                   className="format-btn"
                   onClick={handleFormatJson}
-                  title={t('settings.provider.dialog.formatJson') || 'Format JSON'}
+                  title="Format JSON"
                 >
                   <span className="codicon codicon-symbol-keyword" />
-                  {t('settings.provider.dialog.formatJson') || 'Format'}
+                  Format
                 </button>
               </div>
 
@@ -433,11 +414,11 @@ export default function ProviderDialog({
           <div className="footer-actions" style={{ marginLeft: 'auto' }}>
             <button className="btn btn-secondary" onClick={onClose}>
               <span className="codicon codicon-close" />
-              {t('common.cancel')}
+              Cancel
             </button>
             <button className="btn btn-primary" onClick={handleSave}>
               <span className="codicon codicon-save" />
-              {isAdding ? t('settings.provider.dialog.confirmAdd') : t('settings.provider.dialog.saveChanges')}
+              {isAdding ? 'Confirm Add' : 'Save Changes'}
             </button>
           </div>
         </div>

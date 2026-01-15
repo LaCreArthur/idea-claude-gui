@@ -1,5 +1,4 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { useTranslation } from 'react-i18next';
 
 interface ScrollControlProps {
   containerRef: React.RefObject<HTMLDivElement | null>;
@@ -7,26 +6,25 @@ interface ScrollControlProps {
 }
 
 /**
- * ScrollControl - 滚动控制按钮组件
- * 功能：
- * - 鼠标向上滚动时显示 ↑，点击回到顶部
- * - 鼠标向下滚动时显示 ↓，点击回到底部
- * - 在底部时隐藏按钮
- * - 内容不足一屏时隐藏按钮
- * - 位置始终在输入框上方20px
+ * ScrollControl - Scroll control button component
+ * Features:
+ * - Shows up arrow when scrolling up, click to go to top
+ * - Shows down arrow when scrolling down, click to go to bottom
+ * - Hidden when at the bottom
+ * - Hidden when content fits on one screen
+ * - Position always 20px above the input area
  */
 export const ScrollControl = ({ containerRef, inputAreaRef }: ScrollControlProps) => {
-  const { t } = useTranslation();
   const [visible, setVisible] = useState(false);
   const [direction, setDirection] = useState<'up' | 'down'>('down');
   const [bottomOffset, setBottomOffset] = useState(120);
   const hideTimerRef = useRef<number | null>(null);
 
-  const THRESHOLD = 100; // 距离底部的阈值（像素）
-  const HIDE_DELAY = 1500; // 停止滚动后隐藏的延迟时间（毫秒）
+  const THRESHOLD = 100; // Distance from bottom threshold (pixels)
+  const HIDE_DELAY = 1500; // Delay before hiding after scroll stops (ms)
 
   /**
-   * 更新按钮位置，使其始终在输入框上方20px
+   * Update button position to stay 20px above input area
    */
   const updatePosition = useCallback(() => {
     if (inputAreaRef?.current) {
@@ -38,7 +36,7 @@ export const ScrollControl = ({ containerRef, inputAreaRef }: ScrollControlProps
   }, [inputAreaRef]);
 
   /**
-   * 检查滚动位置并更新按钮状态
+   * Check scroll position and update button state
    */
   const checkScrollPosition = useCallback(() => {
     const container = containerRef.current;
@@ -46,7 +44,7 @@ export const ScrollControl = ({ containerRef, inputAreaRef }: ScrollControlProps
 
     const { scrollTop, scrollHeight, clientHeight } = container;
 
-    // 内容不足一屏，隐藏按钮
+    // Content fits on one screen, hide button
     if (scrollHeight <= clientHeight) {
       setVisible(false);
       return;
@@ -54,14 +52,14 @@ export const ScrollControl = ({ containerRef, inputAreaRef }: ScrollControlProps
 
     const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
 
-    // 在底部（距离底部 < THRESHOLD），隐藏按钮
+    // At bottom (distance from bottom < THRESHOLD), hide button
     if (distanceFromBottom < THRESHOLD) {
       setVisible(false);
     }
   }, [containerRef]);
 
   /**
-   * 处理鼠标滚轮事件
+   * Handle mouse wheel events
    */
   const handleWheel = useCallback((e: WheelEvent) => {
     const container = containerRef.current;
@@ -69,27 +67,27 @@ export const ScrollControl = ({ containerRef, inputAreaRef }: ScrollControlProps
 
     const { scrollTop, scrollHeight, clientHeight } = container;
 
-    // 内容不足一屏，不显示
+    // Content fits on one screen, don't show
     if (scrollHeight <= clientHeight) {
       return;
     }
 
     const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
 
-    // 在底部时不显示
+    // At bottom, don't show
     if (distanceFromBottom < THRESHOLD) {
       setVisible(false);
       return;
     }
 
-    // 清除之前的隐藏定时器
+    // Clear previous hide timer
     if (hideTimerRef.current) {
       clearTimeout(hideTimerRef.current);
     }
 
-    // 根据滚轮方向设置箭头方向
-    // deltaY > 0 表示向下滚动（内容向上移动），显示 ↓
-    // deltaY < 0 表示向上滚动（内容向下移动），显示 ↑
+    // Set arrow direction based on scroll direction
+    // deltaY > 0 means scrolling down (content moves up), show down arrow
+    // deltaY < 0 means scrolling up (content moves down), show up arrow
     if (e.deltaY > 0) {
       setDirection('down');
     } else if (e.deltaY < 0) {
@@ -98,14 +96,14 @@ export const ScrollControl = ({ containerRef, inputAreaRef }: ScrollControlProps
 
     setVisible(true);
 
-    // 设置隐藏定时器
+    // Set hide timer
     hideTimerRef.current = setTimeout(() => {
       setVisible(false);
     }, HIDE_DELAY);
   }, [containerRef]);
 
   /**
-   * 滚动到顶部
+   * Scroll to top
    */
   const scrollToTop = useCallback(() => {
     const container = containerRef.current;
@@ -118,7 +116,7 @@ export const ScrollControl = ({ containerRef, inputAreaRef }: ScrollControlProps
   }, [containerRef]);
 
   /**
-   * 滚动到底部
+   * Scroll to bottom
    */
   const scrollToBottom = useCallback(() => {
     const container = containerRef.current;
@@ -131,7 +129,7 @@ export const ScrollControl = ({ containerRef, inputAreaRef }: ScrollControlProps
   }, [containerRef]);
 
   /**
-   * 处理点击事件
+   * Handle click events
    */
   const handleClick = useCallback(() => {
     if (direction === 'up') {
@@ -139,35 +137,35 @@ export const ScrollControl = ({ containerRef, inputAreaRef }: ScrollControlProps
     } else {
       scrollToBottom();
     }
-    // 点击后隐藏按钮
+    // Hide button after click
     setVisible(false);
   }, [direction, scrollToTop, scrollToBottom]);
 
   /**
-   * 监听滚动和滚轮事件
+   * Listen for scroll and wheel events
    */
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
-    // 初始检查
+    // Initial check
     checkScrollPosition();
     updatePosition();
 
-    // 添加滚动监听（用于检测是否到达底部）
+    // Add scroll listener (to detect reaching bottom)
     container.addEventListener('scroll', checkScrollPosition);
 
-    // 添加滚轮监听（用于检测滚动方向）
+    // Add wheel listener (to detect scroll direction)
     container.addEventListener('wheel', handleWheel, { passive: true });
 
-    // 监听窗口大小变化
+    // Listen for window resize
     const handleResize = () => {
       checkScrollPosition();
       updatePosition();
     };
     window.addEventListener('resize', handleResize);
 
-    // 使用 ResizeObserver 监听输入框大小变化
+    // Use ResizeObserver to monitor input area size changes
     let resizeObserver: ResizeObserver | null = null;
     if (inputAreaRef?.current) {
       resizeObserver = new ResizeObserver(updatePosition);
@@ -194,8 +192,8 @@ export const ScrollControl = ({ containerRef, inputAreaRef }: ScrollControlProps
       className="scroll-control-button"
       style={{ bottom: `${bottomOffset}px` }}
       onClick={handleClick}
-      aria-label={direction === 'up' ? t('chat.backToTop') : t('chat.backToBottom')}
-      title={direction === 'up' ? t('chat.backToTop') : t('chat.backToBottom')}
+      aria-label={direction === 'up' ? 'Back to top' : 'Back to bottom'}
+      title={direction === 'up' ? 'Back to top' : 'Back to bottom'}
     >
       <svg
         width="24"
