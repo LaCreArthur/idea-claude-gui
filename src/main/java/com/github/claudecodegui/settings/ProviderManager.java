@@ -513,4 +513,69 @@ public class ProviderManager {
         }
         return LOCAL_SETTINGS_PROVIDER_ID.equals(claude.get("current").getAsString());
     }
+
+    /**
+     * Auto-enable local settings.json provider if:
+     * 1. No provider is currently configured/active
+     * 2. ~/.claude/settings.json exists and is valid JSON
+     *
+     * This improves UX by automatically using existing Claude CLI authentication.
+     * Users who have run 'claude login' shouldn't need to manually enable the provider.
+     *
+     * @return true if local provider was auto-enabled, false otherwise
+     */
+    public boolean autoEnableLocalProviderIfAvailable() {
+        try {
+            // Check if any provider is already active
+            JsonObject activeProvider = getActiveClaudeProvider();
+            if (activeProvider != null) {
+                LOG.debug("[ProviderManager] Provider already active, skipping auto-enable");
+                return false;
+            }
+
+            // Check if ~/.claude/settings.json exists
+            Path settingsPath = java.nio.file.Paths.get(System.getProperty("user.home"), ".claude", "settings.json");
+            if (!Files.exists(settingsPath)) {
+                LOG.debug("[ProviderManager] ~/.claude/settings.json not found, skipping auto-enable");
+                return false;
+            }
+
+            // Validate it's valid JSON
+            try {
+                String content = Files.readString(settingsPath);
+                gson.fromJson(content, JsonObject.class);
+            } catch (Exception e) {
+                LOG.warn("[ProviderManager] ~/.claude/settings.json exists but is invalid JSON: " + e.getMessage());
+                return false;
+            }
+
+            // Auto-enable the local provider
+            LOG.info("[ProviderManager] Auto-enabling local settings.json provider (found valid ~/.claude/settings.json)");
+            switchToLocalProvider();
+            return true;
+
+        } catch (Exception e) {
+            LOG.warn("[ProviderManager] Failed to auto-enable local provider: " + e.getMessage(), e);
+            return false;
+        }
+    }
+
+    /**
+     * Switch to local settings.json provider
+     */
+    public void switchToLocalProvider() throws IOException {
+        JsonObject config = configReader.apply(null);
+
+        if (!config.has("claude")) {
+            JsonObject claude = new JsonObject();
+            claude.add("providers", new JsonObject());
+            config.add("claude", claude);
+        }
+
+        JsonObject claude = config.getAsJsonObject("claude");
+        claude.addProperty("current", LOCAL_SETTINGS_PROVIDER_ID);
+
+        configWriter.accept(config);
+        LOG.info("[ProviderManager] Switched to local settings.json provider");
+    }
 }

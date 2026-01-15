@@ -117,7 +117,9 @@ public class EnvironmentConfigurator {
         }
         String permissionDir = getPermissionDirectory();
         if (permissionDir != null) {
-            env.putIfAbsent(CLAUDE_PERMISSION_ENV, permissionDir);
+            // Use put() instead of putIfAbsent() to ensure our value is always used
+            env.put(CLAUDE_PERMISSION_ENV, permissionDir);
+            LOG.info("[EnvironmentConfigurator] Set CLAUDE_PERMISSION_DIR=" + permissionDir);
         }
     }
 

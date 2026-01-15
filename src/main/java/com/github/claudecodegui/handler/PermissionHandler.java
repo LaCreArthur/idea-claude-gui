@@ -266,6 +266,7 @@ public class PermissionHandler extends BaseMessageHandler {
             Gson gson = new Gson();
             JsonObject requestData = new JsonObject();
             requestData.addProperty("requestId", requestId);
+            requestData.addProperty("toolName", "AskUserQuestion");
             requestData.add("questions", questionsData.get("questions"));
 
             String requestJson = gson.toJson(requestData);
@@ -301,7 +302,7 @@ public class PermissionHandler extends BaseMessageHandler {
      * Handle ask-user-question response from JavaScript.
      */
     private void handleAskUserQuestionResponse(String jsonContent) {
-        LOG.debug("[ASK_USER_QUESTION] Received response from JS: " + jsonContent);
+        LOG.info("[ASK_USER_QUESTION] Received response from JS: " + jsonContent);
         try {
             Gson gson = new Gson();
             JsonObject response = gson.fromJson(jsonContent, JsonObject.class);
@@ -309,15 +310,17 @@ public class PermissionHandler extends BaseMessageHandler {
             String requestId = response.get("requestId").getAsString();
             boolean cancelled = response.has("cancelled") && response.get("cancelled").getAsBoolean();
 
+            LOG.info("[ASK_USER_QUESTION] requestId=" + requestId + ", cancelled=" + cancelled);
+
             CompletableFuture<JsonObject> pendingFuture = pendingAskUserQuestionRequests.remove(requestId);
 
             if (pendingFuture != null) {
                 if (cancelled) {
-                    LOG.debug("[ASK_USER_QUESTION] User cancelled for requestId=" + requestId);
+                    LOG.info("[ASK_USER_QUESTION] User cancelled for requestId=" + requestId);
                     pendingFuture.complete(null);
                 } else {
                     JsonObject answers = response.has("answers") ? response.getAsJsonObject("answers") : null;
-                    LOG.debug("[ASK_USER_QUESTION] Got answers for requestId=" + requestId);
+                    LOG.info("[ASK_USER_QUESTION] Got answers for requestId=" + requestId + ", answers=" + answers);
                     pendingFuture.complete(answers);
                 }
             } else {

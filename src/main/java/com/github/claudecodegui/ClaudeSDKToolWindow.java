@@ -440,6 +440,13 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
 
         private void syncActiveProvider() {
             try {
+                // First, try to auto-enable local provider if no provider is configured
+                // This provides a better out-of-the-box experience for users who have 'claude login' done
+                if (settingsService.autoEnableLocalProviderIfAvailable()) {
+                    LOG.info("[ClaudeSDKToolWindow] Auto-enabled local settings.json provider");
+                    return;
+                }
+
                 if (settingsService.isLocalProviderActive()) {
                     LOG.info("[ClaudeSDKToolWindow] Local provider active, skipping startup sync");
                     return;

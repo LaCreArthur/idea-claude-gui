@@ -5,7 +5,6 @@ import { sendBridgeEvent } from '../../../utils/bridge';
  * Local commands list (commands to be filtered out)
  */
 const HIDDEN_COMMANDS = new Set([
-  '/clear',
   '/context',
   '/cost',
   '/pr-comments',

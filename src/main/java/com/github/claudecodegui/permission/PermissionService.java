@@ -493,13 +493,13 @@ public class PermissionService {
                 File[] planApprovalFiles = dir.listFiles((d, name) ->
                     name.startsWith("plan-approval-") && name.endsWith(".json") && !name.contains("-response"));
 
-                // Log status periodically (every ~50 seconds)
-                if (pollCount % 100 == 0) {
+                // Log status periodically (every ~10 seconds for better visibility)
+                if (pollCount % 20 == 0) {
                     int permFileCount = permissionFiles != null ? permissionFiles.length : 0;
                     int askFileCount = askUserQuestionFiles != null ? askUserQuestionFiles.length : 0;
                     int planFileCount = planApprovalFiles != null ? planApprovalFiles.length : 0;
-                    debugLog("POLL_STATUS", String.format("Poll #%d, found %d permission + %d ask-user-question + %d plan-approval files",
-                        pollCount, permFileCount, askFileCount, planFileCount));
+                    LOG.info(String.format("[PermissionService] Poll #%d on %s: found %d permission + %d ask-user-question + %d plan-approval files",
+                        pollCount, permissionDir, permFileCount, askFileCount, planFileCount));
                 }
 
                 // Handle permission requests
@@ -516,7 +516,7 @@ public class PermissionService {
                 if (askUserQuestionFiles != null && askUserQuestionFiles.length > 0) {
                     for (File file : askUserQuestionFiles) {
                         if (file.exists()) {
-                            debugLog("ASK_USER_QUESTION_FOUND", "Found ask-user-question file: " + file.getName());
+                            LOG.info("[PermissionService] FOUND ask-user-question file: " + file.getName());
                             handleAskUserQuestionRequest(file.toPath());
                         }
                     }
@@ -841,26 +841,25 @@ public class PermissionService {
             }
 
             // Show dialog asynchronously
-            debugLog("DIALOG_SHOW", "Calling showAskUserQuestionDialog for requestId: " + requestId);
+            LOG.info("[PermissionService] Calling showAskUserQuestionDialog for requestId: " + requestId);
             CompletableFuture<JsonObject> future = dialogShower.showAskUserQuestionDialog(requestId, request);
 
             future.thenAccept(answers -> {
                 try {
                     if (answers != null) {
-                        debugLog("DIALOG_RESPONSE", "Got answers for requestId: " + requestId);
+                        LOG.info("[PermissionService] Got answers for requestId: " + requestId + ", writing response file");
                         writeAskUserQuestionResponse(requestId, answers, false);
                     } else {
-                        debugLog("DIALOG_CANCELLED", "User cancelled for requestId: " + requestId);
+                        LOG.info("[PermissionService] User cancelled for requestId: " + requestId + ", writing cancelled response");
                         writeAskUserQuestionResponse(requestId, null, true);
                     }
                 } catch (Exception e) {
-                    debugLog("DIALOG_ERROR", "Error writing response: " + e.getMessage());
-                    LOG.error("Error occurred", e);
+                    LOG.error("[PermissionService] Error writing response: " + e.getMessage(), e);
                 } finally {
                     processingAskUserQuestionRequests.remove(fileName);
                 }
             }).exceptionally(ex -> {
-                debugLog("DIALOG_EXCEPTION", "Dialog exception: " + ex.getMessage());
+                LOG.error("[PermissionService] Dialog exception: " + ex.getMessage());
                 try {
                     writeAskUserQuestionResponse(requestId, null, true);
                 } catch (Exception e) {
@@ -881,8 +880,7 @@ public class PermissionService {
      * Write ask-user-question response file
      */
     private void writeAskUserQuestionResponse(String requestId, JsonObject answers, boolean cancelled) {
-        debugLog("WRITE_ASK_USER_QUESTION_RESPONSE", String.format(
-            "Writing response for requestId=%s, cancelled=%s", requestId, cancelled));
+        LOG.info("[PermissionService] writeAskUserQuestionResponse: requestId=" + requestId + ", cancelled=" + cancelled);
         try {
             JsonObject response = new JsonObject();
             response.addProperty("cancelled", cancelled);
@@ -892,16 +890,18 @@ public class PermissionService {
 
             Path responseFile = permissionDir.resolve("ask-user-question-response-" + requestId + ".json");
             String responseContent = gson.toJson(response);
-            debugLog("RESPONSE_CONTENT", "Response JSON: " + responseContent);
+            LOG.info("[PermissionService] Writing response to: " + responseFile);
+            LOG.info("[PermissionService] Response content: " + responseContent);
 
             Files.writeString(responseFile, responseContent);
 
             if (Files.exists(responseFile)) {
-                debugLog("WRITE_SUCCESS", "Ask-user-question response file written successfully");
+                LOG.info("[PermissionService] Response file written successfully: " + responseFile);
+            } else {
+                LOG.error("[PermissionService] Response file NOT created after write!");
             }
         } catch (IOException e) {
-            debugLog("WRITE_ERROR", "Failed to write ask-user-question response file: " + e.getMessage());
-            LOG.error("Error occurred", e);
+            LOG.error("[PermissionService] Failed to write response file: " + e.getMessage(), e);
         }
     }
 

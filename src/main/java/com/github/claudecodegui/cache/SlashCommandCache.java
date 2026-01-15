@@ -137,9 +137,12 @@ public class SlashCommandCache {
                 .thenAccept(commands -> {
                     long duration = System.currentTimeMillis() - startTime;
                     if (commands != null && !commands.isEmpty()) {
-                        cachedCommands = new ArrayList<>(commands);
+                        List<JsonObject> commandList = new ArrayList<>(commands);
+                        // Add essential commands that may be missing from SDK
+                        addEssentialCommands(commandList);
+                        cachedCommands = commandList;
                         lastLoadTime = System.currentTimeMillis();
-                        LOG.info("Loaded " + commands.size() + " commands in " + duration + "ms");
+                        LOG.info("Loaded " + commands.size() + " commands (+" + (commandList.size() - commands.size()) + " essential) in " + duration + "ms");
 
                         // 通知所有监听器
                         notifyListeners();
@@ -212,6 +215,35 @@ public class SlashCommandCache {
             }
         }, CACHE_TTL, CACHE_TTL);
         LOG.info("Periodic check scheduled (every 10 minutes)");
+    }
+
+    /**
+     * Add essential commands that may be missing from SDK response.
+     * These are core Claude Code commands that should always be available.
+     */
+    private void addEssentialCommands(List<JsonObject> commands) {
+        // Collect existing command names for deduplication
+        java.util.Set<String> existingNames = new java.util.HashSet<>();
+        for (JsonObject cmd : commands) {
+            if (cmd.has("name")) {
+                existingNames.add(cmd.get("name").getAsString().toLowerCase());
+            }
+        }
+
+        // Essential commands
+        addCommandIfMissing(commands, existingNames, "resume", "Resume a previous conversation");
+        addCommandIfMissing(commands, existingNames, "clear", "Clear conversation history");
+    }
+
+    private void addCommandIfMissing(List<JsonObject> commands, java.util.Set<String> existingNames,
+                                     String name, String description) {
+        if (!existingNames.contains(name.toLowerCase()) && !existingNames.contains("/" + name.toLowerCase())) {
+            JsonObject cmd = new JsonObject();
+            cmd.addProperty("name", name);
+            cmd.addProperty("description", description);
+            commands.add(cmd);
+            LOG.info("Added missing essential command: /" + name);
+        }
     }
 
     /**

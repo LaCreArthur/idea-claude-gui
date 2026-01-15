@@ -376,6 +376,15 @@ public class CodemossSettingsService {
         return providerManager.isLocalProviderActive();
     }
 
+    /**
+     * Auto-enable local settings.json provider if available and no provider is configured.
+     * This provides a better out-of-the-box experience for users who have already run 'claude login'.
+     * @return true if local provider was auto-enabled
+     */
+    public boolean autoEnableLocalProviderIfAvailable() {
+        return providerManager.autoEnableLocalProviderIfAvailable();
+    }
+
     // ==================== MCP Server 管理 ====================
 
     public List<JsonObject> getMcpServers() throws IOException {

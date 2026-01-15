@@ -81,8 +81,16 @@ const ACCEPT_EDITS_AUTO_APPROVE_TOOLS = new Set([
   'Rename'
 ]);
 
+// Tools that require user interaction and should NEVER be auto-approved
+const INTERACTIVE_TOOLS = new Set([
+  'AskUserQuestion'
+]);
+
 function shouldAutoApproveTool(permissionMode, toolName) {
   if (!toolName) return false;
+  // Interactive tools like AskUserQuestion should NEVER be auto-approved
+  // They require user input and must go through canUseTool
+  if (INTERACTIVE_TOOLS.has(toolName)) return false;
   if (permissionMode === 'bypassPermissions') return true;
   if (permissionMode === 'acceptEdits') return ACCEPT_EDITS_AUTO_APPROVE_TOOLS.has(toolName);
   return false;
@@ -92,7 +100,9 @@ function createPreToolUseHook(permissionMode) {
   const normalizedPermissionMode = (!permissionMode || permissionMode === '') ? 'default' : permissionMode;
 
   return async (input) => {
-    console.log('[PERM_DEBUG] PreToolUse hook called:', input?.tool_name);
+    // Use console.error for more visible logging
+    console.error('[PERM_DEBUG] >>>>>>> PreToolUse hook called:', input?.tool_name);
+    console.error('[PERM_DEBUG] tool_input:', JSON.stringify(input?.tool_input)?.substring(0, 200));
 
     if (normalizedPermissionMode === 'plan') {
       return {
@@ -110,8 +120,14 @@ function createPreToolUseHook(permissionMode) {
     try {
       const result = await canUseTool(input?.tool_name, input?.tool_input);
       console.log('[PERM_DEBUG] canUseTool returned:', result?.behavior);
+      console.error('[PERM_DEBUG] canUseTool result:', JSON.stringify(result)?.substring(0, 300));
 
       if (result?.behavior === 'allow') {
+        // Pass updatedInput if provided (important for AskUserQuestion which returns answers)
+        if (result?.updatedInput) {
+          console.error('[PERM_DEBUG] Returning approve with updatedInput');
+          return { decision: 'approve', input: result.updatedInput };
+        }
         return { decision: 'approve' };
       }
       if (result?.behavior === 'deny') {
@@ -601,6 +617,12 @@ export async function sendMessage(message, resumeSessionId = null, cwd = null, p
               }
             } else if (block.type === 'tool_use') {
               console.log('[DEBUG] Tool use payload:', JSON.stringify(block));
+              // Special logging for AskUserQuestion
+              if (block.name === 'AskUserQuestion') {
+                console.error('[PERM_DEBUG] ******* DETECTED AskUserQuestion in message stream *******');
+                console.error('[PERM_DEBUG] AskUserQuestion id:', block.id);
+                console.error('[PERM_DEBUG] AskUserQuestion input:', JSON.stringify(block.input));
+              }
             }
           }
         } else if (typeof content === 'string') {
@@ -1202,6 +1224,12 @@ export async function sendMessageWithAttachments(message, resumeSessionId = null
 	    	              }
 	    	            } else if (block.type === 'tool_use') {
 	    	              console.log('[DEBUG] Tool use payload (withAttachments):', JSON.stringify(block));
+	    	              // Special logging for AskUserQuestion
+	    	              if (block.name === 'AskUserQuestion') {
+	    	                console.error('[PERM_DEBUG] ******* DETECTED AskUserQuestion in message stream (withAttachments) *******');
+	    	                console.error('[PERM_DEBUG] AskUserQuestion id:', block.id);
+	    	                console.error('[PERM_DEBUG] AskUserQuestion input:', JSON.stringify(block.input));
+	    	              }
 	    	            } else if (block.type === 'tool_result') {
 	    	              console.log('[DEBUG] Tool result payload (withAttachments):', JSON.stringify(block));
 	    	            }

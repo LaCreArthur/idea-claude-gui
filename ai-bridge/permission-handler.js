@@ -102,10 +102,13 @@ function rewriteToolInputPaths(toolName, input) {
  */
 async function requestAskUserQuestionAnswers(input) {
   const requestStartTime = Date.now();
+  console.error('[PERM_DEBUG][ASK_ANSWERS] >>>>>> requestAskUserQuestionAnswers CALLED');
+  console.error('[PERM_DEBUG][ASK_ANSWERS] PERMISSION_DIR:', PERMISSION_DIR);
   debugLog('ASK_USER_QUESTION_START', 'Requesting answers for questions', { input });
 
   try {
     const requestId = `ask-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+    console.error('[PERM_DEBUG][ASK_ANSWERS] Generated requestId:', requestId);
     debugLog('ASK_USER_QUESTION_ID', `Generated request ID: ${requestId}`);
 
     const requestFile = join(PERMISSION_DIR, `ask-user-question-${requestId}.json`);
@@ -139,6 +142,7 @@ async function requestAskUserQuestionAnswers(input) {
     let pollCount = 0;
     const pollInterval = 100;
 
+    console.error('[PERM_DEBUG][ASK_ANSWERS] Starting poll loop, responseFile:', responseFile);
     debugLog('ASK_USER_QUESTION_WAIT_START', `Starting to wait for answers (timeout: ${timeout}ms)`);
 
     while (Date.now() - requestStartTime < timeout) {
@@ -148,10 +152,12 @@ async function requestAskUserQuestionAnswers(input) {
       // 每5秒输出一次等待状态
       if (pollCount % 50 === 0) {
         const elapsed = Date.now() - requestStartTime;
+        console.error('[PERM_DEBUG][ASK_ANSWERS] Still polling...', { elapsed, pollCount, responseFile });
         debugLog('ASK_USER_QUESTION_WAITING', `Still waiting for answers`, { elapsed: `${elapsed}ms`, pollCount });
       }
 
       if (existsSync(responseFile)) {
+        console.error('[PERM_DEBUG][ASK_ANSWERS] >>>>>> RESPONSE FILE FOUND!');
         debugLog('ASK_USER_QUESTION_RESPONSE_FOUND', `Response file found!`);
         try {
           const responseContent = readFileSync(responseFile, 'utf-8');
@@ -159,11 +165,13 @@ async function requestAskUserQuestionAnswers(input) {
 
           const responseData = JSON.parse(responseContent);
           const answers = responseData.answers;
+          console.error('[PERM_DEBUG][ASK_ANSWERS] Parsed answers:', JSON.stringify(answers));
           debugLog('ASK_USER_QUESTION_RESPONSE_PARSED', `Parsed answers`, { answers, elapsed: `${Date.now() - requestStartTime}ms` });
 
           // 清理响应文件
           try {
             unlinkSync(responseFile);
+            console.error('[PERM_DEBUG][ASK_ANSWERS] Response file deleted, returning answers');
             debugLog('ASK_USER_QUESTION_FILE_CLEANUP', `Response file deleted`);
           } catch (cleanupError) {
             debugLog('ASK_USER_QUESTION_FILE_CLEANUP_ERROR', `Failed to delete response file: ${cleanupError.message}`);
@@ -179,11 +187,13 @@ async function requestAskUserQuestionAnswers(input) {
 
     // 超时，返回 null
     const elapsed = Date.now() - requestStartTime;
+    console.error('[PERM_DEBUG][ASK_ANSWERS] >>>>>> TIMEOUT! No response file found after', elapsed, 'ms');
     debugLog('ASK_USER_QUESTION_TIMEOUT', `Timeout waiting for answers`, { elapsed: `${elapsed}ms`, timeout: `${timeout}ms` });
 
     return null;
 
   } catch (error) {
+    console.error('[PERM_DEBUG][ASK_ANSWERS] >>>>>> FATAL ERROR:', error.message);
     debugLog('ASK_USER_QUESTION_FATAL_ERROR', `Unexpected error: ${error.message}`, { stack: error.stack });
     return null;
   }
@@ -342,9 +352,10 @@ export async function requestPermissionFromJava(toolName, input) {
  */
 export async function canUseTool(toolName, input, options = {}) {
   const callStartTime = Date.now();
-  console.log('[PERM_DEBUG][CAN_USE_TOOL] ========== CALLED ==========');
-  console.log('[PERM_DEBUG][CAN_USE_TOOL] toolName:', toolName);
-  console.log('[PERM_DEBUG][CAN_USE_TOOL] input:', JSON.stringify(input));
+  // Use console.error for more visible logging (stderr)
+  console.error('[PERM_DEBUG][CAN_USE_TOOL] ========== CALLED ==========');
+  console.error('[PERM_DEBUG][CAN_USE_TOOL] toolName:', toolName);
+  console.error('[PERM_DEBUG][CAN_USE_TOOL] input:', JSON.stringify(input));
   console.log('[PERM_DEBUG][CAN_USE_TOOL] options:', options ? 'present' : 'undefined');
   debugLog('CAN_USE_TOOL', `Called with tool: ${toolName}`, { input });
 

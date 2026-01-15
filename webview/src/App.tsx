@@ -49,13 +49,13 @@ const isTruthy = (value: unknown) => value === true || value === 'true';
 const sendBridgeMessage = (event: string, payload = '') => {
   if (window.sendToJava) {
     const message = `${event}:${payload}`;
-    // 对权限相关消息添加详细日志
-    if (event.includes('permission')) {
+    // Add detailed logging for permission and ask_user_question messages
+    if (event.includes('permission') || event.includes('ask_user_question')) {
       console.log('[PERM_DEBUG][BRIDGE] Sending to Java:', message);
     }
     window.sendToJava(message);
   } else {
-    console.warn('[Frontend] sendToJava is not ready yet');
+    console.error('[BRIDGE] ERROR: window.sendToJava not available for event:', event);
   }
 };
 
@@ -1521,6 +1521,17 @@ const App = () => {
       return;
     }
     if (loading) {
+      return;
+    }
+
+    // Handle local slash commands that don't need to go to Claude
+    if (text.toLowerCase() === '/resume') {
+      setCurrentView('history');
+      return;
+    }
+    if (text.toLowerCase() === '/clear') {
+      setMessages([]);
+      addToast('Conversation cleared', 'info');
       return;
     }
 

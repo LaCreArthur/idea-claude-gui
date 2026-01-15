@@ -54,7 +54,7 @@ Node.js → stdout JSON → Java shows dialog → stdin JSON → Node.js returns
   - Handles AskUserQuestion via stdout request + stdin response
   - Format: `{"type": "...", "data": {...}}`
 
-- [ ] **1.2** Add stdin writer to `ClaudeSDKBridge.java`
+- [x] **1.2** Add stdin writer to `ClaudeSDKBridge.java`
   - Add `sendToProcess(String json)` method that writes to process stdin
   - Modify output reader to parse JSON lines
   - Dispatch events based on `type` field

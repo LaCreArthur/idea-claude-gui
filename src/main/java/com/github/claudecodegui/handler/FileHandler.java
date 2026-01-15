@@ -362,6 +362,10 @@ public class FileHandler extends BaseMessageHandler {
 
                         LOG.info("[FileHandler] Got " + commands.size() + " commands from SDK (filtered from " + sdkCommands.size() + ")");
 
+                        // Always ensure essential commands are included
+                        // SDK may not return all commands (e.g., /resume, /clear)
+                        addEssentialCommands(commands, finalQuery);
+
                         // 如果 SDK 没有返回命令，使用本地默认命令作为回退
                         if (commands.isEmpty() && sdkCommands.isEmpty()) {
                             LOG.info("[FileHandler] SDK returned no commands, using local fallback");
@@ -409,11 +413,44 @@ public class FileHandler extends BaseMessageHandler {
     private void addFallbackCommands(List<JsonObject> commands, String query) {
         addCommand(commands, "/help", "Show help information", query);
         addCommand(commands, "/clear", "Clear chat history", query);
+        addCommand(commands, "/resume", "Resume a previous conversation", query);
         addCommand(commands, "/history", "View history", query);
         addCommand(commands, "/model", "Switch model", query);
         addCommand(commands, "/compact", "Compact conversation context", query);
         addCommand(commands, "/init", "Initialize project configuration", query);
         addCommand(commands, "/review", "Code review", query);
+    }
+
+    /**
+     * Add essential commands that may be missing from SDK response.
+     * These are core Claude Code commands that should always be available.
+     */
+    private void addEssentialCommands(List<JsonObject> commands, String query) {
+        // Collect existing command labels for deduplication
+        java.util.Set<String> existingLabels = new java.util.HashSet<>();
+        for (JsonObject cmd : commands) {
+            if (cmd.has("label")) {
+                existingLabels.add(cmd.get("label").getAsString().toLowerCase());
+            }
+        }
+
+        // Essential commands that should always be available
+        addCommandIfMissing(commands, existingLabels, "/resume", "Resume a previous conversation", query);
+        addCommandIfMissing(commands, existingLabels, "/clear", "Clear chat history", query);
+    }
+
+    private void addCommandIfMissing(List<JsonObject> commands, java.util.Set<String> existingLabels,
+                                     String label, String description, String query) {
+        if (!existingLabels.contains(label.toLowerCase())) {
+            if (query.isEmpty() || label.toLowerCase().contains(query.toLowerCase()) ||
+                description.toLowerCase().contains(query.toLowerCase())) {
+                JsonObject cmd = new JsonObject();
+                cmd.addProperty("label", label);
+                cmd.addProperty("description", description);
+                commands.add(cmd);
+                LOG.info("[FileHandler] Added missing essential command: " + label);
+            }
+        }
     }
 
     /**
