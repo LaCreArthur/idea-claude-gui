@@ -446,6 +446,19 @@ public class ClaudeSession {
         JsonObject openedFilesJson,
         String externalAgentPrompt
     ) {
+        // Use new bridge.js protocol when no attachments (cleaner stdin/stdout IPC)
+        // Fall back to old channel-manager.js for attachment support
+        boolean hasAttachments = attachments != null && !attachments.isEmpty();
+        boolean useNewBridge = !hasAttachments && shouldUseNewBridge();
+
+        if (useNewBridge) {
+            LOG.info("[ClaudeSession] Using new bridge.js protocol");
+            return sendMessageWithBridge(channelId, input, openedFilesJson, externalAgentPrompt);
+        }
+
+        // Legacy path - use old channel-manager.js
+        LOG.info("[ClaudeSession] Using legacy channel-manager.js" + (hasAttachments ? " (has attachments)" : ""));
+
         // Use external agent prompt if provided, otherwise fall back to global setting
         String agentPrompt = externalAgentPrompt;
         if (agentPrompt == null) {
@@ -490,6 +503,17 @@ public class ClaudeSession {
             streaming,
             handler
         ).thenApply(result -> null);
+    }
+
+    /**
+     * Check if the new bridge.js protocol should be used.
+     * Can be controlled via settings or feature flag.
+     */
+    private boolean shouldUseNewBridge() {
+        // TODO: Read from settings once testing is complete
+        // For now, disabled by default to maintain backward compatibility
+        // Set to true to test the new protocol
+        return false;
     }
 
     /**
