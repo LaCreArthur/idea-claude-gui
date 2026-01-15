@@ -1,13 +1,13 @@
 <idea-plugin>
-    <id>com.github.idea-claude-code-gui</id>
-    <name>Claude Code GUI</name>
-    <vendor>CodeMossAI</vendor>
+    <id>com.lacrearthur.idea-claude-gui</id>
+    <name>IDEA Claude Code GUI</name>
+    <vendor>LaCreArthur</vendor>
 
     <!-- Resource bundle for i18n -->
     <resource-bundle>messages.ClaudeCodeGuiBundle</resource-bundle>
 
     <description><![CDATA[
-        <p><strong>Claude Code GUI</strong> - A powerful visual interface plugin that brings <strong>Claude Code</strong> and <strong>OpenAI Codex</strong> dual AI tools directly into IntelliJ IDEA, making AI-assisted programming more efficient and intuitive.</p>
+        <p><strong>IDEA Claude Code GUI</strong> - A powerful visual interface plugin that brings <strong>Claude Code</strong> and <strong>OpenAI Codex</strong> dual AI tools directly into IntelliJ IDEA, making AI-assisted programming more efficient and intuitive.</p>
 
         <h2>Dual AI Engine Support</h2>
         <ul>
@@ -37,38 +37,6 @@
             <li>Get instant AI-powered code assistance and intelligent suggestions</li>
         </ul>
 
-        <hr/>
-
-        <p><strong>Claude Code GUI</strong> - 一个功能强大的可视化界面插件，将 <strong>Claude Code</strong> 和 <strong>OpenAI Codex</strong> 双 AI 工具直接集成到 IntelliJ IDEA 中，让 AI 辅助编程变得更加高效和直观。</p>
-
-        <h2>双 AI 引擎支持</h2>
-        <ul>
-            <li><strong>Claude Code</strong> - Anthropic 官方 AI 编程助手（支持 Opus 4.5 等多模型）</li>
-            <li><strong>OpenAI Codex</strong> - OpenAI 强大的代码生成引擎</li>
-        </ul>
-
-        <h2>核心功能</h2>
-        <ul>
-            <li><strong>上下文感知助手</strong>：智能编程助手，支持 @文件引用</li>
-            <li><strong>图片支持</strong>：发送图片可视化描述需求</li>
-            <li><strong>Agent 系统</strong>：内置智能体自动化执行复杂任务</li>
-            <li><strong>Skills 命令</strong>：斜杠命令系统（/init, /review 等）</li>
-            <li><strong>MCP 服务器</strong>：通过 MCP 协议扩展 AI 能力</li>
-            <li><strong>代码 DIFF</strong>：可视化代码对比和文件导航</li>
-            <li><strong>对话回退</strong>：灵活调整对话历史</li>
-            <li><strong>会话管理</strong>：历史记录、收藏、搜索和导出</li>
-            <li><strong>主题支持</strong>：深色/浅色主题，支持 IDE 字体同步</li>
-            <li><strong>权限控制</strong>：完善的安全管理</li>
-            <li><strong>供应商管理</strong>：兼容 cc-switch</li>
-        </ul>
-
-        <h2>使用方法</h2>
-        <ul>
-            <li>从右侧边栏打开 Claude Code GUI 工具窗口</li>
-            <li>选中代码后使用 <kbd>Ctrl+Alt+K</kbd>（Win/Linux）或 <kbd>Cmd+Alt+K</kbd>（Mac）发送给 AI</li>
-            <li>即时获得 AI 驱动的代码辅助和智能建议</li>
-        </ul>
-
         <p><em>Keywords: Claude, Claude Code, Codex, OpenCode, Gemini, AI Assistant, Code Generation, AI Coding, Productivity, Intelligent Code Assistant</em></p>
     ]]></description>
 
@@ -96,11 +64,11 @@
     </extensions>
 
     <actions>
-        <!-- 发送选中代码到终端的Action -->
+        <!-- Send selected code to AI action -->
         <action id="ClaudeCodeGUI.SendSelectionToTerminalAction"
                 class="com.github.claudecodegui.SendSelectionToTerminalAction"
                 icon="/icons/send-to-terminal.svg">
-            <!-- 添加到编辑器右键菜单（显示在最上面） -->
+            <!-- Add to editor context menu (show at top) -->
             <add-to-group group-id="EditorPopupMenu" anchor="first"/>
             <keyboard-shortcut keymap="$default" first-keystroke="ctrl alt K"/>
             <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta alt K"/>
