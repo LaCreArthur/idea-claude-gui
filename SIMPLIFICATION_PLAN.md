@@ -159,10 +159,10 @@ Node.js → stdout JSON → Java shows dialog → stdin JSON → Node.js returns
 
 - [ ] **5.1** Remove unused imports across all Java files
 - [ ] **5.2** Remove unused methods (use IDE's "find usages")
-- [ ] **5.3** Remove excessive debug logging
+- [x] **5.3** Remove excessive debug logging (~80 console.log statements removed)
 - [ ] **5.4** Remove commented-out code
-- [ ] **5.5** Remove any remaining i18n code
-- [ ] **5.6** Remove any remaining Codex references
+- [x] **5.5** Remove any remaining i18n code (none found - English-only)
+- [x] **5.6** Remove any remaining Codex references (~70 lines removed)
 - [ ] **5.7** Update build.gradle - remove unused dependencies
 - [ ] **5.8** Final test - everything works
 
