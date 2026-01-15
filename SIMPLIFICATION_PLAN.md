@@ -73,7 +73,7 @@ Each iteration:
 
 ## Section 7: Replace Translations in React Components (Batch 2 - Settings)
 
-- [ ] Remove i18n from `webview/src/components/settings/ProviderList/index.tsx`
+- [x] Remove i18n from `webview/src/components/settings/ProviderList/index.tsx` ✓
 - [ ] Remove i18n from `webview/src/components/settings/ProviderList/ImportConfirmDialog.tsx`
 - [ ] Remove i18n from `webview/src/components/settings/ProviderManageSection/index.tsx`
 - [ ] Remove i18n from `webview/src/components/settings/DependencySection/index.tsx` - also remove codex-sdk

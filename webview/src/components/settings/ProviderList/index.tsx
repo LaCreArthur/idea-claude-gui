@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
 import type { ProviderConfig } from '../../../types/provider';
 import { sendToJava } from '../../../utils/bridge';
 import ImportConfirmDialog from './ImportConfirmDialog';
@@ -24,7 +23,6 @@ export default function ProviderList({
   addToast,
   emptyState,
 }: ProviderListProps) {
-  const { t } = useTranslation();
   const LOCAL_PROVIDER_ID = '__local_settings_json__';
   const [importMenuOpen, setImportMenuOpen] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
@@ -41,7 +39,6 @@ export default function ProviderList({
       }
     };
 
-    // 注册全局回调函数供 Java 调用
     (window as any).import_preview_result = (dataOrStr: any) => {
         console.log('[Frontend] Received import_preview_result:', dataOrStr);
         let data = dataOrStr;
@@ -59,8 +56,7 @@ export default function ProviderList({
     (window as any).backend_notification = (...args: any[]) => {
         console.log('[Frontend] Received backend_notification args:', args);
         let data: any = {};
-        
-        // 支持多参数调用 (type, title, message) 以避免 JSON 解析问题
+
         if (args.length >= 3 && typeof args[0] === 'string' && typeof args[2] === 'string') {
             data = {
                 type: args[0],
@@ -68,7 +64,6 @@ export default function ProviderList({
                 message: args[2]
             };
         } else if (args.length > 0) {
-            // 兼容旧的单参数 JSON 方式
             let dataOrStr = args[0];
             data = dataOrStr;
             if (typeof data === 'string') {
@@ -79,13 +74,13 @@ export default function ProviderList({
                 }
             }
         }
-        
+
         const event = new CustomEvent('backend_notification', { detail: data });
         window.dispatchEvent(event);
     };
 
     const handleImportPreview = (event: CustomEvent) => {
-      setIsImporting(false); // 收到结果，关闭loading
+      setIsImporting(false);
       const data = event.detail;
       if (data && data.providers) {
         setImportPreviewData(data.providers);
@@ -94,7 +89,7 @@ export default function ProviderList({
     };
 
     const handleBackendNotification = (event: CustomEvent) => {
-      setIsImporting(false); // 收到通知（可能是错误），关闭loading
+      setIsImporting(false);
       const data = event.detail;
       if (data && data.message) {
         addToast(data.message, data.type || 'info');
@@ -104,13 +99,12 @@ export default function ProviderList({
     document.addEventListener('mousedown', handleClickOutside);
     window.addEventListener('import_preview_result', handleImportPreview as EventListener);
     window.addEventListener('backend_notification', handleBackendNotification as EventListener);
-    
+
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
       window.removeEventListener('import_preview_result', handleImportPreview as EventListener);
       window.removeEventListener('backend_notification', handleBackendNotification as EventListener);
-      
-      // 清理全局函数
+
       delete (window as any).import_preview_result;
       delete (window as any).backend_notification;
     };
@@ -126,36 +120,24 @@ export default function ProviderList({
 
   const handleConvert = () => {
     if (convertingProvider) {
-      // 1. 生成新的 ID (例如在原 ID 后加 _custom 或 _local，或者保持原 ID 但删除 source)
-      // 用户需求是"断开ID连接关系"，通常意味着 cc-switch 导入时是靠 ID 匹配的。
-      // 如果我们保留原 ID 仅仅删除 source 字段：
-      //   - 再次导入 cc-switch 时，因为 ID 相同，还是会匹配到并提示"更新"。
-      //   - 覆盖更新后，source 字段又回来了。
-      // 所以，如果要彻底"断开"，我们需要修改 ID。
-
       const oldId = convertingProvider.id;
-      const newId = `${oldId}_local`; // 或者用 uuid，这里简单加后缀以示区分
+      const newId = `${oldId}_local`;
 
-      // 2. 构造新配置
       const newProvider = {
           ...convertingProvider,
           id: newId,
-          name: convertingProvider.name + ' (Local)', // 可选：修改名称避免混淆
+          name: convertingProvider.name + ' (Local)',
       };
       delete newProvider.source;
 
-      // 3. 保存新配置（作为新增）
       sendToJava('add_provider', newProvider);
-
-      // 4. 删除旧配置
       sendToJava('delete_provider', { id: oldId });
 
       setConvertingProvider(null);
-      addToast(t('settings.provider.convertSuccess'), 'success');
+      addToast('Conversion successful, new ID generated and disconnected', 'success');
 
       if (editingCcSwitchProvider && editingCcSwitchProvider.id === convertingProvider.id) {
           setEditingCcSwitchProvider(null);
-          // 继续编辑新的 provider
           onEdit(newProvider);
       }
     }
@@ -164,13 +146,11 @@ export default function ProviderList({
   const handleSelectFileClick = () => {
     setImportMenuOpen(false);
     setIsImporting(true);
-    // 让后端打开系统文件选择器，这样可以获取正确的绝对路径
     sendToJava('open_file_chooser_for_cc_switch');
   };
 
   return (
     <div className={styles.container}>
-      {/* 导入弹窗 */}
       {showImportDialog && (
         <ImportConfirmDialog
           providers={importPreviewData}
@@ -183,33 +163,31 @@ export default function ProviderList({
         />
       )}
 
-      {/* 导入加载中 */}
       {isImporting && (
         <div className={styles.loadingOverlay}>
           <div className={styles.loadingContent}>
             <span className="codicon codicon-loading codicon-modifier-spin" />
-            <span>{t('settings.provider.readingCcSwitch')}</span>
+            <span>Reading cc-switch configuration...</span>
           </div>
         </div>
       )}
 
-      {/* 编辑警告弹窗 */}
       {editingCcSwitchProvider && (
           <div className={styles.warningOverlay}>
               <div className={styles.warningDialog}>
                   <div className={styles.warningTitle}>
                       <span className="codicon codicon-warning" />
-                      {t('settings.provider.editCcSwitchTitle')}
+                      Edit cc-switch Configuration
                   </div>
                   <div className={styles.warningContent}>
-                      {t('settings.provider.editCcSwitchWarning')}
+                      You are editing a cc-switch configuration. Editing will not update cc-switch, and imports may overwrite your changes. Consider converting to local configuration before editing.
                   </div>
                   <div className={styles.warningActions}>
                       <button
                           className={styles.btnSecondary}
                           onClick={() => setEditingCcSwitchProvider(null)}
                       >
-                          {t('common.cancel')}
+                          Cancel
                       </button>
                       <button
                           className={styles.btnSecondary}
@@ -219,52 +197,49 @@ export default function ProviderList({
                               onEdit(p);
                           }}
                       >
-                          {t('settings.provider.continueEdit')}
+                          Continue Editing
                       </button>
                       <button
                           className={styles.btnWarning}
                           onClick={() => {
                               setConvertingProvider(editingCcSwitchProvider);
-                              // setEditingCcSwitchProvider(null); // 保持 null 以便在转换后处理
                           }}
                       >
-                          {t('settings.provider.convertAndEdit')}
+                          Convert and Edit
                       </button>
                   </div>
               </div>
           </div>
       )}
 
-      {/* 转换确认弹窗 */}
       {convertingProvider && (
           <div className={styles.warningOverlay}>
               <div className={styles.warningDialog}>
                   <div className={styles.warningTitle}>
                       <span className="codicon codicon-arrow-swap" />
-                      {t('settings.provider.convertToPlugin')}
+                      Convert to Plugin Configuration
                   </div>
                   <div className={styles.warningContent}>
-                      {t('settings.provider.convertConfirmMessage', { name: convertingProvider.name })}<br/><br/>
-                      {t('settings.provider.convertDetailMessage')}
+                      {`Convert cc-switch configuration "${convertingProvider.name}" to plugin configuration?`}<br/><br/>
+                      After conversion, the ID connection with cc-switch will be disconnected, and future imports won't overwrite this configuration.
                   </div>
                   <div className={styles.warningActions}>
                       <button
                           className={styles.btnSecondary}
                           onClick={() => {
                               setConvertingProvider(null);
-                              // 如果是从编辑来的，取消转换意味着取消编辑
                               if (editingCcSwitchProvider) {
                                   setEditingCcSwitchProvider(null);
                               }
                           }}
                       >
-                          {t('common.cancel')}
+                          Cancel
                       </button>
                       <button
                           className={styles.btnPrimary}
                           onClick={handleConvert}
                       >
-                          {t('settings.provider.confirmConvert')}
+                          Confirm Conversion
                       </button>
                   </div>
               </div>
@@ -272,7 +247,7 @@ export default function ProviderList({
       )}
 
       <div className={styles.header}>
-        <h4 className={styles.title}>{t('settings.provider.allProviders')}</h4>
+        <h4 className={styles.title}>All Providers</h4>
 
         <div className={styles.actions}>
           <div className={styles.importMenuWrapper} ref={importMenuRef}>
@@ -281,49 +256,29 @@ export default function ProviderList({
               onClick={() => setImportMenuOpen(!importMenuOpen)}
             >
               <span className="codicon codicon-cloud-download" />
-              {t('settings.provider.import')}
+              Import
             </button>
-            
+
             {importMenuOpen && (
               <div className={styles.importMenu}>
                 <div
                   className={styles.importMenuItem}
                   onClick={() => {
                     setImportMenuOpen(false);
-                    setIsImporting(true); // 开始加载
+                    setIsImporting(true);
                     sendToJava('preview_cc_switch_import');
                   }}
                 >
                   <span className="codicon codicon-arrow-swap" />
-                  {t('settings.provider.importFromCcSwitchUpdate')}
+                  Import/Update from cc-switch
                 </div>
                 <div
                   className={styles.importMenuItem}
                   onClick={handleSelectFileClick}
                 >
                   <span className="codicon codicon-file" />
-                  {t('settings.provider.importFromCcSwitchFile')}
+                  Select cc-switch.db File to Import
                 </div>
-                {/* <div
-                  className={styles.importMenuItem}
-                  onClick={() => {
-                    setImportMenuOpen(false);
-                    addToast(t('settings.provider.featureComingSoon'), 'info');
-                  }}
-                >
-                  <span className="codicon codicon-arrow-swap" />
-                  {t('settings.provider.importFromCcSwitchCli')}
-                </div>
-                <div
-                  className={styles.importMenuItem}
-                  onClick={() => {
-                    setImportMenuOpen(false);
-                    addToast(t('settings.provider.featureComingSoon'), 'info');
-                  }}
-                >
-                  <span className="codicon codicon-arrow-swap" />
-                  {t('settings.provider.importFromClaudeRouter')}
-                </div> */}
               </div>
             )}
           </div>
@@ -333,7 +288,7 @@ export default function ProviderList({
             onClick={onAdd}
           >
             <span className="codicon codicon-add" />
-            {t('common.add')}
+            Add
           </button>
         </div>
       </div>
@@ -347,15 +302,15 @@ export default function ProviderList({
             <div className={styles.cardInfo}>
               <div className={styles.name}>
                 <span className="codicon codicon-file" style={{ marginRight: '8px' }} />
-                {t('settings.provider.localProviderName')}
+                Local settings.json
                 <span
                   className="codicon codicon-info"
                   style={{ marginLeft: '8px', cursor: 'help', opacity: 0.7 }}
-                  title={t('settings.provider.localProviderHelp')}
+                  title="When using local provider mode:\n• The plugin will not modify your ~/.claude/settings.json file\n• You need to manually manage your configurations\n• Make sure the file exists and contains valid JSON\n• Suitable for advanced users who prefer manual control"
                 />
               </div>
-              <div className={styles.website} title={t('settings.provider.localProviderDescription')}>
-                {t('settings.provider.localProviderDescription')}
+              <div className={styles.website} title="Use configuration directly from ~/.claude/settings.json">
+                Use configuration directly from ~/.claude/settings.json
               </div>
             </div>
 
@@ -363,7 +318,7 @@ export default function ProviderList({
               {providers.some(p => p.id === LOCAL_PROVIDER_ID && p.isActive) ? (
                 <div className={styles.activeBadge}>
                   <span className="codicon codicon-check" />
-                  {t('settings.provider.inUse')}
+                  In Use
                 </div>
               ) : (
                 <button
@@ -371,7 +326,7 @@ export default function ProviderList({
                   onClick={() => onSwitch(LOCAL_PROVIDER_ID)}
                 >
                   <span className="codicon codicon-play" />
-                  {t('settings.provider.enable')}
+                  Enable
                 </button>
               )}
             </div>
@@ -381,8 +336,8 @@ export default function ProviderList({
             const regularProviders = providers.filter(p => p.id !== LOCAL_PROVIDER_ID);
             return regularProviders.length > 0 ? (
               regularProviders.map((provider) => (
-            <div 
-              key={provider.id} 
+            <div
+              key={provider.id}
               className={`${styles.card} ${provider.isActive ? styles.active : ''}`}
             >
               <div className={styles.cardInfo}>
@@ -400,12 +355,12 @@ export default function ProviderList({
                     </div>
                 )}
               </div>
-              
+
               <div className={styles.cardActions}>
                 {provider.isActive ? (
                   <div className={styles.activeBadge}>
                     <span className="codicon codicon-check" />
-                    {t('settings.provider.inUse')}
+                    In Use
                   </div>
                 ) : (
                   <button
@@ -413,7 +368,7 @@ export default function ProviderList({
                     onClick={() => onSwitch(provider.id)}
                   >
                     <span className="codicon codicon-play" />
-                    {t('settings.provider.enable')}
+                    Enable
                   </button>
                 )}
 
@@ -429,7 +384,7 @@ export default function ProviderList({
                             e.stopPropagation();
                             setConvertingProvider(provider);
                           }}
-                          title={t('settings.provider.convertToPlugin')}
+                          title="Convert to Plugin Configuration"
                         >
                           <span className="codicon codicon-arrow-swap" />
                         </button>
@@ -437,14 +392,14 @@ export default function ProviderList({
                       <button
                         className={styles.iconBtn}
                         onClick={() => handleEditClick(provider)}
-                        title={t('common.edit')}
+                        title="Edit"
                       >
                         <span className="codicon codicon-edit" />
                       </button>
                       <button
                         className={styles.iconBtn}
                         onClick={() => onDelete(provider)}
-                        title={t('common.delete')}
+                        title="Delete"
                       >
                         <span className="codicon codicon-trash" />
                       </button>
