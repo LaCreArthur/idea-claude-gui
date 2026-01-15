@@ -386,8 +386,6 @@ export interface ButtonAreaProps {
   hasInputContent?: boolean;
   /** Whether in conversation */
   isLoading?: boolean;
-  /** Whether enhancing prompt */
-  isEnhancing?: boolean;
   /** Current model */
   selectedModel?: string;
   /** Current mode */
@@ -401,8 +399,6 @@ export interface ButtonAreaProps {
   onModeSelect?: (mode: PermissionMode) => void;
   onModelSelect?: (modelId: string) => void;
   onProviderSelect?: (providerId: string) => void;
-  /** Enhance prompt callback */
-  onEnhancePrompt?: () => void;
   /** Whether always-thinking is enabled */
   alwaysThinkingEnabled?: boolean;
   /** Toggle thinking mode */

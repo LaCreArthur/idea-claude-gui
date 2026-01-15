@@ -10,7 +10,6 @@ export const ButtonArea = ({
   disabled = false,
   hasInputContent = false,
   isLoading = false,
-  isEnhancing = false,
   selectedModel = 'claude-sonnet-4-5',
   permissionMode = 'bypassPermissions',
   currentProvider = 'claude',
@@ -19,7 +18,6 @@ export const ButtonArea = ({
   onModeSelect,
   onModelSelect,
   onProviderSelect,
-  onEnhancePrompt,
   alwaysThinkingEnabled = false,
   onToggleThinking,
   streamingEnabled = false,
@@ -88,11 +86,6 @@ export const ButtonArea = ({
     onProviderSelect?.(providerId);
   }, [onProviderSelect]);
 
-  const handleEnhanceClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    onEnhancePrompt?.();
-  }, [onEnhancePrompt]);
-
   return (
     <div className="button-area" data-provider={currentProvider}>
       <div className="button-area-left">
@@ -112,17 +105,6 @@ export const ButtonArea = ({
       </div>
 
       <div className="button-area-right">
-        <div className="button-divider" />
-
-        <button
-          className="enhance-prompt-button has-tooltip"
-          onClick={handleEnhanceClick}
-          disabled={disabled || !hasInputContent || isLoading || isEnhancing}
-          data-tooltip="Enhance prompt (⌘P)"
-        >
-          <span className={`codicon ${isEnhancing ? 'codicon-loading codicon-modifier-spin' : 'codicon-sparkle'}`} />
-        </button>
-
         {isLoading ? (
           <button
             className="submit-button stop-button"

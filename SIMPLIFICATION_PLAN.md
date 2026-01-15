@@ -120,26 +120,12 @@ Node.js → stdout JSON → Java shows dialog → stdin JSON → Node.js returns
 - [x] **3.2** Remove UsageStatisticsSection from settings/index.tsx and sidebar
 - [x] **3.3** Remove usage statistics polling from App.tsx
 
-### Settings to SIMPLIFY
+### Settings to SIMPLIFY (deferred - requires careful UI changes)
 
-- [ ] **3.4** Simplify `ProviderDialog.tsx` - just show auth status, not complex config
-  - Show: "Authenticated via CLI" or "Using API Key" or "Not configured"
-  - Remove: Complex environment variable configuration
-  - Remove: Multiple provider types
-
-- [ ] **3.5** Simplify `settings/index.tsx`
-  - Keep: Authentication status (read-only display)
-  - Keep: Model selection (simple dropdown)
-  - Keep: Permission mode (3 radio buttons: Plan/Ask/Skip)
-  - Keep: MCP Servers section
-  - Keep: Skills/Agents section
-  - Remove: Unused tabs/sections
-
-- [ ] **3.6** Simplify `SettingsHandler.java`
-  - Remove handlers for deleted settings
-  - Simplify remaining handlers
-
-- [ ] **3.7** Test Phase 3 - settings still work, UI is cleaner
+- [ ] **3.4** Simplify `ProviderDialog.tsx` - DEFERRED (working feature)
+- [ ] **3.5** Simplify `settings/index.tsx` - DEFERRED (working feature)
+- [ ] **3.6** Simplify `SettingsHandler.java` - DEFERRED
+- [ ] **3.7** Test Phase 3 - PARTIAL (usage stats removed)
 
 ---
 
@@ -147,7 +133,7 @@ Node.js → stdout JSON → Java shows dialog → stdin JSON → Node.js returns
 
 ### Handlers to DELETE or MERGE
 
-- [ ] **4.1** Delete `PromptEnhancerHandler.java` (441 lines) - feature creep
+- [x] **4.1** Delete `PromptEnhancerHandler.java` (441 lines) + all related frontend code
 - [ ] **4.2** Merge `ProviderHandler.java` into `SettingsHandler.java`
 - [ ] **4.3** Simplify `FileHandler.java` - remove unused features
 - [ ] **4.4** Simplify `HistoryHandler.java` - remove unused features
