@@ -1,6 +1,5 @@
 package com.github.claudecodegui.permission;
 
-import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.intellij.openapi.diagnostic.Logger;
@@ -19,7 +18,6 @@ public class PermissionService {
 
     private static PermissionService instance;
     private final Project project;
-    private final Gson gson = new Gson();
 
     // Permission memory (tool+params level)
     private final Map<String, Integer> permissionMemory = new ConcurrentHashMap<>();

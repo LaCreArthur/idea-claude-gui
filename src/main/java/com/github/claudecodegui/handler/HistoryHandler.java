@@ -5,7 +5,6 @@ import com.github.claudecodegui.util.JsUtils;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.diagnostic.Logger;
 
-import javax.swing.*;
 import java.util.concurrent.CompletableFuture;
 
 /**
