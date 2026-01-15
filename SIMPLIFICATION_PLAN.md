@@ -158,7 +158,7 @@ Node.js → stdout JSON → Java shows dialog → stdin JSON → Node.js returns
 ## PHASE 5: Dead Code Cleanup
 
 - [x] **5.1** Remove unused imports across all Java files - Removed Gson/javax.swing from PermissionService/HistoryHandler
-- [ ] **5.2** Remove unused methods (use IDE's "find usages")
+- [x] **5.2** Remove unused methods - Removed unused permissionMemory field and deprecated setDialogShower method
 - [x] **5.3** Remove excessive debug logging (~80 console.log statements removed)
 - [x] **5.4** Remove commented-out code (~47 lines removed)
 - [x] **5.5** Remove any remaining i18n code (none found - English-only)

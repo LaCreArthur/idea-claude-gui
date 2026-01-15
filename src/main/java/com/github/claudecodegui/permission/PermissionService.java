@@ -19,8 +19,6 @@ public class PermissionService {
     private static PermissionService instance;
     private final Project project;
 
-    // Permission memory (tool+params level)
-    private final Map<String, Integer> permissionMemory = new ConcurrentHashMap<>();
     // Tool-level permission memory (tool name -> always allow)
     private final Map<String, Boolean> toolOnlyPermissionMemory = new ConcurrentHashMap<>();
     private volatile PermissionDecisionListener decisionListener;
@@ -183,19 +181,6 @@ public class PermissionService {
             debugLog("CONFIG", "Dialog shower unregistered for project: " + project.getName() +
                 ", was registered: " + (removed != null) + ", remaining: " + dialogShowers.size());
         }
-    }
-
-    /**
-     * Set permission dialog shower (for showing frontend dialogs)
-     * @deprecated Use {@link #registerDialogShower(Project, PermissionDialogShower)} instead
-     */
-    @Deprecated
-    public void setDialogShower(PermissionDialogShower shower) {
-        // Legacy compatibility: register with default project
-        if (shower != null && this.project != null) {
-            dialogShowers.put(this.project, shower);
-        }
-        debugLog("CONFIG", "Dialog shower set (legacy): " + (shower != null));
     }
 
     /**
