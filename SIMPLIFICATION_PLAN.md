@@ -50,11 +50,11 @@ Each iteration:
 
 ## Section 4: Delete Codex UI and Documentation
 
-- [ ] Delete `webview/src/components/CodexProviderDialog.tsx`
-- [ ] Delete `docs/codex/` directory (entire directory)
-- [ ] Delete `docs/sdk/codex-cli-sdk.md` if exists
-- [ ] Delete `docs/sdk/codex-sdk-npm-demo.md` if exists
-- [ ] Delete `docs/sdk/codex-sdk.md` if exists
+- [x] Delete `webview/src/components/CodexProviderDialog.tsx` ✓
+- [x] Delete `docs/codex/` directory (entire directory) ✓
+- [x] Delete `docs/sdk/codex-cli-sdk.md` if exists ✓
+- [x] Delete `docs/sdk/codex-sdk-npm-demo.md` if exists ✓
+- [x] Delete `docs/sdk/codex-sdk.md` if exists ✓
 
 ## Section 5: Remove i18n Dependencies
 
