@@ -40,11 +40,11 @@ public class FileExportHandler extends BaseMessageHandler {
     public boolean handle(String type, String content) {
         if ("save_markdown".equals(type)) {
             LOG.info("[FileExportHandler] Processing: save_markdown");
-            handleSaveFile(content, ".md", com.github.claudecodegui.ClaudeCodeGuiBundle.message("file.saveMarkdownDialog"));
+            handleSaveFile(content, ".md", "Save Markdown File");
             return true;
         } else if ("save_json".equals(type)) {
             LOG.info("[FileExportHandler] 处理: save_json");
-            handleSaveFile(content, ".json", com.github.claudecodegui.ClaudeCodeGuiBundle.message("file.saveJsonDialog"));
+            handleSaveFile(content, ".json", "Save JSON File");
             return true;
         }
         return false;
@@ -110,7 +110,7 @@ public class FileExportHandler extends BaseMessageHandler {
 
                                 // 通知前端成功
                                 ApplicationManager.getApplication().invokeLater(() -> {
-                                    String successMsg = escapeJs(com.github.claudecodegui.ClaudeCodeGuiBundle.message("file.saved"));
+                                    String successMsg = escapeJs("File saved");
                                     String jsCode = "if (window.addToast) { " +
                                         "  window.addToast('" + successMsg + "', 'success'); " +
                                         "}";
@@ -122,8 +122,8 @@ public class FileExportHandler extends BaseMessageHandler {
 
                                 // Notify frontend of failure
                                 ApplicationManager.getApplication().invokeLater(() -> {
-                                    String errorDetail = e.getMessage() != null ? e.getMessage() : com.github.claudecodegui.ClaudeCodeGuiBundle.message("file.saveFailed");
-                                    String errorMsg = escapeJs(com.github.claudecodegui.ClaudeCodeGuiBundle.message("file.saveFailedWithReason", errorDetail));
+                                    String errorDetail = e.getMessage() != null ? e.getMessage() : "Save failed";
+                                    String errorMsg = escapeJs("Save failed: " + errorDetail);
                                     String jsCode = "if (window.addToast) { " +
                                         "  window.addToast('" + errorMsg + "', 'error'); " +
                                         "}";
@@ -137,8 +137,8 @@ public class FileExportHandler extends BaseMessageHandler {
                 } catch (Exception e) {
                     LOG.error("[FileExportHandler] ❌ Failed to show dialog: " + e.getMessage(), e);
 
-                    String errorDetail = e.getMessage() != null ? e.getMessage() : com.github.claudecodegui.ClaudeCodeGuiBundle.message("file.showDialogFailed");
-                    String errorMsg = escapeJs(com.github.claudecodegui.ClaudeCodeGuiBundle.message("file.saveFailedWithReason", errorDetail));
+                    String errorDetail = e.getMessage() != null ? e.getMessage() : "Failed to show dialog";
+                    String errorMsg = escapeJs("Save failed: " + errorDetail);
                     String jsCode = "if (window.addToast) { " +
                         "  window.addToast('" + errorMsg + "', 'error'); " +
                         "}";
@@ -152,8 +152,8 @@ public class FileExportHandler extends BaseMessageHandler {
             LOG.error("[FileExportHandler] ❌ Failed to process save request: " + e.getMessage(), e);
 
             ApplicationManager.getApplication().invokeLater(() -> {
-                String errorDetail = e.getMessage() != null ? e.getMessage() : com.github.claudecodegui.ClaudeCodeGuiBundle.message("file.unknownError");
-                String errorMsg = escapeJs(com.github.claudecodegui.ClaudeCodeGuiBundle.message("file.saveFailedWithReason", errorDetail));
+                String errorDetail = e.getMessage() != null ? e.getMessage() : "Unknown error";
+                String errorMsg = escapeJs("Save failed: " + errorDetail);
                 String jsCode = "if (window.addToast) { " +
                     "  window.addToast('" + errorMsg + "', 'error'); " +
                     "}";

@@ -30,12 +30,12 @@ public class SendSelectionToTerminalAction extends AnAction implements DumbAware
     private static final Logger LOG = Logger.getInstance(SendSelectionToTerminalAction.class);
 
     /**
-     * 构造函数 - 设置本地化的Action文本和描述
+     * Constructor - set Action text and description
      */
     public SendSelectionToTerminalAction() {
         super(
-            ClaudeCodeGuiBundle.message("action.sendToGui.text"),
-            ClaudeCodeGuiBundle.message("action.sendToGui.description"),
+            "Send Selected Code to GUI Plugin",
+            "Send current selected code and path to terminal window",
             null
         );
     }

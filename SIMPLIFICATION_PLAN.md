@@ -164,13 +164,12 @@ Each iteration:
 
 ## Section 17: Replace Java Bundle Messages
 
-- [ ] Replace ClaudeCodeGuiBundle.message() calls in `src/main/java/com/github/claudecodegui/handler/McpServerHandler.java`
-- [ ] Replace ClaudeCodeGuiBundle.message() calls in `src/main/java/com/github/claudecodegui/handler/ProviderHandler.java`
-- [ ] Replace ClaudeCodeGuiBundle.message() calls in `src/main/java/com/github/claudecodegui/handler/FileExportHandler.java`
-- [ ] Replace ClaudeCodeGuiBundle.message() calls in `src/main/java/com/github/claudecodegui/settings/ProviderManager.java`
-- [ ] Replace ClaudeCodeGuiBundle.message() calls in `src/main/java/com/github/claudecodegui/SendSelectionToTerminalAction.java`
-- [ ] Replace ClaudeCodeGuiBundle.message() calls in `src/main/java/com/github/claudecodegui/QuickFixWithClaudeAction.java`
-- [ ] Replace ClaudeCodeGuiBundle.message() calls in `src/main/java/com/github/claudecodegui/ClaudeSDKToolWindow.java`
+- [x] Replace ClaudeCodeGuiBundle.message() calls in `src/main/java/com/github/claudecodegui/handler/McpServerHandler.java` ✓
+- [x] Replace ClaudeCodeGuiBundle.message() calls in `src/main/java/com/github/claudecodegui/handler/FileExportHandler.java` ✓
+- [x] Replace ClaudeCodeGuiBundle.message() calls in `src/main/java/com/github/claudecodegui/settings/ProviderManager.java` ✓
+- [x] Replace ClaudeCodeGuiBundle.message() calls in `src/main/java/com/github/claudecodegui/SendSelectionToTerminalAction.java` ✓
+- [x] Replace ClaudeCodeGuiBundle.message() calls in `src/main/java/com/github/claudecodegui/QuickFixWithClaudeAction.java` ✓
+- [x] Replace ClaudeCodeGuiBundle.message() calls in `src/main/java/com/github/claudecodegui/ClaudeSDKToolWindow.java` ✓
 
 ## Section 18: Simplify ai-bridge
 

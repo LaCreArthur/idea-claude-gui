@@ -1,6 +1,5 @@
 package com.github.claudecodegui.settings;
 
-import com.github.claudecodegui.ClaudeCodeGuiBundle;
 import com.github.claudecodegui.bridge.NodeDetector;
 import com.github.claudecodegui.model.DeleteResult;
 import com.google.gson.Gson;
@@ -603,14 +602,14 @@ public class ProviderManager {
     }
 
     /**
-     * Create local provider object with internationalized name and description
+     * Create local provider object
      * @param isActive whether this provider is currently active
      * @return JsonObject representing the local provider
      */
     private JsonObject createLocalProviderObject(boolean isActive) {
         JsonObject localProvider = new JsonObject();
         localProvider.addProperty("id", LOCAL_SETTINGS_PROVIDER_ID);
-        localProvider.addProperty("name", ClaudeCodeGuiBundle.message("provider.local.name"));
+        localProvider.addProperty("name", "Local settings.json");
         localProvider.addProperty("isActive", isActive);
         localProvider.addProperty("isLocalProvider", true);
         return localProvider;

@@ -37,8 +37,8 @@ public class QuickFixWithClaudeAction extends AnAction implements DumbAware {
 
     public QuickFixWithClaudeAction() {
         super(
-            ClaudeCodeGuiBundle.message("action.quickFixWithClaude.text"),
-            ClaudeCodeGuiBundle.message("action.quickFixWithClaude.description"),
+            "Ask Claude Code GUI...",
+            "Ask Claude Code GUI to analyze and improve your code",
             null
         );
     }
@@ -58,7 +58,7 @@ public class QuickFixWithClaudeAction extends AnAction implements DumbAware {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBorder(JBUI.Borders.empty(8));
 
-        JBLabel label = new JBLabel(ClaudeCodeGuiBundle.message("action.quickFixWithClaude.dialogLabel"));
+        JBLabel label = new JBLabel("Enter your question or request:");
         label.setBorder(JBUI.Borders.emptyBottom(4));
         panel.add(label, BorderLayout.NORTH);
 
@@ -72,7 +72,7 @@ public class QuickFixWithClaudeAction extends AnAction implements DumbAware {
                 .setFocusable(true)
                 .setResizable(true)
                 .setMovable(true)
-                .setTitle(ClaudeCodeGuiBundle.message("action.quickFixWithClaude.dialogTitle"))
+                .setTitle("Ask Claude Code GUI")
                 .createPopup();
 
         textField.addKeyListener(new KeyAdapter() {

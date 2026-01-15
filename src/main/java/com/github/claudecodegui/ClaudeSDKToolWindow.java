@@ -1770,7 +1770,7 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
 
                 // 更新前端状态
                 ApplicationManager.getApplication().invokeLater(() -> {
-                    callJavaScript("updateStatus", JsUtils.escapeJs(ClaudeCodeGuiBundle.message("toast.newSessionCreatedReady")));
+                    callJavaScript("updateStatus", JsUtils.escapeJs("New session created, you can start asking questions"));
 
                     // 重置 Token 使用统计
                     int maxTokens = SettingsHandler.getModelContextLimit(handlerContext.getCurrentModel());
