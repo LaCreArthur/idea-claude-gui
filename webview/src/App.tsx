@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import MarkdownBlock from './components/MarkdownBlock';
 import CollapsibleTextBlock from './components/CollapsibleTextBlock';
 import HistoryView from './components/history/HistoryView';
@@ -14,7 +13,7 @@ import RewindDialog, { type RewindRequest } from './components/RewindDialog';
 import RewindSelectDialog, { type RewindableMessage } from './components/RewindSelectDialog';
 import { rewindFiles } from './utils/bridge';
 import { ChatInputBox } from './components/ChatInputBox';
-import { CLAUDE_MODELS, CODEX_MODELS } from './components/ChatInputBox/types';
+import { CLAUDE_MODELS } from './components/ChatInputBox/types';
 import type { Attachment, PermissionMode, ReasoningEffort, SelectedAgent } from './components/ChatInputBox/types';
 import { setupSlashCommandsCallback, resetSlashCommandsState, resetFileReferenceState } from './components/ChatInputBox/providers';
 import {
@@ -71,7 +70,6 @@ const formatTime = (timestamp?: string) => {
 };
 
 const App = () => {
-  const { t } = useTranslation();
   const [messages, setMessages] = useState<ClaudeMessage[]>([]);
   const [_status, setStatus] = useState(DEFAULT_STATUS); // Internal state, displayed via toast
   const [loading, setLoading] = useState(false);
@@ -419,7 +417,7 @@ const App = () => {
   // Rewind 相关处理函数
   const handleRewindClick = (messageIndex: number, message: ClaudeMessage) => {
     if (!currentSessionId) {
-      addToast(t('rewind.notAvailable'), 'warning');
+      addToast('Rewind not available for this session', 'warning');
       return;
     }
 
@@ -449,7 +447,7 @@ const App = () => {
     const raw = targetMessage.raw;
     const uuid = typeof raw === 'object' ? (raw as any)?.uuid : undefined;
     if (!uuid) {
-      addToast(t('rewind.notAvailable'), 'warning');
+      addToast('Rewind not available for this session', 'warning');
       console.warn('[Rewind] No UUID found in message:', targetMessage);
       return;
     }
@@ -1024,11 +1022,11 @@ const App = () => {
           // 注意：不在这里显示成功 toast，等待后端保存完成后再显示
         }).catch(error => {
           console.error('[Frontend] Failed to export session:', error);
-          addToast(t('history.exportFailed'), 'error');
+          addToast('Export failed', 'error');
         });
       } catch (error) {
         console.error('[Frontend] Failed to parse export data:', error);
-        addToast(t('history.exportFailed'), 'error');
+        addToast('Export failed', 'error');
       }
     };
 
@@ -1391,12 +1389,12 @@ const App = () => {
 
         if (result.success) {
           window.addToast?.(
-            t('rewind.successSimple'),
+            'Rewind successful',
             'success'
           );
         } else {
           window.addToast?.(
-            result.message || t('rewind.failed'),
+            result.message || 'Failed to restore files',
             'error'
           );
         }
@@ -1405,7 +1403,7 @@ const App = () => {
         setIsRewinding(false);
         setRewindDialogOpen(false);
         setCurrentRewindRequest(null);
-        window.addToast?.(t('rewind.parseError'), 'error');
+        window.addToast?.('Failed to parse result', 'error');
       }
     };
   }, []); // 移除 currentProvider 依赖，因为现在使用 ref 获取最新值
@@ -1576,12 +1574,12 @@ const App = () => {
 
     // 🔧 防御性校验：即使输入框侧 gating 失效，也不能在 SDK 状态未知/未安装时发送
     if (!sdkStatusLoaded) {
-      addToast(t('chat.sdkStatusLoading'), 'info');
+      addToast('Checking SDK status...', 'info');
       return;
     }
     if (!currentSdkInstalled) {
       addToast(
-        t('chat.sdkNotInstalled', { provider: currentProvider === 'codex' ? 'Codex' : 'Claude Code' }) + ' ' + t('chat.goInstallSdk'),
+        'Claude Code SDK is not installed. Please install the SDK to start chatting. Go to Install',
         'warning'
       );
       setSettingsInitialTab('dependencies');
@@ -1755,7 +1753,7 @@ const App = () => {
     if (!activeProviderConfig) {
       setClaudeSettingsAlwaysThinkingEnabled(enabled);
       sendBridgeMessage('set_thinking_enabled', JSON.stringify({ enabled }));
-      addToast(enabled ? t('toast.thinkingEnabled') : t('toast.thinkingDisabled'), 'success');
+      addToast(enabled ? 'Thinking enabled' : 'Thinking disabled', 'success');
       return;
     }
 
@@ -1779,7 +1777,7 @@ const App = () => {
       }
     });
     sendBridgeMessage('update_provider', payload);
-    addToast(enabled ? t('toast.thinkingEnabled') : t('toast.thinkingDisabled'), 'success');
+    addToast(enabled ? 'Thinking enabled' : 'Thinking disabled', 'success');
   };
 
   /**
@@ -1789,7 +1787,7 @@ const App = () => {
     setStreamingEnabledSetting(enabled);
     const payload = { streamingEnabled: enabled };
     sendBridgeMessage('set_streaming_enabled', JSON.stringify(payload));
-    addToast(enabled ? t('settings.basic.streaming.enabled') : t('settings.basic.streaming.disabled'), 'success');
+    addToast(enabled ? 'Enabled' : 'Disabled', 'success');
   }, [t, addToast]);
 
   /**
@@ -1955,7 +1953,7 @@ const App = () => {
       channelId,
       allow: false,
       remember: false,
-      rejectMessage: t('permission.userDenied'),
+      rejectMessage: 'User denied the permission request',
     });
     console.log('[PERM_DEBUG][FRONTEND] Sending decision payload:', payload);
     sendBridgeMessage('permission_decision', payload);
@@ -2012,7 +2010,7 @@ const App = () => {
       }
 
       // 显示成功提示
-      addToast(t('history.sessionDeleted'), 'success');
+      addToast('Session deleted', 'success');
     }
   };
 
@@ -2050,9 +2048,9 @@ const App = () => {
       // 显示提示
       const session = historyData.sessions.find(s => s.sessionId === sessionId);
       if (session?.isFavorited) {
-        addToast(t('history.unfavorited'), 'success');
+        addToast('Unfavorited', 'success');
       } else {
-        addToast(t('history.favorited'), 'success');
+        addToast('Favorited', 'success');
       }
     }
   };
@@ -2081,107 +2079,12 @@ const App = () => {
       });
 
       // 显示成功提示
-      addToast(t('history.titleUpdated'), 'success');
+      addToast('Title updated', 'success');
     }
   };
 
-  // 文案本地化映射
-  const localizeMessage = (text: string): string => {
-    // ai-bridge 错误消息的英文到 i18n 键的映射
-    const aiBridgeMessageMap: Record<string, string> = {
-      // Claude Code 错误消息
-      'Claude Code was interrupted (possibly response timeout or user cancellation):': t('aiBridge.claudeCodeInterrupted'),
-      'Claude Code error:': t('aiBridge.claudeCodeError'),
-      'Not configured': t('aiBridge.notConfigured'),
-      'Not configured (value is empty or missing)': t('aiBridge.notConfiguredEmpty'),
-      'Default (https://api.anthropic.com)': t('aiBridge.defaultBaseUrl'),
-      // Codex 错误消息
-      'Codex authentication error:': t('aiBridge.codexAuthError'),
-      'Codex network error:': t('aiBridge.codexNetworkError'),
-      'Codex error:': t('aiBridge.codexError'),
-      // 权限相关
-      'User did not provide answers': t('aiBridge.userDidNotProvideAnswers'),
-      // 数据库相关
-      'Missing database file path argument': t('aiBridge.dbMissingPath'),
-      'Database file does not exist': t('aiBridge.dbFileNotExist'),
-      'Failed to read database': t('aiBridge.dbReadFailed'),
-      'Failed to parse provider config': t('aiBridge.dbParseProviderFailed'),
-      // 其他
-      'AI response is empty': t('aiBridge.aiResponseEmpty'),
-      'Enhancement failed': t('aiBridge.enhancementFailed'),
-      'Request interrupted by user': t('chat.requestInterrupted'),
-      '[Empty message]': t('aiBridge.emptyMessage'),
-      '[Uploaded attachment(s)]': t('aiBridge.uploadedAttachments'),
-    };
-
-    // 检查是否有完全匹配的映射
-    if (aiBridgeMessageMap[text]) {
-      return aiBridgeMessageMap[text];
-    }
-
-    // 检查是否包含需要映射的关键词并替换
-    let result = text;
-    for (const [key, value] of Object.entries(aiBridgeMessageMap)) {
-      if (result.includes(key)) {
-        result = result.replace(key, value);
-      }
-    }
-
-    // 处理带参数的消息
-    // 匹配 "User denied permission for XXX tool"
-    const permissionDeniedMatch = result.match(/User denied permission for (.+) tool/);
-    if (permissionDeniedMatch) {
-      result = result.replace(
-        permissionDeniedMatch[0],
-        t('aiBridge.userDeniedPermission', { toolName: permissionDeniedMatch[1] })
-      );
-    }
-
-    // 匹配 "[Uploaded X image(s)]"
-    const uploadedImagesMatch = result.match(/\[Uploaded (\d+) image\(s\)\]/);
-    if (uploadedImagesMatch) {
-      result = result.replace(
-        uploadedImagesMatch[0],
-        t('aiBridge.uploadedImages', { count: parseInt(uploadedImagesMatch[1], 10) })
-      );
-    }
-
-    // 匹配 "[Attachment: XXX]"
-    const attachmentMatch = result.match(/\[Attachment: (.+)\]/);
-    if (attachmentMatch) {
-      result = result.replace(
-        attachmentMatch[0],
-        `[${t('aiBridge.attachment')}: ${attachmentMatch[1]}]`
-      );
-    }
-
-    // 处理多行错误消息中的标签
-    result = result
-      .replace(/- Error message:/g, `- ${t('aiBridge.errorMessage')}:`)
-      .replace(/- Current API Key source:/g, `- ${t('aiBridge.currentApiKeySource')}:`)
-      .replace(/- Current API Key preview:/g, `- ${t('aiBridge.currentApiKeyPreview')}:`)
-      .replace(/- Current Base URL:/g, `- ${t('aiBridge.currentBaseUrl')}:`)
-      .replace(/\(source:/g, `(${t('aiBridge.source')}:`)
-      .replace(/- Tip: CLI can read from environment variables or settings\.json; this plugin only supports reading from settings\.json to avoid issues\. You can configure it in the plugin's top-right Settings > Provider Management/g,
-        `- ${t('aiBridge.configTip')}`);
-
-    // 处理 Codex 错误消息的详细内容
-    result = result
-      .replace(/Please check the following:\n1\. Is the Codex API Key in plugin settings correct\n2\. Does the API Key have sufficient permissions\n3\. If using a custom Base URL, please confirm the address is correct/g,
-        t('aiBridge.codexAuthErrorChecks'))
-      .replace(/Tip: Codex requires a valid OpenAI API Key/g, t('aiBridge.codexAuthTip'))
-      .replace(/Please check:\n1\. Is the network connection working\n2\. If using a proxy, please confirm proxy configuration\n3\. Is the firewall blocking the connection/g,
-        t('aiBridge.codexNetworkErrorChecks'))
-      .replace(/Please check network connection and Codex configuration/g, t('aiBridge.codexErrorCheck'));
-
-    // 处理 API 错误消息
-    result = result
-      .replace(/API error:/g, `${t('aiBridge.apiError')}:`)
-      .replace(/Possible causes:\n1\. API Key is not configured correctly\n2\. Third-party proxy service configuration issue\n3\. Please check the configuration in ~\/\.claude\/settings\.json/g,
-        t('aiBridge.apiErrorCauses'));
-
-    return result;
-  };
+  // Message passthrough (i18n removed - English only)
+  const localizeMessage = (text: string): string => text;
 
   const getMessageText = (message: ClaudeMessage) => {
     let text = '';
@@ -2191,7 +2094,7 @@ const App = () => {
     } else {
       const raw = message.raw;
       if (!raw) {
-        return `(${t('chat.emptyMessage')})`;
+        return `(${'Empty message'})`;
       }
       if (typeof raw === 'string') {
         text = raw;
@@ -2208,7 +2111,7 @@ const App = () => {
           .map((block) => block.text ?? '')
           .join('\n');
       } else {
-        return `(${t('chat.emptyMessage')})`;
+        return `(${'Empty message'})`;
       }
     }
 
@@ -2241,7 +2144,7 @@ const App = () => {
     }
     if (message.type === 'user' || message.type === 'error') {
       // 检查是否有有效的文本内容
-      if (text && text.trim() && text !== `(${t('chat.emptyMessage')})` && text !== `(${t('chat.parseError')})`) {
+      if (text && text.trim() && text !== `(${'Empty message'})` && text !== `(${'Failed to parse content'})`) {
         return true;
       }
       // 检查是否有有效的内容块（如图片等）
@@ -2303,7 +2206,7 @@ const App = () => {
           blocks.push({
             type: 'tool_use',
             id: typeof candidate.id === 'string' ? (candidate.id as string) : undefined,
-            name: typeof candidate.name === 'string' ? (candidate.name as string) : t('tools.unknownTool'),
+            name: typeof candidate.name === 'string' ? (candidate.name as string) : 'Unknown tool',
             input: (candidate.input as Record<string, unknown>) ?? {},
           });
         } else if (type === 'image') {
@@ -2587,11 +2490,11 @@ const App = () => {
 
   const sessionTitle = useMemo(() => {
     if (messages.length === 0) {
-      return t('common.newSession');
+      return 'New Session';
     }
     const firstUserMessage = messages.find((message) => message.type === 'user');
     if (!firstUserMessage) {
-      return t('common.newSession');
+      return 'New Session';
     }
     const text = getMessageText(firstUserMessage);
     return text.length > 15 ? `${text.substring(0, 15)}...` : text;
@@ -2631,8 +2534,8 @@ const App = () => {
         <div className="header">
           <div className="header-left">
             {currentView === 'history' ? (
-              <button className="back-button" onClick={() => setCurrentView('chat')} data-tooltip={t('common.back')}>
-                <BackIcon /> {t('common.back')}
+              <button className="back-button" onClick={() => setCurrentView('chat')} data-tooltip={'Back'}>
+                <BackIcon /> {'Back'}
               </button>
             ) : (
               <div
@@ -2650,20 +2553,20 @@ const App = () => {
           <div className="header-right">
             {currentView === 'chat' && (
               <>
-                <button className="icon-button" onClick={createNewSession} data-tooltip={t('common.newSession')}>
+                <button className="icon-button" onClick={createNewSession} data-tooltip={'New Session'}>
                   <span className="codicon codicon-plus" />
                 </button>
                 <button
                   className="icon-button"
                   onClick={() => sendBridgeMessage('create_new_tab')}
-                  data-tooltip={t('common.newTab')}
+                  data-tooltip={'New Tab'}
                 >
                   <span className="codicon codicon-split-horizontal" />
                 </button>
                 <button
                   className="icon-button"
                   onClick={() => setCurrentView('history')}
-                  data-tooltip={t('common.history')}
+                  data-tooltip={'History'}
                 >
                   <span className="codicon codicon-history" />
                 </button>
@@ -2673,7 +2576,7 @@ const App = () => {
                     setSettingsInitialTab(undefined);
                     setCurrentView('settings');
                   }}
-                  data-tooltip={t('common.settings')}
+                  data-tooltip={'Settings'}
                 >
                   <span className="codicon codicon-settings-gear" />
                 </button>
@@ -2715,7 +2618,7 @@ const App = () => {
                 </span>
               </div>
               <div>
-                <AnimatedText text={t('chat.sendMessage', { provider: currentProvider === 'codex' ? 'Codex Cli' : 'Claude Code' })} />
+                <AnimatedText text={'Send message to Claude Code'} />
               </div>
             </div>
           )}
@@ -2743,8 +2646,8 @@ const App = () => {
                   <button
                     className={`message-copy-btn ${copiedMessageIndex === messageIndex ? 'copied' : ''}`}
                     onClick={handleCopyMessage}
-                    title={t('markdown.copyMessage')}
-                    aria-label={t('markdown.copyMessage')}
+                    title={'Copy message'}
+                    aria-label={'Copy message'}
                   >
                     <span className="copy-icon">
                       <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -2752,7 +2655,7 @@ const App = () => {
                         <path d="M2 2l0 8l-2 0l0 -8a2 2 0 0 1 2 -2l8 0l0 2l-8 0z" fill="currentColor" fillOpacity="0.6"/>
                       </svg>
                     </span>
-                    <span className="copy-tooltip">{t('markdown.copySuccess')}</span>
+                    <span className="copy-tooltip">{'Copied!'}</span>
                   </button>
                 )}
                 {message.type === 'user' && message.timestamp && (
@@ -2792,18 +2695,18 @@ const App = () => {
                               if (previewRoot && block.src) {
                                 previewRoot.innerHTML = `
                                   <div class="image-preview-overlay" onclick="this.remove()">
-                                    <img src="${block.src}" alt={t('chat.imagePreview')} class="image-preview-content" onclick="event.stopPropagation()" />
+                                    <img src="${block.src}" alt={'Preview'} class="image-preview-content" onclick="event.stopPropagation()" />
                                     <div class="image-preview-close" onclick="this.parentElement.remove()">×</div>
                                   </div>
                                 `;
                               }
                             }}
                             style={{ cursor: 'pointer' }}
-                            title={t('chat.clickToPreview')}
+                            title={'Click to preview'}
                           >
                             <img
                               src={block.src}
-                              alt={t('chat.userUploadedImage')}
+                              alt={'User uploaded image'}
                               style={{
                                 maxWidth: message.type === 'user' ? '200px' : '100%',
                                 maxHeight: message.type === 'user' ? '150px' : 'auto',
@@ -2822,8 +2725,8 @@ const App = () => {
                             >
                               <span className="thinking-title">
                                 {isThinking && messageIndex === mergedMessages.length - 1
-                                  ? t('common.thinking')
-                                  : t('common.thinkingProcess')}
+                                  ? 'Thinking'
+                                  : 'Thinking Process'}
                               </span>
                               <span className="thinking-icon">
                                 {isThinkingExpanded(messageIndex, blockIndex) ? '▼' : '▶'}
@@ -2832,7 +2735,7 @@ const App = () => {
                             {isThinkingExpanded(messageIndex, blockIndex) && (
                               <div className="thinking-content">
                                 <MarkdownBlock
-                                  content={block.thinking ?? block.text ?? t('chat.noThinkingContent')}
+                                  content={block.thinking ?? block.text ?? 'No thinking content'}
                                   isStreaming={streamingActive && message.type === 'assistant' && messageIndex === mergedMessages.length - 1}
                                 />
                               </div>
@@ -2884,7 +2787,7 @@ const App = () => {
             <div className="message assistant">
               <div className="thinking-status">
                 <span className="thinking-status-icon">🤔</span>
-                <span className="thinking-status-text">{t('common.thinking')}</span>
+                <span className="thinking-status-text">{'Thinking'}</span>
               </div>
             </div>
           )} */}
@@ -2921,7 +2824,7 @@ const App = () => {
             usageMaxTokens={usageMaxTokens}
             showUsage={true}
             alwaysThinkingEnabled={activeProviderConfig?.settingsConfig?.alwaysThinkingEnabled ?? claudeSettingsAlwaysThinkingEnabled}
-            placeholder={t('chat.inputPlaceholder')}
+            placeholder={'@reference files, shift + enter for new line'}
             sdkInstalled={currentSdkInstalled}
             sdkStatusLoading={!sdkStatusLoaded}
             onInstallSdk={() => {
@@ -2965,20 +2868,20 @@ const App = () => {
 
       <ConfirmDialog
         isOpen={showNewSessionConfirm}
-        title={t('chat.createNewSession')}
-        message={t('chat.confirmNewSession')}
-        confirmText={t('common.confirm')}
-        cancelText={t('common.cancel')}
+        title={'Create New Session'}
+        message={'Current session has messages. Are you sure you want to create a new session?'}
+        confirmText={'Confirm'}
+        cancelText={'Cancel'}
         onConfirm={handleConfirmNewSession}
         onCancel={handleCancelNewSession}
       />
 
       <ConfirmDialog
         isOpen={showInterruptConfirm}
-        title={t('chat.createNewSession')}
-        message={t('chat.confirmInterrupt')}
-        confirmText={t('common.confirm')}
-        cancelText={t('common.cancel')}
+        title={'Create New Session'}
+        message={'A conversation is in progress. Creating a new session will interrupt it. Continue?'}
+        confirmText={'Confirm'}
+        cancelText={'Cancel'}
         onConfirm={handleConfirmInterrupt}
         onCancel={handleCancelInterrupt}
       />
