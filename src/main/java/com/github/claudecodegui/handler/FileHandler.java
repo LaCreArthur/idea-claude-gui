@@ -20,15 +20,16 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * 文件和命令相关消息处理器
+ * File and command message handler.
+ * Handles file listing, command listing, and file/browser opening.
  */
 public class FileHandler extends BaseMessageHandler {
 
     private static final Logger LOG = Logger.getInstance(FileHandler.class);
 
-    private static final String[] SUPPORTED_TYPES = {"list_files", "get_commands", "open_file", "open_browser",};
+    private static final String[] SUPPORTED_TYPES = {"list_files", "get_commands", "open_file", "open_browser"};
 
-    // 常量定义
+    // File listing limits
     private static final int MAX_RECENT_FILES = 50;
     private static final int MAX_SEARCH_RESULTS = 200;
     private static final int MAX_SEARCH_DEPTH = 15;
@@ -64,36 +65,26 @@ public class FileHandler extends BaseMessageHandler {
     }
 
     /**
-     * 处理文件列表请求
+     * Handle file list request for @-mention autocomplete
      */
     private void handleListFiles(String content) {
         CompletableFuture.runAsync(() -> {
             try {
-                // 1. 解析请求
                 FileListRequest request = parseRequest(content);
-
-                // 2. 获取基础路径
                 String basePath = getEffectiveBasePath();
-
-                // 3. 初始化文件集合（去重）
                 FileSet fileSet = new FileSet();
-
-                // 4. 收集文件
                 List<JsonObject> files = new ArrayList<>();
 
-                // Priority 1: 当前打开的文件
+                // Priority 1: Currently open files
                 collectOpenFiles(files, fileSet, basePath, request);
 
-                // Priority 2: 最近打开的文件
+                // Priority 2: Recently opened files
                 collectRecentFiles(files, fileSet, basePath, request);
 
-                // Priority 3: 文件系统扫描
+                // Priority 3: File system scan
                 collectFileSystemFiles(files, fileSet, basePath, request);
 
-                // 5. 排序
                 sortFiles(files);
-
-                // 6. 返回结果
                 sendResult(files);
             } catch (Exception e) {
                 LOG.error("[FileHandler] Failed to list files: " + e.getMessage(), e);
@@ -116,7 +107,7 @@ public class FileHandler extends BaseMessageHandler {
     }
 
     /**
-     * 收集当前打开的文件
+     * Collect currently open files in the editor
      */
     private void collectOpenFiles(List<JsonObject> files, FileSet fileSet, String basePath, FileListRequest request) {
         ApplicationManager.getApplication().runReadAction(() -> {
@@ -146,32 +137,22 @@ public class FileHandler extends BaseMessageHandler {
     }
 
     /**
-     * 收集最近打开的文件
+     * Collect recently opened files from editor history
      */
     private void collectRecentFiles(List<JsonObject> files, FileSet fileSet, String basePath, FileListRequest request) {
         ApplicationManager.getApplication().runReadAction(() -> {
             Project project = context.getProject();
             if (project == null || project.isDisposed()) {
-                LOG.debug("[FileHandler] Project is null or disposed in collectRecentFiles");
                 return;
             }
 
             try {
-                // Double-check project state inside read action
-                if (project.isDisposed()) {
-                    LOG.debug("[FileHandler] Project disposed during collectRecentFiles");
-                    return;
-                }
-
                 List<VirtualFile> recentFiles = EditorHistoryManager.getInstance(project).getFileList();
                 if (recentFiles == null) {
-                    LOG.warn("[FileHandler] EditorHistoryManager returned null file list");
                     return;
                 }
 
-                LOG.debug("[FileHandler] Collecting up to " + MAX_RECENT_FILES + " recent files from " + recentFiles.size() + " total");
-
-                // 倒序遍历，取最近的文件
+                // Reverse iterate to get most recent files first
                 int count = 0;
                 for (int i = recentFiles.size() - 1; i >= 0; i--) {
                     if (count >= MAX_RECENT_FILES) {
@@ -190,7 +171,7 @@ public class FileHandler extends BaseMessageHandler {
     }
 
     /**
-     * 收集文件系统文件
+     * Collect files from file system (disk scan)
      */
     private void collectFileSystemFiles(List<JsonObject> files, FileSet fileSet, String basePath, FileListRequest request) {
         List<JsonObject> diskFiles = new ArrayList<>();
@@ -205,7 +186,7 @@ public class FileHandler extends BaseMessageHandler {
             }
         }
 
-        // 合并磁盘扫描结果
+        // Merge disk scan results
         for (JsonObject fileObj : diskFiles) {
             String absPath = fileObj.get("absolutePath").getAsString();
             if (fileSet.tryAdd(absPath)) {
@@ -216,7 +197,7 @@ public class FileHandler extends BaseMessageHandler {
     }
 
     /**
-     * 解析请求
+     * Parse file list request from JSON content
      */
     private FileListRequest parseRequest(String content) {
         if (content == null || content.isEmpty()) {
@@ -229,14 +210,14 @@ public class FileHandler extends BaseMessageHandler {
             String currentPath = json.has("currentPath") ? json.get("currentPath").getAsString() : "";
             return new FileListRequest(query, currentPath);
         } catch (Exception e) {
-            // 如果不是 JSON，当作纯文本 query
+            // If not JSON, treat as plain text query
             return new FileListRequest(content.trim(), "");
         }
     }
 
     /**
-     * 获取有效的基础路径
-     * Ensures a non-null path is always returned with proper fallback chain
+     * Get effective base path with proper fallback chain.
+     * Returns session cwd > project path > user home > current dir
      */
     private String getEffectiveBasePath() {
         if (context.getSession() != null) {
@@ -267,30 +248,29 @@ public class FileHandler extends BaseMessageHandler {
     }
 
     /**
-     * 文件排序
+     * Sort files by priority: open files > recent files > disk files
      */
     private void sortFiles(List<JsonObject> files) {
         if (files.isEmpty()) return;
 
-        // 1. 包装为 SortItem，预读取/计算排序字段
+        // Wrap in SortItem for efficient sorting
         List<FileSortItem> items = new ArrayList<>(files.size());
         for (JsonObject json : files) {
             items.add(new FileSortItem(json));
         }
 
-        // 2. 排序
         items.sort((a, b) -> {
-            // Priority 1 & 2: 保持原始顺序 (稳定性)
+            // Priority 1 & 2: maintain original order (stability)
             if (a.priority < 3 && b.priority < 3) {
                 return 0;
             }
 
-            // Priority 不同：数值小的在前
+            // Lower priority number = higher priority
             if (a.priority != b.priority) {
                 return a.priority - b.priority;
             }
 
-            // Priority 3+: 按 depth → parent → type → name 排序
+            // Priority 3+: sort by depth -> parent -> type -> name
             int depthDiff = a.getDepth() - b.getDepth();
             if (depthDiff != 0) return depthDiff;
 
@@ -304,7 +284,7 @@ public class FileHandler extends BaseMessageHandler {
             return a.name.compareToIgnoreCase(b.name);
         });
 
-        // 3. 重写回原列表
+        // Write back to original list
         files.clear();
         for (FileSortItem item : items) {
             files.add(item.json);
@@ -312,8 +292,7 @@ public class FileHandler extends BaseMessageHandler {
     }
 
     /**
-     * 处理获取命令列表请求
-     * 调用 ClaudeSDKBridge 获取真实的 SDK 斜杠命令列表
+     * Handle slash command list request from SDK
      */
     private void handleGetCommands(String content) {
         CompletableFuture.runAsync(() -> {
@@ -331,27 +310,23 @@ public class FileHandler extends BaseMessageHandler {
                     }
                 }
 
-                // 获取工作目录
                 String cwd = getEffectiveBasePath();
-
-                LOG.info("[FileHandler] Getting slash commands from SDK, cwd=" + cwd);
-
-                // 调用 ClaudeSDKBridge 获取真实的斜杠命令
                 final String finalQuery = query;
+
                 context.getClaudeSDKBridge().getSlashCommands(cwd).thenAccept(sdkCommands -> {
                     try {
                         Gson gson = new Gson();
                         List<JsonObject> commands = new ArrayList<>();
 
-                        // 转换 SDK 返回的命令格式
+                        // Convert SDK command format
                         for (JsonObject cmd : sdkCommands) {
                             String name = cmd.has("name") ? cmd.get("name").getAsString() : "";
                             String description = cmd.has("description") ? cmd.get("description").getAsString() : "";
 
-                            // 确保命令以 / 开头
+                            // Ensure command starts with /
                             String label = name.startsWith("/") ? name : "/" + name;
 
-                            // Apply filter
+                            // Apply query filter
                             if (finalQuery.isEmpty() || label.toLowerCase().contains(finalQuery.toLowerCase()) || description.toLowerCase().contains(finalQuery.toLowerCase())) {
                                 JsonObject cmdObj = new JsonObject();
                                 cmdObj.addProperty("label", label);
@@ -360,15 +335,11 @@ public class FileHandler extends BaseMessageHandler {
                             }
                         }
 
-                        LOG.info("[FileHandler] Got " + commands.size() + " commands from SDK (filtered from " + sdkCommands.size() + ")");
-
                         // Always ensure essential commands are included
-                        // SDK may not return all commands (e.g., /resume, /clear)
                         addEssentialCommands(commands, finalQuery);
 
-                        // 如果 SDK 没有返回命令，使用本地默认命令作为回退
+                        // If SDK returned no commands, use fallback
                         if (commands.isEmpty() && sdkCommands.isEmpty()) {
-                            LOG.info("[FileHandler] SDK returned no commands, using local fallback");
                             addFallbackCommands(commands, finalQuery);
                         }
 
@@ -385,7 +356,7 @@ public class FileHandler extends BaseMessageHandler {
                     }
                 }).exceptionally(ex -> {
                     LOG.error("[FileHandler] Failed to get commands from SDK: " + ex.getMessage());
-                    // 出错时使用本地默认命令
+                    // On error, use fallback commands
                     try {
                         Gson gson = new Gson();
                         List<JsonObject> commands = new ArrayList<>();
@@ -454,35 +425,26 @@ public class FileHandler extends BaseMessageHandler {
     }
 
     /**
-     * 在编辑器中打开文件
-     */
-    /**
-     * 在编辑器中打开文件
-     * 支持带行号的文件路径格式：file.txt:100 或 file.txt:100-200
+     * Open file in editor.
+     * Supports line number format: file.txt:100 or file.txt:100-200
      */
     private void handleOpenFile(String filePath) {
-        LOG.info("Requesting to open file: " + filePath);
-
-        // 先在普通线程中处理文件路径解析（不涉及 VFS 操作）
         CompletableFuture.runAsync(() -> {
             try {
-                // 解析文件路径和行号
+                // Parse file path and line number
                 final String[] parsedPath = {filePath};
                 final int[] parsedLineNumber = {-1};
 
-                // 检测并提取行号（格式：file.txt:100 或 file.txt:100-200）
+                // Extract line number (format: file.txt:100 or file.txt:100-200)
                 int colonIndex = filePath.lastIndexOf(':');
                 if (colonIndex > 0) {
                     String afterColon = filePath.substring(colonIndex + 1);
-                    // 检查冒号后是否为行号（可能包含范围，如 100-200）
                     if (afterColon.matches("\\d+(-\\d+)?")) {
                         parsedPath[0] = filePath.substring(0, colonIndex);
-                        // 提取起始行号
                         int dashIndex = afterColon.indexOf('-');
                         String lineStr = dashIndex > 0 ? afterColon.substring(0, dashIndex) : afterColon;
                         try {
                             parsedLineNumber[0] = Integer.parseInt(lineStr);
-                            LOG.info("Detected line number: " + parsedLineNumber[0]);
                         } catch (NumberFormatException e) {
                             LOG.warn("Failed to parse line number: " + lineStr);
                         }
@@ -494,10 +456,9 @@ public class FileHandler extends BaseMessageHandler {
 
                 File file = new File(actualPath);
 
-                // 如果文件不存在且是相对路径，尝试相对于项目根目录解析
+                // If file doesn't exist and is relative, try resolving from project root
                 if (!file.exists() && !file.isAbsolute() && context.getProject().getBasePath() != null) {
                     File projectFile = new File(context.getProject().getBasePath(), actualPath);
-                    LOG.info("Trying to resolve relative to project root: " + projectFile.getAbsolutePath());
                     if (projectFile.exists()) {
                         file = projectFile;
                     }
@@ -513,34 +474,25 @@ public class FileHandler extends BaseMessageHandler {
 
                 final File finalFile = file;
 
-                // Use utility method to async refresh and find file
                 EditorFileUtils.refreshAndFindFileAsync(finalFile, virtualFile -> {
-                    // File found, open in editor
                     FileEditorManager.getInstance(context.getProject()).openFile(virtualFile, true);
 
                     // If line number specified, jump to that line
                     if (lineNumber > 0) {
                         ApplicationManager.getApplication().invokeLater(() -> {
-                            com.intellij.openapi.editor.Editor editor = com.intellij.openapi.fileEditor.FileEditorManager.getInstance(context.getProject()).getSelectedTextEditor();
+                            com.intellij.openapi.editor.Editor editor = FileEditorManager.getInstance(context.getProject()).getSelectedTextEditor();
                             if (editor != null && editor.getDocument().getTextLength() > 0) {
-                                // Line numbers are 0-based internally, user input is 1-based
                                 int zeroBasedLine = Math.max(0, lineNumber - 1);
                                 int lineCount = editor.getDocument().getLineCount();
                                 if (zeroBasedLine < lineCount) {
                                     int offset = editor.getDocument().getLineStartOffset(zeroBasedLine);
                                     editor.getCaretModel().moveToOffset(offset);
                                     editor.getScrollingModel().scrollToCaret(com.intellij.openapi.editor.ScrollType.CENTER);
-                                    LOG.info("Jumped to line " + lineNumber);
-                                } else {
-                                    LOG.warn("Line number " + lineNumber + " out of range (file has " + lineCount + " lines)");
                                 }
                             }
                         }, ModalityState.nonModal());
                     }
-
-                    LOG.info("Successfully opened file: " + filePath);
                 }, () -> {
-                    // Failure callback
                     LOG.error("Failed to get VirtualFile: " + filePath);
                     callJavaScript("addErrorMessage", escapeJs("Cannot open file: " + filePath));
                 });
@@ -551,7 +503,7 @@ public class FileHandler extends BaseMessageHandler {
     }
 
     /**
-     * 打开浏览器
+     * Open URL in browser
      */
     private void handleOpenBrowser(String url) {
         ApplicationManager.getApplication().invokeLater(() -> {
@@ -564,7 +516,7 @@ public class FileHandler extends BaseMessageHandler {
     }
 
     /**
-     * 列出目录的直接子文件/文件夹（不递归）
+     * List direct children of a directory (non-recursive)
      */
     private void listDirectChildren(File dir, String basePath, List<JsonObject> files) {
         if (!dir.isDirectory()) return;
@@ -591,7 +543,7 @@ public class FileHandler extends BaseMessageHandler {
     }
 
     /**
-     * 递归收集文件
+     * Recursively collect files matching query
      */
     private void collectFilesRecursive(File dir, String basePath, List<JsonObject> files, FileListRequest request, int depth) {
         if (depth > MAX_SEARCH_DEPTH || files.size() >= MAX_SEARCH_RESULTS) return;
@@ -613,18 +565,15 @@ public class FileHandler extends BaseMessageHandler {
 
             String relativePath = getRelativePath(child, basePath);
 
-            // 检查是否匹配查询
-            boolean matches = true;
-            if (request.hasQuery) {
-                matches = request.matches(name, relativePath);
-            }
+            // Check if matches query
+            boolean matches = !request.hasQuery || request.matches(name, relativePath);
 
             if (matches) {
                 JsonObject fileObj = createFileObject(child, name, relativePath);
                 files.add(fileObj);
             }
 
-            // 目录总是递归搜索（即使目录本身不匹配，其子文件可能匹配）
+            // Always recurse into directories (child files may match even if directory doesn't)
             if (isDir) {
                 collectFilesRecursive(child, basePath, files, request, depth + 1);
             }
@@ -632,29 +581,25 @@ public class FileHandler extends BaseMessageHandler {
     }
 
     /**
-     * 判断是否应该跳过文件或目录
+     * Check if file/directory should be skipped during search
      */
     private boolean shouldSkipInSearch(String name, boolean isDirectory) {
-        // 通用跳过
+        // Skip version control directories
         if (name.equals(".git") || name.equals(".svn") || name.equals(".hg")) {
             return true;
         }
+        // Skip dependency/cache directories
         if (name.equals("node_modules") || name.equals("__pycache__")) {
             return true;
         }
-
-        // 目录特有
+        // Skip build output directories
         if (isDirectory) {
             return (name.equals("target") || name.equals("build") || name.equals("dist") || name.equals("out"));
         }
-
-        // 文件特有
+        // Skip system/IDE files
         return name.equals(".DS_Store") || name.equals(".idea");
     }
 
-    /**
-     * 获取相对路径
-     */
     private String getRelativePath(File file, String basePath) {
         String relativePath = file.getAbsolutePath().substring(basePath.length());
         if (relativePath.startsWith(File.separator)) {
@@ -664,7 +609,7 @@ public class FileHandler extends BaseMessageHandler {
     }
 
     /**
-     * 创建文件对象
+     * Create JSON file object from File
      */
     private JsonObject createFileObject(File file, String name, String relativePath) {
         JsonObject fileObj = new JsonObject();
@@ -683,7 +628,7 @@ public class FileHandler extends BaseMessageHandler {
     }
 
     /**
-     * 创建文件对象 (从 VirtualFile，避免物理 I/O)
+     * Create JSON file object from VirtualFile (avoids physical I/O)
      */
     private JsonObject createFileObject(VirtualFile file, String relativePath) {
         JsonObject fileObj = new JsonObject();
@@ -703,7 +648,7 @@ public class FileHandler extends BaseMessageHandler {
     }
 
     /**
-     * 添加命令到列表
+     * Add command to list if it matches query
      */
     private void addCommand(List<JsonObject> commands, String label, String description, String query) {
         if (query.isEmpty() || label.toLowerCase().contains(query.toLowerCase()) || description.toLowerCase().contains(query.toLowerCase())) {
@@ -715,27 +660,19 @@ public class FileHandler extends BaseMessageHandler {
     }
 
     /**
-     * 添加 VirtualFile 到列表
+     * Add VirtualFile to result list with deduplication
      */
     private void addVirtualFile(VirtualFile vf, String basePath, List<JsonObject> files, FileSet fileSet, FileListRequest request, int priority) {
-        // Enhanced null safety checks
         if (vf == null || !vf.isValid() || vf.isDirectory()) return;
-        if (basePath == null) {
-            LOG.warn("[FileHandler] basePath is null in addVirtualFile, skipping file");
-            return;
-        }
+        if (basePath == null) return;
 
         String name = vf.getName();
         if (shouldSkipInSearch(name, false)) return;
 
         String path = vf.getPath();
-        if (path == null) {
-            LOG.warn("[FileHandler] VirtualFile path is null for: " + name);
-            return;
-        }
-        if (!fileSet.tryAdd(path)) return;
+        if (path == null || !fileSet.tryAdd(path)) return;
 
-        // 计算相对路径
+        // Calculate relative path
         String relativePath = path;
         if (path.startsWith(basePath)) {
             relativePath = path.substring(basePath.length());
@@ -744,7 +681,6 @@ public class FileHandler extends BaseMessageHandler {
             }
         }
 
-        // 匹配查询
         if (request.matches(name, relativePath)) {
             JsonObject obj = createFileObject(vf, relativePath);
             obj.addProperty("priority", priority);
@@ -752,13 +688,12 @@ public class FileHandler extends BaseMessageHandler {
         }
     }
 
-    // --- 内部辅助类 ---
+    // --- Helper Classes ---
 
     /**
-     * 文件列表请求封装
+     * File list request with query and path
      */
     private static class FileListRequest {
-
         final String query;
         final String queryLower;
         final String currentPath;
@@ -773,29 +708,18 @@ public class FileHandler extends BaseMessageHandler {
 
         boolean matches(String name, String relativePath) {
             if (!hasQuery) return true;
-            String lowerName = name.toLowerCase();
-            String lowerPath = relativePath.toLowerCase();
-            return (lowerName.contains(queryLower) || lowerPath.contains(queryLower));
+            return name.toLowerCase().contains(queryLower) || relativePath.toLowerCase().contains(queryLower);
         }
     }
 
     /**
-     * 文件集合，自动处理路径归一化和去重
+     * File set with path normalization and deduplication
      */
     private static class FileSet {
-
         private final HashSet<String> paths = new HashSet<>();
 
         boolean tryAdd(String path) {
-            return paths.add(normalizePath(path));
-        }
-
-        boolean contains(String path) {
-            return paths.contains(normalizePath(path));
-        }
-
-        private String normalizePath(String path) {
-            return path == null ? "" : path.replace('\\', '/');
+            return paths.add(path == null ? "" : path.replace('\\', '/'));
         }
     }
 }

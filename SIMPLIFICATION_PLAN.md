@@ -148,7 +148,7 @@ Node.js → stdout JSON → Java shows dialog → stdin JSON → Node.js returns
 
 - [x] **4.1** Delete `PromptEnhancerHandler.java` (441 lines) + all related frontend code
 - [x] **4.2** Merge `ProviderHandler.java` into `SettingsHandler.java` (~427 lines merged)
-- [ ] **4.3** Simplify `FileHandler.java` - remove unused features
+- [x] **4.3** Simplify `FileHandler.java` - converted Chinese comments to English, removed unused code
 - [ ] **4.4** Simplify `HistoryHandler.java` - remove unused features
 - [ ] **4.5** Remove file-based IPC code from `PermissionService.java`
 - [ ] **4.6** Test Phase 4 - all core features work
