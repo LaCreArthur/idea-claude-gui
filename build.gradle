@@ -50,6 +50,13 @@ tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
 }
 
+// Configure JetBrains Marketplace publishing
+intellijPlatform {
+    publishing {
+        token = providers.environmentVariable("JETBRAINS_MARKETPLACE_TOKEN")
+    }
+}
+
 // Ensure plugin.xml is patched with the correct since/until build and change notes
 patchPluginXml {
     // plugin compatibility range

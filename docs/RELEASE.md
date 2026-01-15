@@ -49,6 +49,26 @@ Before creating a new release, verify all version numbers and changelogs are upd
 | `CHANGELOG.md` | Header | `##### **January 4, 2026 (v0.2.1)**` |
 | `plugin.xml` | `<change-notes>` | `<h3>v0.2.1 - Feature Update</h3>` |
 
+## Publishing to JetBrains Marketplace
+
+### Automatic (via GitHub Actions)
+Pushing a tag triggers automatic publishing:
+```bash
+git tag vX.Y.Z
+git push origin vX.Y.Z
+```
+
+The workflow publishes to JetBrains Marketplace using the `JETBRAINS_MARKETPLACE_TOKEN` secret.
+
+### Manual (via CLI)
+```bash
+JETBRAINS_MARKETPLACE_TOKEN=your_token ./gradlew publishPlugin
+```
+
+### Setup (one-time)
+1. Get a token from https://plugins.jetbrains.com/author/me/tokens
+2. Add `JETBRAINS_MARKETPLACE_TOKEN` to GitHub repository secrets
+
 ## Notes
 
 - The webview `package.json` version is `0.0.0` (intentional, not released separately)
