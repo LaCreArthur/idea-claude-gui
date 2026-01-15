@@ -45,7 +45,7 @@ describe('McpSettingsSection', () => {
     render(<McpSettingsSection />);
 
     // Should show loading initially
-    expect(screen.getByText('mcp.loading')).toBeInTheDocument();
+    expect(screen.getByText('Loading...')).toBeInTheDocument();
   });
 
   it('renders server list after loading', async () => {
@@ -97,7 +97,7 @@ describe('McpSettingsSection', () => {
     }));
   });
 
-  it('uses i18n keys for toast messages (not hardcoded Chinese)', async () => {
+  it('uses English strings for toast messages (not Chinese)', async () => {
     render(<McpSettingsSection />);
 
     // Simulate server data

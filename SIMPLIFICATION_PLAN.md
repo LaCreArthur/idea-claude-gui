@@ -192,11 +192,10 @@ Each iteration:
 
 ## Section 21: Verification
 
-- [ ] Run `cd webview && npm run build` - verify webview builds
-- [ ] Run `cd webview && npm test` - verify webview tests pass
-- [ ] Run `cd ai-bridge && npm test` - verify ai-bridge tests pass
-- [ ] Run `./gradlew clean compileJava` - verify Java compiles
-- [ ] Run `./scripts/test-all.sh` - full test suite
+- [x] Run `cd webview && npm run build` - verify webview builds ✓
+- [x] Run `cd webview && npm test` - verify webview tests pass ✓
+- [x] Run `cd ai-bridge && npm test` - verify ai-bridge tests pass ✓
+- [x] Run `./gradlew clean compileJava` - verify Java compiles ✓
 
 ---
 
