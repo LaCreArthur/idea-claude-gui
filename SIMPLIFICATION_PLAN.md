@@ -75,7 +75,7 @@ Each iteration:
 
 - [x] Remove i18n from `webview/src/components/settings/ProviderList/index.tsx` ✓
 - [x] Remove i18n from `webview/src/components/settings/ProviderList/ImportConfirmDialog.tsx` ✓
-- [ ] Remove i18n from `webview/src/components/settings/ProviderManageSection/index.tsx`
+- [x] Remove i18n from `webview/src/components/settings/ProviderManageSection/index.tsx` ✓
 - [ ] Remove i18n from `webview/src/components/settings/DependencySection/index.tsx` - also remove codex-sdk
 - [ ] Remove i18n from `webview/src/components/settings/UsageSection/index.tsx`
 - [ ] Remove i18n from `webview/src/components/settings/AgentSection/index.tsx`
