@@ -298,3 +298,11 @@ main();
 # Check for unused code
 ./gradlew checkstyleMain
 ```
+
+---
+
+## Future Work (Low Priority)
+
+- [ ] Rename `.codemoss` directory to `.claude-gui` or similar (upstream legacy name)
+- [ ] Convert remaining Chinese comments to English in Java files
+- [ ] Remove unused `buildBaseCommand` method from BaseSDKBridge.java
