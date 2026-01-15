@@ -26,13 +26,13 @@ Each iteration:
 - [x] Delete `webview/src/i18n/locales/es.json` ✓
 - [x] Delete `webview/src/i18n/locales/fr.json` ✓
 - [x] Delete `webview/src/i18n/locales/hi.json` ✓
-- [ ] Delete `src/main/resources/messages/ClaudeCodeGuiBundle_zh.properties`
-- [ ] Delete `src/main/resources/messages/ClaudeCodeGuiBundle_zh_TW.properties`
-- [ ] Delete `src/main/resources/messages/ClaudeCodeGuiBundle_ja.properties`
-- [ ] Delete `src/main/resources/messages/ClaudeCodeGuiBundle_es.properties`
-- [ ] Delete `src/main/resources/messages/ClaudeCodeGuiBundle_fr.properties`
-- [ ] Delete `src/main/resources/messages/ClaudeCodeGuiBundle_hi.properties`
-- [ ] Delete `src/main/resources/messages/ClaudeCodeGuiBundle_en.properties`
+- [x] Delete `src/main/resources/messages/ClaudeCodeGuiBundle_zh.properties` ✓
+- [x] Delete `src/main/resources/messages/ClaudeCodeGuiBundle_zh_TW.properties` ✓
+- [x] Delete `src/main/resources/messages/ClaudeCodeGuiBundle_ja.properties` ✓
+- [x] Delete `src/main/resources/messages/ClaudeCodeGuiBundle_es.properties` ✓
+- [x] Delete `src/main/resources/messages/ClaudeCodeGuiBundle_fr.properties` ✓
+- [x] Delete `src/main/resources/messages/ClaudeCodeGuiBundle_hi.properties` ✓
+- [x] Delete `src/main/resources/messages/ClaudeCodeGuiBundle_en.properties` ✓
 
 ## Section 2: Delete Codex Provider Files (Java)
 
