@@ -1,3 +1,3 @@
 PHASE: 2 - EXECUTION
-ITERATION: 6
-LAST_ACTION: Removed i18n from SettingsSidebar/index.tsx
+ITERATION: 7
+LAST_ACTION: Removed i18n from SettingsHeader/index.tsx

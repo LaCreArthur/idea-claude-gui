@@ -69,7 +69,7 @@ Each iteration:
 - [x] Remove i18n from `webview/src/components/settings/index.tsx` ✓
 - [x] Remove i18n from `webview/src/components/settings/BasicConfigSection/index.tsx` - also remove language selector UI ✓
 - [x] Remove i18n from `webview/src/components/settings/SettingsSidebar/index.tsx` ✓
-- [ ] Remove i18n from `webview/src/components/settings/SettingsHeader/index.tsx`
+- [x] Remove i18n from `webview/src/components/settings/SettingsHeader/index.tsx` ✓
 
 ## Section 7: Replace Translations in React Components (Batch 2 - Settings)
 
