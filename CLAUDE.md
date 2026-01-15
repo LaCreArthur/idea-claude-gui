@@ -1,6 +1,27 @@
-# Project: idea-claude-code-gui
+# Project: idea-claude-gui
 
 IntelliJ IDEA plugin providing a GUI for Claude Code. React/TypeScript webview + Java plugin + Node.js ai-bridge.
+
+## CRITICAL: Fork Identity (NEVER OVERWRITE)
+
+This is a fork. The following values define the fork's identity and **MUST NEVER be changed during upstream merges or any other operation**:
+
+| File | Field | Required Value |
+|------|-------|----------------|
+| `build.gradle` | `group` | `com.lacrearthur.idea-claude-gui` |
+| `build.gradle` | `version` | Current fork version (e.g., `0.2.4`) |
+| `plugin.xml` | `<id>` | `com.lacrearthur.idea-claude-gui` |
+| `plugin.xml` | `<name>` | `Claude GUI` |
+| `plugin.xml` | `<vendor>` | `Arthur Scheidel` |
+| `BridgeDirectoryResolver.java` | `PLUGIN_ID` | `com.lacrearthur.idea-claude-gui` |
+| `PluginUpdateListener.java` | `PLUGIN_ID` | `com.lacrearthur.idea-claude-gui` |
+| `README.md` | Title | `Claude GUI` |
+| `README.md` | JetBrains link | `https://plugins.jetbrains.com/plugin/29599-claude-gui` |
+
+**During upstream merges:**
+1. ALWAYS reject upstream changes to these fields
+2. If accidentally overwritten, revert immediately before any commit
+3. Verify these values after every merge operation
 
 ## Design Philosophy
 

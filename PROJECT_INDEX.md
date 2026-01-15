@@ -1,4 +1,4 @@
-# Project Index: IDEA Claude Code GUI
+# Project Index: Claude GUI
 
 **Generated**: 2025-12-14
 **Version**: v0.1.1 (branch)
@@ -188,8 +188,7 @@ idea-claude-gui/
 - **CONFIG_PRIORITY_GUIDE.md** - Config priority guide
 
 ### Project Docs
-- **README.md** - Project overview (English)
-- **README.zh-CN.md** - 项目概述（中文）
+- **README.md** - Project overview
 - **CHANGELOG.md** - Version history
 
 ---

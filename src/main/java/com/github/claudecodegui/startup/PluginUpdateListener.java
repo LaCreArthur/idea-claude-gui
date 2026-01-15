@@ -24,7 +24,7 @@ import java.io.File;
 public class PluginUpdateListener implements ProjectActivity {
 
     private static final Logger LOG = Logger.getInstance(PluginUpdateListener.class);
-    private static final String PLUGIN_ID = "com.github.idea-claude-code-gui";
+    private static final String PLUGIN_ID = "com.lacrearthur.idea-claude-gui";
     private static final String LAST_VERSION_KEY = "claude.code.last.plugin.version";
     private static final String SDK_DIR_NAME = "ai-bridge";
 

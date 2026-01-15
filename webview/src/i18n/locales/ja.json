@@ -800,6 +800,58 @@
     "codexError": "Codex エラー：",
     "codexErrorCheck": "ネットワーク接続と Codex 設定を確認してください",
     "codexThinkingHint": "Codex が reasoning 項目を返しませんでした。思考プロセスが表示されない場合は、docs/codex/docs/config.md の hide_agent_reasoning/show_raw_agent_reasoning 設定を参照し、OpenAI アカウントが認証済みであることを確認してください。",
+"errors": {
+      "SESSION_EXPIRED": {
+        "title": "セッション期限切れ",
+        "message": "Claude セッションの有効期限が切れました。",
+        "action": "ターミナルで \"claude login\" を実行してセッションを更新してください"
+      },
+      "NO_SESSION": {
+        "title": "未ログイン",
+        "message": "Claude セッションが見つかりません。認証が必要です。",
+        "action": "ターミナルで \"claude login\" を実行して認証してください"
+      },
+      "STREAM_INTERRUPTED": {
+        "title": "接続中断",
+        "message": "接続が予期せず終了しました。",
+        "action": "再試行してください。問題が続く場合は \"claude login\" でセッションを更新してください"
+      },
+      "AUTH_FAILED": {
+        "title": "認証失敗",
+        "message": "Claude での認証に失敗しました。",
+        "action": "設定 > プロバイダー管理 で API キーを確認するか、\"claude login\" を実行してください"
+      },
+      "RATE_LIMITED": {
+        "title": "レート制限",
+        "message": "リクエストが多すぎます。",
+        "action": "数分待ってから再試行してください"
+      },
+      "NETWORK_ERROR": {
+        "title": "ネットワークエラー",
+        "message": "Claude サーバーに接続できませんでした。",
+        "action": "ネットワーク接続を確認して再試行してください"
+      },
+      "SDK_NOT_INSTALLED": {
+        "title": "SDK 未インストール",
+        "message": "Claude Code SDK がインストールされていません。",
+        "action": "設定 > 依存関係 から Claude SDK をインストールしてください"
+      },
+      "NO_AUTH_CONFIG": {
+        "title": "認証未設定",
+        "message": "認証が設定されていません。",
+        "action": "\"claude login\" を実行するか、設定 > プロバイダー管理 で API キーを設定してください"
+      },
+      "REQUEST_ABORTED": {
+        "title": "リクエストキャンセル",
+        "message": "リクエストがキャンセルまたはタイムアウトしました。",
+        "action": "短いプロンプトで再試行するか、ネットワーク接続を確認してください"
+      },
+      "UNKNOWN_ERROR": {
+        "title": "エラー",
+        "message": "予期しないエラーが発生しました。",
+        "action": "エラーの詳細を確認して再試行してください"
+      }
+    },
     "userDeniedPermission": "ユーザーが {{toolName}} ツールの使用権限を拒否しました",
     "userDidNotProvideAnswers": "ユーザーが回答を提供しませんでした",
     "dbMissingPath": "データベースファイルパス引数がありません",

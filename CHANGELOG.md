@@ -1,4 +1,4 @@
-##### **v0.2.4** (2026-01-14)
+##### **v0.2.4** (2026-01-15)
 
 **Upstream Sync Release** - Merged 88 commits from upstream in 11 batches.
 
@@ -10,6 +10,12 @@ New Features (from upstream):
 - MCP server status API
 - SDK lazy loading architecture
 - Enhanced permission handling
+
+Improvements:
+- **Better error diagnostics for Team/Pro/Max plans**: "Stream closed" errors now show actionable guidance (e.g., "Session expired 2 hours ago. Run 'claude login' to refresh")
+- Added credential health check with token expiration detection
+- Error classification system with specific fix actions for each error type
+- i18n support for all error messages (8 languages)
 
 Build Improvements:
 - Added Java plugin compile-time dependency for JavaContextCollector

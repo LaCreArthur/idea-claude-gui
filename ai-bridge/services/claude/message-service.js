@@ -57,7 +57,7 @@ import { readFile } from 'fs/promises';
 import { join } from 'path';
 import { homedir } from 'os';
 
-import { setupApiKey, isCustomBaseUrl, loadClaudeSettings } from '../../config/api-config.js';
+import { setupApiKey, isCustomBaseUrl, loadClaudeSettings, classifyError, checkCredentialHealth } from '../../config/api-config.js';
 import { selectWorkingDirectory } from '../../utils/path-utils.js';
 import { mapModelIdToSdkName } from '../../utils/model-utils.js';
 import { AsyncStream } from '../../utils/async-stream.js';
@@ -139,21 +139,18 @@ function createPreToolUseHook(permissionMode) {
  * @param {string} permissionMode - 权限模式（可选）
  * @param {string} model - 模型名称（可选）
  */
-	function buildConfigErrorPayload(error) {
-			  try {
-			    const rawError = error?.message || String(error);
-			    const errorName = error?.name || 'Error';
-			    const errorStack = error?.stack || null;
+function buildConfigErrorPayload(error, authType = null) {
+  try {
+    const rawError = error?.message || String(error);
+    const errorName = error?.name || 'Error';
+    const errorStack = error?.stack || null;
 
-			    // 之前这里对 AbortError / "Claude Code process aborted by user" 做了超时提示
-			    // 现在统一走错误处理逻辑，但仍然在 details 中记录是否为超时/中断类错误，方便排查
-			    const isAbortError =
-			      errorName === 'AbortError' ||
-			      rawError.includes('Claude Code process aborted by user') ||
-			      rawError.includes('The operation was aborted');
+    // Use the new error classification system for actionable guidance
+    const classified = classifyError(error, authType);
+    const health = checkCredentialHealth();
 
-		    const settings = loadClaudeSettings();
-	    const env = settings?.env || {};
+    const settings = loadClaudeSettings();
+    const env = settings?.env || {};
 
     const settingsApiKey =
       env.ANTHROPIC_AUTH_TOKEN !== undefined && env.ANTHROPIC_AUTH_TOKEN !== null
@@ -167,66 +164,113 @@ function createPreToolUseHook(permissionMode) {
         ? env.ANTHROPIC_BASE_URL
         : null;
 
-    // 注意：配置只从 settings.json 读取，不再检查 shell 环境变量
-    let keySource = 'Not configured';
+    let keySource = health.details?.source || 'Not configured';
     let rawKey = null;
 
     if (settingsApiKey !== null) {
       rawKey = String(settingsApiKey);
-      if (env.ANTHROPIC_AUTH_TOKEN !== undefined && env.ANTHROPIC_AUTH_TOKEN !== null) {
-        keySource = '~/.claude/settings.json: ANTHROPIC_AUTH_TOKEN';
-      } else if (env.ANTHROPIC_API_KEY !== undefined && env.ANTHROPIC_API_KEY !== null) {
-        keySource = '~/.claude/settings.json: ANTHROPIC_API_KEY';
-      } else {
-        keySource = '~/.claude/settings.json';
-      }
     }
 
     const keyPreview = rawKey && rawKey.length > 0
       ? `${rawKey.substring(0, 10)}... (length: ${rawKey.length} chars)`
-      : 'Not configured (value is empty or missing)';
+      : health.authType === 'cli_session'
+        ? `CLI session (${health.status})`
+        : 'Not configured';
 
-		    let baseUrl = settingsBaseUrl || 'https://api.anthropic.com';
-		    let baseUrlSource;
-		    if (settingsBaseUrl) {
-		      baseUrlSource = '~/.claude/settings.json: ANTHROPIC_BASE_URL';
-		    } else {
-		      baseUrlSource = 'Default (https://api.anthropic.com)';
-		    }
+    let baseUrl = settingsBaseUrl || 'https://api.anthropic.com';
+    let baseUrlSource = settingsBaseUrl
+      ? '~/.claude/settings.json: ANTHROPIC_BASE_URL'
+      : 'Default (https://api.anthropic.com)';
 
-		    const heading = isAbortError
-		      ? 'Claude Code was interrupted (possibly response timeout or user cancellation):'
-		      : 'Claude Code error:';
+    // Build user-friendly error message with actionable guidance
+    const lines = [];
 
-		    const userMessage = [
-	      heading,
-	      `- Error message: ${rawError}`,
-	      `- Current API Key source: ${keySource}`,
-	      `- Current API Key preview: ${keyPreview}`,
-	      `- Current Base URL: ${baseUrl} (source: ${baseUrlSource})`,
-	      `- Tip: CLI can read from environment variables or settings.json; this plugin only supports reading from settings.json to avoid issues. You can configure it in the plugin's top-right Settings > Provider Management`,
-	      ''
-	    ].join('\n');
+    // Main error heading based on classification
+    if (classified.errorCode === 'SESSION_EXPIRED') {
+      lines.push('Session Expired');
+      lines.push('');
+      lines.push(`Your Claude session has expired. ${classified.message}`);
+    } else if (classified.errorCode === 'NO_SESSION') {
+      lines.push('Not Logged In');
+      lines.push('');
+      lines.push('No Claude session found. You need to authenticate first.');
+    } else if (classified.errorCode === 'STREAM_INTERRUPTED') {
+      lines.push('Connection Interrupted');
+      lines.push('');
+      lines.push('The connection was unexpectedly closed.');
+    } else if (classified.errorCode === 'AUTH_FAILED') {
+      lines.push('Authentication Failed');
+      lines.push('');
+      lines.push('Could not authenticate with Claude.');
+    } else if (classified.errorCode === 'RATE_LIMITED') {
+      lines.push('Rate Limited');
+      lines.push('');
+      lines.push('You have made too many requests.');
+    } else if (classified.errorCode === 'NETWORK_ERROR') {
+      lines.push('Network Error');
+      lines.push('');
+      lines.push('Could not connect to Claude servers.');
+    } else if (classified.errorCode === 'SDK_NOT_INSTALLED') {
+      lines.push('SDK Not Installed');
+      lines.push('');
+      lines.push('The Claude Code SDK is not installed.');
+    } else {
+      lines.push('Error');
+      lines.push('');
+      lines.push(classified.message);
+    }
 
-	    return {
-	      success: false,
-	      error: userMessage,
-	      details: {
-	        rawError,
-	        errorName,
-	        errorStack,
-	        isAbortError,
-	        keySource,
-	        keyPreview,
-	        baseUrl,
-	        baseUrlSource
-	      }
-	    };
+    // Action to fix
+    lines.push('');
+    lines.push(`**How to fix:** ${classified.action}`);
+
+    // Technical details (collapsed by default in UI)
+    lines.push('');
+    lines.push('---');
+    lines.push('**Details:**');
+    lines.push(`- Error code: ${classified.errorCode}`);
+    lines.push(`- Auth type: ${health.authType || 'unknown'}`);
+    lines.push(`- Auth source: ${keySource}`);
+    if (health.authType === 'cli_session') {
+      lines.push(`- Session status: ${health.status}`);
+      if (health.details?.expiresAt) {
+        lines.push(`- Token expiry: ${health.details.expiresAt}`);
+      }
+    } else {
+      lines.push(`- API Key: ${keyPreview}`);
+    }
+    lines.push(`- Base URL: ${baseUrl}`);
+    if (rawError !== classified.message) {
+      lines.push(`- Raw error: ${rawError}`);
+    }
+
+    const userMessage = lines.join('\n');
+
+    return {
+      success: false,
+      error: userMessage,
+      errorCode: classified.errorCode,
+      action: classified.action,
+      isRetryable: classified.isRetryable,
+      details: {
+        rawError,
+        errorName,
+        errorStack,
+        errorCode: classified.errorCode,
+        classified,
+        credentialHealth: health,
+        keySource,
+        keyPreview,
+        baseUrl,
+        baseUrlSource
+      }
+    };
   } catch (innerError) {
     const rawError = error?.message || String(error);
     return {
       success: false,
       error: rawError,
+      errorCode: 'BUILD_ERROR_FAILED',
       details: {
         rawError,
         buildErrorFailed: String(innerError)

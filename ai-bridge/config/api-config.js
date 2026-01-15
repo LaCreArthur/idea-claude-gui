@@ -245,3 +245,301 @@ export function isCustomBaseUrl(baseUrl) {
   ];
   return !officialUrls.some(url => baseUrl.toLowerCase().includes('api.anthropic.com'));
 }
+
+/**
+ * Get CLI session credentials with full details
+ * @returns {Object|null} Full credentials object or null
+ */
+export function getCliCredentials() {
+  try {
+    const currentPlatform = platform();
+    let credentials = null;
+
+    if (currentPlatform === 'darwin') {
+      credentials = readMacKeychainCredentials();
+      if (!credentials) {
+        credentials = readFileCredentials();
+      }
+    } else {
+      credentials = readFileCredentials();
+    }
+
+    return credentials;
+  } catch (error) {
+    console.log('[DEBUG] Failed to get CLI credentials:', error.message);
+    return null;
+  }
+}
+
+/**
+ * Comprehensive credential health check with detailed diagnostics
+ * Returns actionable information about authentication status and issues
+ *
+ * @returns {Object} Health check result with:
+ *   - status: 'healthy' | 'expired' | 'missing' | 'invalid' | 'error'
+ *   - authType: The authentication type being used
+ *   - message: Human-readable status message
+ *   - action: Suggested action to fix issues (if any)
+ *   - details: Additional diagnostic information
+ */
+export function checkCredentialHealth() {
+  const result = {
+    status: 'unknown',
+    authType: null,
+    message: '',
+    action: null,
+    details: {}
+  };
+
+  try {
+    const settings = loadClaudeSettings();
+    const currentPlatform = platform();
+
+    // Check for API key in settings.json first
+    if (settings?.env?.ANTHROPIC_AUTH_TOKEN) {
+      result.authType = 'auth_token';
+      result.details.source = 'settings.json (ANTHROPIC_AUTH_TOKEN)';
+      result.status = 'healthy';
+      result.message = 'Using API auth token from settings.json';
+      return result;
+    }
+
+    if (settings?.env?.ANTHROPIC_API_KEY) {
+      result.authType = 'api_key';
+      result.details.source = 'settings.json (ANTHROPIC_API_KEY)';
+      result.status = 'healthy';
+      result.message = 'Using API key from settings.json';
+      return result;
+    }
+
+    if (settings?.env?.CLAUDE_CODE_USE_BEDROCK) {
+      result.authType = 'aws_bedrock';
+      result.details.source = 'settings.json (AWS_BEDROCK)';
+      result.status = 'healthy';
+      result.message = 'Using AWS Bedrock authentication';
+      return result;
+    }
+
+    // No API key in settings, check CLI session
+    result.authType = 'cli_session';
+    result.details.platform = currentPlatform;
+    result.details.source = currentPlatform === 'darwin'
+      ? 'macOS Keychain'
+      : '~/.claude/.credentials.json';
+
+    const credentials = getCliCredentials();
+
+    if (!credentials) {
+      result.status = 'missing';
+      result.message = 'No CLI session found. You need to log in.';
+      result.action = 'Run "claude login" in your terminal to authenticate';
+      result.details.checked = result.details.source;
+      return result;
+    }
+
+    const oauth = credentials.claudeAiOauth;
+
+    if (!oauth) {
+      result.status = 'invalid';
+      result.message = 'Credentials file exists but contains no OAuth data';
+      result.action = 'Run "claude login" to re-authenticate';
+      result.details.hasCredentialsFile = true;
+      result.details.hasOAuthData = false;
+      return result;
+    }
+
+    if (!oauth.accessToken) {
+      result.status = 'invalid';
+      result.message = 'OAuth data exists but access token is missing';
+      result.action = 'Run "claude login" to re-authenticate';
+      result.details.hasOAuthData = true;
+      result.details.hasAccessToken = false;
+      return result;
+    }
+
+    // Check token expiration
+    if (oauth.expiresAt) {
+      const now = Date.now();
+      const expiresAt = oauth.expiresAt;
+      const timeUntilExpiry = expiresAt - now;
+
+      result.details.expiresAt = new Date(expiresAt).toISOString();
+      result.details.timeUntilExpiryMs = timeUntilExpiry;
+
+      if (timeUntilExpiry < 0) {
+        // Token is expired
+        const expiredAgo = Math.abs(timeUntilExpiry);
+        const expiredMinutes = Math.floor(expiredAgo / 60000);
+        const expiredHours = Math.floor(expiredMinutes / 60);
+        const expiredDays = Math.floor(expiredHours / 24);
+
+        result.status = 'expired';
+        if (expiredDays > 0) {
+          result.message = `Session expired ${expiredDays} day${expiredDays > 1 ? 's' : ''} ago`;
+        } else if (expiredHours > 0) {
+          result.message = `Session expired ${expiredHours} hour${expiredHours > 1 ? 's' : ''} ago`;
+        } else {
+          result.message = `Session expired ${expiredMinutes} minute${expiredMinutes > 1 ? 's' : ''} ago`;
+        }
+        result.action = 'Run "claude login" to refresh your session';
+        result.details.expiredAgoMs = expiredAgo;
+        return result;
+      }
+
+      // Token is valid but check if expiring soon (within 1 hour)
+      if (timeUntilExpiry < 3600000) {
+        const minutesLeft = Math.floor(timeUntilExpiry / 60000);
+        result.status = 'expiring_soon';
+        result.message = `Session expires in ${minutesLeft} minute${minutesLeft > 1 ? 's' : ''}`;
+        result.action = 'Consider running "claude login" soon to refresh your session';
+        return result;
+      }
+    }
+
+    // Check for subscription type info
+    if (oauth.subscriptionType) {
+      result.details.subscriptionType = oauth.subscriptionType;
+    }
+    if (oauth.scopes) {
+      result.details.scopes = oauth.scopes;
+    }
+    if (oauth.refreshToken) {
+      result.details.hasRefreshToken = true;
+    }
+
+    result.status = 'healthy';
+    result.message = 'CLI session is valid';
+    return result;
+
+  } catch (error) {
+    result.status = 'error';
+    result.message = `Failed to check credentials: ${error.message}`;
+    result.action = 'Check plugin logs for details';
+    result.details.error = error.message;
+    return result;
+  }
+}
+
+/**
+ * Classify an error and provide actionable guidance
+ * @param {Error} error - The error to classify
+ * @param {string} authType - The authentication type being used
+ * @returns {Object} Classification with errorCode, message, action, and isRetryable
+ */
+export function classifyError(error, authType) {
+  const errorMsg = error?.message || String(error);
+  const errorName = error?.name || 'Error';
+
+  // Stream closed - common issue with CLI session auth
+  if (errorMsg.includes('Stream closed') || errorMsg.includes('stream closed')) {
+    const health = checkCredentialHealth();
+
+    if (health.status === 'expired') {
+      return {
+        errorCode: 'SESSION_EXPIRED',
+        message: health.message,
+        action: health.action,
+        isRetryable: false,
+        details: health.details
+      };
+    }
+
+    if (health.status === 'missing') {
+      return {
+        errorCode: 'NO_SESSION',
+        message: health.message,
+        action: health.action,
+        isRetryable: false,
+        details: health.details
+      };
+    }
+
+    // Stream closed but credentials look OK - might be network or server issue
+    return {
+      errorCode: 'STREAM_INTERRUPTED',
+      message: 'Connection was interrupted unexpectedly',
+      action: 'Try again. If this persists, run "claude login" to refresh your session',
+      isRetryable: true,
+      details: { originalError: errorMsg, credentialHealth: health }
+    };
+  }
+
+  // Abort errors
+  if (errorName === 'AbortError' || errorMsg.includes('aborted')) {
+    return {
+      errorCode: 'REQUEST_ABORTED',
+      message: 'Request was cancelled or timed out',
+      action: 'Try again with a shorter prompt, or check your network connection',
+      isRetryable: true,
+      details: { originalError: errorMsg }
+    };
+  }
+
+  // Authentication errors
+  if (errorMsg.includes('401') || errorMsg.includes('Unauthorized') || errorMsg.includes('authentication')) {
+    const health = checkCredentialHealth();
+    return {
+      errorCode: 'AUTH_FAILED',
+      message: 'Authentication failed',
+      action: authType === 'cli_session'
+        ? 'Run "claude login" to re-authenticate'
+        : 'Check your API key in Settings > Provider Management',
+      isRetryable: false,
+      details: { credentialHealth: health }
+    };
+  }
+
+  // Rate limit errors
+  if (errorMsg.includes('429') || errorMsg.includes('rate limit') || errorMsg.includes('too many requests')) {
+    return {
+      errorCode: 'RATE_LIMITED',
+      message: 'Too many requests. You have been rate limited.',
+      action: 'Wait a few minutes before trying again',
+      isRetryable: true,
+      details: { originalError: errorMsg }
+    };
+  }
+
+  // Network errors
+  if (errorMsg.includes('ECONNREFUSED') || errorMsg.includes('ENOTFOUND') ||
+      errorMsg.includes('network') || errorMsg.includes('fetch failed')) {
+    return {
+      errorCode: 'NETWORK_ERROR',
+      message: 'Network connection failed',
+      action: 'Check your internet connection and try again',
+      isRetryable: true,
+      details: { originalError: errorMsg }
+    };
+  }
+
+  // SDK not installed
+  if (errorMsg.includes('SDK_NOT_INSTALLED') || errorMsg.includes('SDK not installed')) {
+    return {
+      errorCode: 'SDK_NOT_INSTALLED',
+      message: 'Claude Code SDK is not installed',
+      action: 'Go to Settings > Dependencies and install the Claude SDK',
+      isRetryable: false,
+      details: { originalError: errorMsg }
+    };
+  }
+
+  // API key not configured
+  if (errorMsg.includes('API Key not configured') || errorMsg.includes('no CLI session')) {
+    return {
+      errorCode: 'NO_AUTH_CONFIG',
+      message: 'No authentication configured',
+      action: 'Either run "claude login" or configure an API key in Settings > Provider Management',
+      isRetryable: false,
+      details: { originalError: errorMsg }
+    };
+  }
+
+  // Default: unknown error
+  return {
+    errorCode: 'UNKNOWN_ERROR',
+    message: errorMsg,
+    action: 'Check the error details and try again. If this persists, check plugin logs.',
+    isRetryable: true,
+    details: { originalError: errorMsg, errorName }
+  };
+}

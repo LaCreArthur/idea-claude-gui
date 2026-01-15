@@ -735,6 +735,58 @@
     "codexError": "Erreur Codex :",
     "codexErrorCheck": "Veuillez vérifier la connexion réseau et la configuration Codex",
     "codexThinkingHint": "Codex n'a pas retourné d'éléments de raisonnement. Si vous ne pouvez toujours pas voir le processus de réflexion, veuillez consulter docs/codex/docs/config.md pour les paramètres hide_agent_reasoning/show_raw_agent_reasoning, et assurez-vous que votre compte OpenAI a été vérifié.",
+"errors": {
+      "SESSION_EXPIRED": {
+        "title": "Session expirée",
+        "message": "Votre session Claude a expiré.",
+        "action": "Exécutez \"claude login\" dans votre terminal pour rafraîchir votre session"
+      },
+      "NO_SESSION": {
+        "title": "Non connecté",
+        "message": "Aucune session Claude trouvée. Vous devez d'abord vous authentifier.",
+        "action": "Exécutez \"claude login\" dans votre terminal pour vous authentifier"
+      },
+      "STREAM_INTERRUPTED": {
+        "title": "Connexion interrompue",
+        "message": "La connexion a été fermée de manière inattendue.",
+        "action": "Réessayez. Si le problème persiste, exécutez \"claude login\" pour rafraîchir votre session"
+      },
+      "AUTH_FAILED": {
+        "title": "Échec de l'authentification",
+        "message": "Impossible de s'authentifier auprès de Claude.",
+        "action": "Vérifiez votre clé API dans Paramètres > Gestion des fournisseurs, ou exécutez \"claude login\""
+      },
+      "RATE_LIMITED": {
+        "title": "Limite de débit",
+        "message": "Vous avez fait trop de requêtes.",
+        "action": "Attendez quelques minutes avant de réessayer"
+      },
+      "NETWORK_ERROR": {
+        "title": "Erreur réseau",
+        "message": "Impossible de se connecter aux serveurs Claude.",
+        "action": "Vérifiez votre connexion internet et réessayez"
+      },
+      "SDK_NOT_INSTALLED": {
+        "title": "SDK non installé",
+        "message": "Le SDK Claude Code n'est pas installé.",
+        "action": "Allez dans Paramètres > Dépendances et installez le SDK Claude"
+      },
+      "NO_AUTH_CONFIG": {
+        "title": "Pas d'authentification",
+        "message": "Aucune authentification configurée.",
+        "action": "Exécutez \"claude login\" ou configurez une clé API dans Paramètres > Gestion des fournisseurs"
+      },
+      "REQUEST_ABORTED": {
+        "title": "Requête annulée",
+        "message": "La requête a été annulée ou a expiré.",
+        "action": "Réessayez avec un prompt plus court, ou vérifiez votre connexion réseau"
+      },
+      "UNKNOWN_ERROR": {
+        "title": "Erreur",
+        "message": "Une erreur inattendue s'est produite.",
+        "action": "Vérifiez les détails de l'erreur et réessayez"
+      }
+    },
     "userDeniedPermission": "L'utilisateur a refusé la permission pour l'outil {{toolName}}",
     "userDidNotProvideAnswers": "L'utilisateur n'a pas fourni de réponses",
     "dbMissingPath": "Argument de chemin de fichier de base de données manquant",

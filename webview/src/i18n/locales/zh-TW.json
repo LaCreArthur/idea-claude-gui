@@ -735,6 +735,58 @@
     "codexError": "Codex 出現錯誤：",
     "codexErrorCheck": "請檢查網路連線和 Codex 配置",
     "codexThinkingHint": "Codex 未返回 reasoning 項。若依然看不到思考過程，請參考 docs/codex/docs/config.md 中 hide_agent_reasoning/show_raw_agent_reasoning 的說明，並確認 OpenAI 帳號已完成驗證。",
+"errors": {
+      "SESSION_EXPIRED": {
+        "title": "工作階段已過期",
+        "message": "您的 Claude 工作階段已過期。",
+        "action": "在終端機中執行 \"claude login\" 來重新整理工作階段"
+      },
+      "NO_SESSION": {
+        "title": "未登入",
+        "message": "找不到 Claude 工作階段。您需要先進行身份驗證。",
+        "action": "在終端機中執行 \"claude login\" 進行身份驗證"
+      },
+      "STREAM_INTERRUPTED": {
+        "title": "連線中斷",
+        "message": "連線意外關閉。",
+        "action": "請重試。如果問題持續，請執行 \"claude login\" 重新整理工作階段"
+      },
+      "AUTH_FAILED": {
+        "title": "身份驗證失敗",
+        "message": "無法通過 Claude 身份驗證。",
+        "action": "在 設定 > 供應商管理 中檢查您的 API 金鑰，或執行 \"claude login\""
+      },
+      "RATE_LIMITED": {
+        "title": "請求頻率限制",
+        "message": "您的請求過於頻繁。",
+        "action": "請等待幾分鐘後再試"
+      },
+      "NETWORK_ERROR": {
+        "title": "網路錯誤",
+        "message": "無法連線到 Claude 伺服器。",
+        "action": "請檢查網路連線後重試"
+      },
+      "SDK_NOT_INSTALLED": {
+        "title": "SDK 未安裝",
+        "message": "Claude Code SDK 未安裝。",
+        "action": "前往 設定 > 相依性 安裝 Claude SDK"
+      },
+      "NO_AUTH_CONFIG": {
+        "title": "未設定身份驗證",
+        "message": "未設定身份驗證方式。",
+        "action": "執行 \"claude login\" 或在 設定 > 供應商管理 中設定 API 金鑰"
+      },
+      "REQUEST_ABORTED": {
+        "title": "請求已取消",
+        "message": "請求被取消或逾時。",
+        "action": "請使用較短的提示詞重試，或檢查網路連線"
+      },
+      "UNKNOWN_ERROR": {
+        "title": "錯誤",
+        "message": "發生意外錯誤。",
+        "action": "請查看錯誤詳情並重試"
+      }
+    },
     "userDeniedPermission": "用戶拒絕了 {{toolName}} 工具的使用權限",
     "userDidNotProvideAnswers": "用戶未提供問題答案",
     "dbMissingPath": "缺少資料庫檔案路徑參數",

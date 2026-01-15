@@ -46,7 +46,7 @@ public class BridgeDirectoryResolver {
     private static final String BRIDGE_VERSION_FILE = ".bridge-version";
     private static final String BRIDGE_PATH_PROPERTY = "claude.bridge.path";
     private static final String BRIDGE_PATH_ENV = "CLAUDE_BRIDGE_PATH";
-    private static final String PLUGIN_ID = "com.github.idea-claude-code-gui";
+    private static final String PLUGIN_ID = "com.lacrearthur.idea-claude-gui";
     private static final String PLUGIN_DIR_NAME = "idea-claude-code-gui";
 
     private volatile File cachedSdkDir = null;

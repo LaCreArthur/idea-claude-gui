@@ -1,13 +1,13 @@
 <idea-plugin>
     <id>com.lacrearthur.idea-claude-gui</id>
-    <name>IDEA Claude Code GUI</name>
-    <vendor>LaCreArthur</vendor>
+    <name>Claude GUI</name>
+    <vendor>Arthur Scheidel</vendor>
 
     <!-- Resource bundle for i18n -->
     <resource-bundle>messages.ClaudeCodeGuiBundle</resource-bundle>
 
     <description><![CDATA[
-        <p><strong>IDEA Claude Code GUI</strong> - A powerful visual interface plugin that brings <strong>Claude Code</strong> and <strong>OpenAI Codex</strong> dual AI tools directly into IntelliJ IDEA, making AI-assisted programming more efficient and intuitive.</p>
+        <p><strong>Claude GUI</strong> - A powerful visual interface plugin that brings <strong>Claude Code</strong> and <strong>OpenAI Codex</strong> dual AI tools directly into IntelliJ IDEA, making AI-assisted programming more efficient and intuitive.</p>
 
         <h2>Dual AI Engine Support</h2>
         <ul>

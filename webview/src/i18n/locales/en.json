@@ -883,6 +883,58 @@
     "codexError": "Codex error:",
     "codexErrorCheck": "Please check network connection and Codex configuration",
     "codexThinkingHint": "Codex did not return reasoning items. If you still cannot see the thinking process, please refer to docs/codex/docs/config.md for hide_agent_reasoning/show_raw_agent_reasoning settings, and ensure your OpenAI account has been verified.",
+"errors": {
+      "SESSION_EXPIRED": {
+        "title": "Session Expired",
+        "message": "Your Claude session has expired.",
+        "action": "Run \"claude login\" in your terminal to refresh your session"
+      },
+      "NO_SESSION": {
+        "title": "Not Logged In",
+        "message": "No Claude session found. You need to authenticate first.",
+        "action": "Run \"claude login\" in your terminal to authenticate"
+      },
+      "STREAM_INTERRUPTED": {
+        "title": "Connection Interrupted",
+        "message": "The connection was unexpectedly closed.",
+        "action": "Try again. If this persists, run \"claude login\" to refresh your session"
+      },
+      "AUTH_FAILED": {
+        "title": "Authentication Failed",
+        "message": "Could not authenticate with Claude.",
+        "action": "Check your API key in Settings > Provider Management, or run \"claude login\""
+      },
+      "RATE_LIMITED": {
+        "title": "Rate Limited",
+        "message": "You have made too many requests.",
+        "action": "Wait a few minutes before trying again"
+      },
+      "NETWORK_ERROR": {
+        "title": "Network Error",
+        "message": "Could not connect to Claude servers.",
+        "action": "Check your internet connection and try again"
+      },
+      "SDK_NOT_INSTALLED": {
+        "title": "SDK Not Installed",
+        "message": "The Claude Code SDK is not installed.",
+        "action": "Go to Settings > Dependencies and install the Claude SDK"
+      },
+      "NO_AUTH_CONFIG": {
+        "title": "No Authentication",
+        "message": "No authentication configured.",
+        "action": "Either run \"claude login\" or configure an API key in Settings > Provider Management"
+      },
+      "REQUEST_ABORTED": {
+        "title": "Request Cancelled",
+        "message": "The request was cancelled or timed out.",
+        "action": "Try again with a shorter prompt, or check your network connection"
+      },
+      "UNKNOWN_ERROR": {
+        "title": "Error",
+        "message": "An unexpected error occurred.",
+        "action": "Check the error details and try again"
+      }
+    },
     "userDeniedPermission": "User denied permission for {{toolName}} tool",
     "userDidNotProvideAnswers": "User did not provide answers",
     "dbMissingPath": "Missing database file path argument",

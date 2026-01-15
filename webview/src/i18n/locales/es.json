@@ -735,6 +735,58 @@
     "codexError": "Error de Codex:",
     "codexErrorCheck": "Por favor verifique la conexión de red y la configuración de Codex",
     "codexThinkingHint": "Codex no devolvió elementos de razonamiento. Si aún no puede ver el proceso de pensamiento, consulte docs/codex/docs/config.md para la configuración de hide_agent_reasoning/show_raw_agent_reasoning, y asegúrese de que su cuenta de OpenAI haya sido verificada.",
+"errors": {
+      "SESSION_EXPIRED": {
+        "title": "Sesión expirada",
+        "message": "Su sesión de Claude ha expirado.",
+        "action": "Ejecute \"claude login\" en su terminal para actualizar su sesión"
+      },
+      "NO_SESSION": {
+        "title": "Sin sesión",
+        "message": "No se encontró sesión de Claude. Necesita autenticarse primero.",
+        "action": "Ejecute \"claude login\" en su terminal para autenticarse"
+      },
+      "STREAM_INTERRUPTED": {
+        "title": "Conexión interrumpida",
+        "message": "La conexión se cerró inesperadamente.",
+        "action": "Intente de nuevo. Si persiste, ejecute \"claude login\" para actualizar su sesión"
+      },
+      "AUTH_FAILED": {
+        "title": "Autenticación fallida",
+        "message": "No se pudo autenticar con Claude.",
+        "action": "Verifique su clave API en Configuración > Gestión de proveedores, o ejecute \"claude login\""
+      },
+      "RATE_LIMITED": {
+        "title": "Límite de tasa",
+        "message": "Ha realizado demasiadas solicitudes.",
+        "action": "Espere unos minutos antes de intentar de nuevo"
+      },
+      "NETWORK_ERROR": {
+        "title": "Error de red",
+        "message": "No se pudo conectar a los servidores de Claude.",
+        "action": "Verifique su conexión a internet e intente de nuevo"
+      },
+      "SDK_NOT_INSTALLED": {
+        "title": "SDK no instalado",
+        "message": "El SDK de Claude Code no está instalado.",
+        "action": "Vaya a Configuración > Dependencias e instale el SDK de Claude"
+      },
+      "NO_AUTH_CONFIG": {
+        "title": "Sin autenticación",
+        "message": "No hay autenticación configurada.",
+        "action": "Ejecute \"claude login\" o configure una clave API en Configuración > Gestión de proveedores"
+      },
+      "REQUEST_ABORTED": {
+        "title": "Solicitud cancelada",
+        "message": "La solicitud fue cancelada o expiró.",
+        "action": "Intente de nuevo con un prompt más corto, o verifique su conexión de red"
+      },
+      "UNKNOWN_ERROR": {
+        "title": "Error",
+        "message": "Ocurrió un error inesperado.",
+        "action": "Verifique los detalles del error e intente de nuevo"
+      }
+    },
     "userDeniedPermission": "El usuario denegó el permiso para la herramienta {{toolName}}",
     "userDidNotProvideAnswers": "El usuario no proporcionó respuestas",
     "dbMissingPath": "Falta el argumento de ruta del archivo de base de datos",
