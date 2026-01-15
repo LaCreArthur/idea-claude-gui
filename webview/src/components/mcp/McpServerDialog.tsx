@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useTranslation } from 'react-i18next';
 import type { McpServer, McpServerSpec } from '../../types/mcp';
 
 interface McpServerDialogProps {
@@ -13,7 +12,6 @@ interface McpServerDialogProps {
  * MCP Server Configuration Dialog (Add/Edit)
  */
 export function McpServerDialog({ server, existingIds = [], onClose, onSave }: McpServerDialogProps) {
-  const { t } = useTranslation();
   const [saving, setSaving] = useState(false);
   const [jsonContent, setJsonContent] = useState('');
   const [parseError, setParseError] = useState('');
@@ -33,14 +31,14 @@ export function McpServerDialog({ server, existingIds = [], onClose, onSave }: M
 //   }
 // }`;
 
-  // 计算行数
+  // Calculate line count
   const lineCount = Math.max((jsonContent || placeholder).split('\n').length, 12);
 
-  // 验证 JSON 是否有效
+  // Validate JSON
   const isValid = useCallback(() => {
     if (!jsonContent.trim()) return false;
 
-    // 移除注释行
+    // Remove comment lines
     const cleanedContent = jsonContent
       .split('\n')
       .filter(line => !line.trim().startsWith('//'))
@@ -50,11 +48,11 @@ export function McpServerDialog({ server, existingIds = [], onClose, onSave }: M
 
     try {
       const parsed = JSON.parse(cleanedContent);
-      // 验证结构
+      // Validate structure
       if (parsed.mcpServers && typeof parsed.mcpServers === 'object') {
         return Object.keys(parsed.mcpServers).length > 0;
       }
-      // 直接是服务器配置 (有 command 或 url)
+      // Direct server config (has command or url)
       if (parsed.command || parsed.url) {
         return true;
       }
@@ -64,13 +62,13 @@ export function McpServerDialog({ server, existingIds = [], onClose, onSave }: M
     }
   }, [jsonContent]);
 
-  // 处理输入
+  // Handle input
   const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setJsonContent(e.target.value);
     setParseError('');
   };
 
-  // 处理 Tab 键
+  // Handle Tab key
   const handleTab = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Tab') {
       e.preventDefault();
@@ -89,10 +87,10 @@ export function McpServerDialog({ server, existingIds = [], onClose, onSave }: M
     }
   };
 
-  // 解析 JSON 配置
+  // Parse JSON config
   const parseConfig = (): McpServer[] | null => {
     try {
-      // 移除注释行
+      // Remove comment lines
       const cleanedContent = jsonContent
         .split('\n')
         .filter(line => !line.trim().startsWith('//'))
@@ -101,12 +99,12 @@ export function McpServerDialog({ server, existingIds = [], onClose, onSave }: M
       const parsed = JSON.parse(cleanedContent);
       const servers: McpServer[] = [];
 
-      // mcpServers 格式
+      // mcpServers format
       if (parsed.mcpServers && typeof parsed.mcpServers === 'object') {
         for (const [id, config] of Object.entries(parsed.mcpServers)) {
           // Check if ID already exists (except in edit mode)
           if (!server && existingIds.includes(id)) {
-            setParseError(t('mcp.serverDialog.errors.idExists', { id }));
+            setParseError(`Server ID "${id}" already exists`);
             return null;
           }
 
@@ -124,15 +122,13 @@ export function McpServerDialog({ server, existingIds = [], onClose, onSave }: M
             } as McpServerSpec,
             apps: {
               claude: true,
-              codex: false,
-              gemini: false,
             },
             enabled: true,
           };
           servers.push(newServer);
         }
       }
-      // 直接服务器配置格式
+      // Direct server config format
       else if (parsed.command || parsed.url) {
         const id = `server-${Date.now()}`;
         const newServer: McpServer = {
@@ -148,8 +144,6 @@ export function McpServerDialog({ server, existingIds = [], onClose, onSave }: M
           } as McpServerSpec,
           apps: {
             claude: true,
-            codex: false,
-            gemini: false,
           },
           enabled: true,
         };
@@ -157,25 +151,25 @@ export function McpServerDialog({ server, existingIds = [], onClose, onSave }: M
       }
 
       if (servers.length === 0) {
-        setParseError(t('mcp.serverDialog.errors.unrecognizedFormat'));
+        setParseError('Unrecognized configuration format');
         return null;
       }
 
       return servers;
     } catch (e) {
-      setParseError(t('mcp.serverDialog.errors.jsonParseError', { message: (e as Error).message }));
+      setParseError(`JSON parse error: ${(e as Error).message}`);
       return null;
     }
   };
 
-  // 确认保存
+  // Confirm save
   const handleConfirm = async () => {
     const servers = parseConfig();
     if (!servers) return;
 
     setSaving(true);
     try {
-      // 逐个保存服务器
+      // Save servers one by one
       for (const srv of servers) {
         onSave(srv);
       }
@@ -185,10 +179,10 @@ export function McpServerDialog({ server, existingIds = [], onClose, onSave }: M
     }
   };
 
-  // 初始化编辑模式
+  // Initialize edit mode
   useEffect(() => {
     if (server) {
-      // 编辑模式：转换为 JSON 格式
+      // Edit mode: convert to JSON format
       const config: any = {
         mcpServers: {
           [server.id]: {
@@ -200,7 +194,7 @@ export function McpServerDialog({ server, existingIds = [], onClose, onSave }: M
     }
   }, [server]);
 
-  // 点击遮罩关闭
+  // Click overlay to close
   const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) {
       onClose();
@@ -211,10 +205,10 @@ export function McpServerDialog({ server, existingIds = [], onClose, onSave }: M
     <div className="dialog-overlay" onClick={handleOverlayClick}>
       <div className="dialog mcp-server-dialog">
         <div className="dialog-header">
-          <h3>{server ? t('mcp.serverDialog.editTitle') : t('mcp.serverDialog.addTitle')}</h3>
+          <h3>{server ? 'Edit Server' : 'Manual Configuration'}</h3>
           <div className="header-actions">
             <button className="mode-btn active">
-              {t('mcp.serverDialog.rawConfig')}
+              Raw Configuration (JSON)
             </button>
             <button className="close-btn" onClick={onClose}>
               <span className="codicon codicon-close"></span>
@@ -224,7 +218,7 @@ export function McpServerDialog({ server, existingIds = [], onClose, onSave }: M
 
         <div className="dialog-body">
           <p className="dialog-desc">
-            {t('mcp.serverDialog.description')}
+            Enter MCP Servers configuration JSON (prefer NPX or UVX configuration)
           </p>
 
           <div className="json-editor">
@@ -255,17 +249,17 @@ export function McpServerDialog({ server, existingIds = [], onClose, onSave }: M
         <div className="dialog-footer">
           <div className="footer-hint">
             <span className="codicon codicon-info"></span>
-            {t('mcp.serverDialog.securityWarning')}
+            Please verify the source and assess risks before configuration
           </div>
           <div className="footer-actions">
-            <button className="btn btn-secondary" onClick={onClose}>{t('common.cancel')}</button>
+            <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
             <button
               className="btn btn-primary"
               onClick={handleConfirm}
               disabled={!isValid() || saving}
             >
               {saving && <span className="codicon codicon-loading codicon-modifier-spin"></span>}
-              {saving ? t('mcp.serverDialog.saving') : t('common.confirm')}
+              {saving ? 'Saving...' : 'Confirm'}
             </button>
           </div>
         </div>

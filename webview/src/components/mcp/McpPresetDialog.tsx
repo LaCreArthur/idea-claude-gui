@@ -1,4 +1,3 @@
-import { useTranslation } from 'react-i18next';
 import type { McpPreset } from '../../types/mcp';
 
 interface McpPresetDialogProps {
@@ -7,16 +6,15 @@ interface McpPresetDialogProps {
 }
 
 /**
- * MCP 预设服务器选择对话框
+ * MCP Preset Server Selection Dialog
  */
 export function McpPresetDialog({ onClose, onSelect }: McpPresetDialogProps) {
-  const { t } = useTranslation();
-  // MCP 预设服务器配置
+  // MCP preset server configurations
   const MCP_PRESETS: McpPreset[] = [
     {
       id: 'fetch',
       name: 'mcp-server-fetch',
-      description: t('mcp.presets.fetch'),
+      description: 'Web content fetching tool for scraping web pages',
       tags: ['stdio', 'http', 'web'],
       server: {
         type: 'stdio',
@@ -29,7 +27,7 @@ export function McpPresetDialog({ onClose, onSelect }: McpPresetDialogProps) {
     {
       id: 'time',
       name: '@modelcontextprotocol/server-time',
-      description: t('mcp.presets.time'),
+      description: 'Time and timezone utilities',
       tags: ['stdio', 'time', 'utility'],
       server: {
         type: 'stdio',
@@ -42,7 +40,7 @@ export function McpPresetDialog({ onClose, onSelect }: McpPresetDialogProps) {
     {
       id: 'memory',
       name: '@modelcontextprotocol/server-memory',
-      description: t('mcp.presets.memory'),
+      description: 'Knowledge graph and memory storage tool',
       tags: ['stdio', 'memory', 'graph'],
       server: {
         type: 'stdio',
@@ -55,7 +53,7 @@ export function McpPresetDialog({ onClose, onSelect }: McpPresetDialogProps) {
     {
       id: 'sequential-thinking',
       name: '@modelcontextprotocol/server-sequential-thinking',
-      description: t('mcp.presets.sequentialThinking'),
+      description: 'Sequential thinking and reasoning tool',
       tags: ['stdio', 'thinking', 'reasoning'],
       server: {
         type: 'stdio',
@@ -68,7 +66,7 @@ export function McpPresetDialog({ onClose, onSelect }: McpPresetDialogProps) {
     {
       id: 'context7',
       name: '@upstash/context7-mcp',
-      description: t('mcp.presets.context7'),
+      description: 'Document search and context retrieval tool',
       tags: ['stdio', 'docs', 'search'],
       server: {
         type: 'stdio',
@@ -80,7 +78,7 @@ export function McpPresetDialog({ onClose, onSelect }: McpPresetDialogProps) {
     },
   ];
 
-  // 服务器图标颜色
+  // Server icon colors
   const iconColors = [
     '#3B82F6', // blue
     '#10B981', // green
@@ -118,7 +116,7 @@ export function McpPresetDialog({ onClose, onSelect }: McpPresetDialogProps) {
     onSelect(preset);
   };
 
-  // 点击遮罩关闭
+  // Click overlay to close
   const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) {
       onClose();

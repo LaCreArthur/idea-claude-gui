@@ -1,4 +1,3 @@
-import { useTranslation } from 'react-i18next';
 import { copyToClipboard } from '../../utils/helpers';
 
 interface SkillHelpDialogProps {
@@ -10,8 +9,7 @@ interface SkillHelpDialogProps {
  * Explains what Skills are and how to use them
  */
 export function SkillHelpDialog({ onClose }: SkillHelpDialogProps) {
-  const { t } = useTranslation();
-  // 阻止事件冒泡
+  // Prevent event bubbling
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
       onClose();
@@ -23,7 +21,7 @@ export function SkillHelpDialog({ onClose }: SkillHelpDialogProps) {
     e.preventDefault();
     const success = await copyToClipboard(url);
     if (success) {
-      alert(t('mcp.linkCopied'));
+      alert('Link copied, please open in browser');
     }
   };
 
@@ -32,7 +30,7 @@ export function SkillHelpDialog({ onClose }: SkillHelpDialogProps) {
       <div className="skill-dialog help-dialog">
         {/* Header */}
         <div className="dialog-header">
-          <h3>{t('skills.help.title')}</h3>
+          <h3>What are Skills?</h3>
           <button className="close-btn" onClick={onClose}>
             <span className="codicon codicon-close"></span>
           </button>
@@ -43,53 +41,63 @@ export function SkillHelpDialog({ onClose }: SkillHelpDialogProps) {
           <section className="help-section">
             <h4>
               <span className="codicon codicon-extensions"></span>
-              {t('skills.help.overview.title')}
+              Overview
             </h4>
             <p>
-              {t('skills.help.overview.description')}
+              Skills are dynamically loaded instruction sets, scripts, and resource folders that enhance Claude's performance for specific tasks. Skills teach Claude how to complete particular tasks in a repeatable way, such as creating documents using company brand guidelines, analyzing data following organization-specific workflows, or automating personal tasks.
             </p>
           </section>
 
           <section className="help-section">
             <h4>
               <span className="codicon codicon-folder"></span>
-              {t('skills.help.structure.title')}
+              Skill Structure
             </h4>
-            <p>{t('skills.help.structure.description')}</p>
+            <p>A Skill is a folder containing a SKILL.md file:</p>
             <pre className="code-block">
-{t('skills.help.structure.example')}
+{`my-skill/
+├── SKILL.md          # Required: skill definition file
+├── templates/        # Optional: template files
+└── references/       # Optional: reference materials`}
             </pre>
           </section>
 
           <section className="help-section">
             <h4>
               <span className="codicon codicon-file-code"></span>
-              {t('skills.help.format.title')}
+              SKILL.md Format
             </h4>
-            <p>{t('skills.help.format.description')}</p>
+            <p>SKILL.md files use YAML frontmatter + Markdown format:</p>
             <pre className="code-block">
-{t('skills.help.format.example')}
+{`---
+name: my-skill-name
+description: Skill description and when to use
+---
+
+# Skill Instructions
+
+Detailed instruction content...`}
             </pre>
             <p className="hint-text">
-              {t('skills.help.format.hint')}
+              name and description are required fields. Optional fields include license, allowed-tools, metadata
             </p>
           </section>
 
           <section className="help-section">
             <h4>
               <span className="codicon codicon-gear"></span>
-              {t('skills.help.configuration.title')}
+              Configuration Methods
             </h4>
-            <p>{t('skills.help.configuration.description')}</p>
+            <p>Ways to add a Skill:</p>
             <ul>
               <li>
-                <strong>{t('skills.help.configuration.localPath.label')}</strong>: {t('skills.help.configuration.localPath.description')}
+                <strong>Local Path</strong>: Specify folder path containing SKILL.md
               </li>
               <li>
-                <strong>{t('skills.help.configuration.relativePath.label')}</strong>: {t('skills.help.configuration.relativePath.description')}
+                <strong>Relative Path</strong>: Relative to project root, e.g., ./skills/my-skill
               </li>
               <li>
-                <strong>{t('skills.help.configuration.absolutePath.label')}</strong>: {t('skills.help.configuration.absolutePath.description')}
+                <strong>Absolute Path</strong>: Complete filesystem path
               </li>
             </ul>
           </section>
@@ -97,30 +105,30 @@ export function SkillHelpDialog({ onClose }: SkillHelpDialogProps) {
           <section className="help-section">
             <h4>
               <span className="codicon codicon-lightbulb"></span>
-              {t('skills.help.tips.title')}
+              Usage Tips
             </h4>
             <ul>
-              <li>{t('skills.help.tips.item1')}</li>
-              <li>{t('skills.help.tips.item2')}</li>
-              <li>{t('skills.help.tips.item3')}</li>
-              <li>{t('skills.help.tips.item4')}</li>
-              <li>{t('skills.help.tips.item5')}</li>
+              <li>Ensure Skill directory contains a valid SKILL.md file</li>
+              <li>Skill names must use lowercase letters, numbers, and hyphens (hyphen-case)</li>
+              <li>Skills automatically take effect in Claude sessions after loading</li>
+              <li>Control individual Skill status with enable/disable toggles</li>
+              <li>Mention Skill name in chat to use it, e.g., "Use the pdf skill to extract form fields"</li>
             </ul>
           </section>
 
           <section className="help-section">
             <h4>
               <span className="codicon codicon-link-external"></span>
-              {t('skills.help.learnMore.title')}
+              Learn More
             </h4>
-            <p>{t('skills.help.learnMore.description')}</p>
+            <p>More information about Skills:</p>
             <ul>
               <li>
                 <a
                   href="https://support.claude.com/en/articles/12512176-what-are-skills"
                   onClick={(e) => handleLinkClick(e, 'https://support.claude.com/en/articles/12512176-what-are-skills')}
                 >
-                  {t('skills.help.learnMore.link1')}
+                  What are Skills?
                 </a>
               </li>
               <li>
@@ -128,7 +136,7 @@ export function SkillHelpDialog({ onClose }: SkillHelpDialogProps) {
                   href="https://support.claude.com/en/articles/12512198-creating-custom-skills"
                   onClick={(e) => handleLinkClick(e, 'https://support.claude.com/en/articles/12512198-creating-custom-skills')}
                 >
-                  {t('skills.help.learnMore.link2')}
+                  Creating Custom Skills
                 </a>
               </li>
               <li>
@@ -136,7 +144,7 @@ export function SkillHelpDialog({ onClose }: SkillHelpDialogProps) {
                   href="https://github.com/anthropics/skills"
                   onClick={(e) => handleLinkClick(e, 'https://github.com/anthropics/skills')}
                 >
-                  {t('skills.help.learnMore.link3')}
+                  Anthropic Skills Example Repository
                 </a>
               </li>
             </ul>
@@ -146,7 +154,7 @@ export function SkillHelpDialog({ onClose }: SkillHelpDialogProps) {
         {/* Footer */}
         <div className="dialog-footer">
           <button className="btn-primary" onClick={onClose}>
-            {t('mcp.help.gotIt')}
+            Got it
           </button>
         </div>
       </div>
