@@ -1,10 +1,6 @@
 import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import styles from './style.module.less';
 
-/**
- * Claude CLI 当前配置信息
- */
 export interface ClaudeConfig {
   apiKey: string;
   baseUrl: string;
@@ -14,9 +10,6 @@ export interface ClaudeConfig {
   authType?: 'api_key' | 'auth_token' | 'cli_session' | 'none';
 }
 
-/**
- * 供应商配置
- */
 export interface ProviderOption {
   id: string;
   name: string;
@@ -32,20 +25,12 @@ interface ConfigInfoDisplayProps {
   addToast?: (message: string, type: 'info' | 'success' | 'warning' | 'error') => void;
 }
 
-/**
- * 配置信息展示组件
- * 用于展示当前 ~/.claude/settings.json 的配置信息
- */
 const ConfigInfoDisplay = ({ config, loading = false, providers = [], onSwitchProvider, addToast }: ConfigInfoDisplayProps) => {
-  const { t } = useTranslation();
   const [showApiKey, setShowApiKey] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
 
-  // 获取当前激活的供应商
   const activeProvider = providers.find(p => p.isActive);
-  // 获取可切换的供应商（过滤掉当前选中的）
   const switchableProviders = providers.filter(p => !p.isActive);
-  // 是否有可切换的供应商
   const hasSwitchableProviders = switchableProviders.length > 0;
 
   if (loading) {
@@ -53,32 +38,31 @@ const ConfigInfoDisplay = ({ config, loading = false, providers = [], onSwitchPr
       <div className={styles.container}>
         <div className={styles.header}>
           <span className={styles.title}>
-            {t('settings.provider.currentConfig')}
+            Current ClaudeCode Configuration
           </span>
         </div>
         <div className={styles.loading}>
           <span className="codicon codicon-loading codicon-modifier-spin" />
-          <span>{t('settings.provider.loading')}</span>
+          <span>Loading...</span>
         </div>
       </div>
     );
   }
 
-  // No API key configured - check for CLI session or show login instructions
   if (!config || (!config.apiKey && !config.hasCliSession && !config.baseUrl)) {
     return (
       <div className={styles.container}>
         <div className={styles.header}>
           <span className={styles.title}>
-            {t('settings.provider.currentConfig')}
+            Current ClaudeCode Configuration
           </span>
         </div>
         <div className={styles.noAuth}>
           <span className="codicon codicon-warning" />
           <div className={styles.noAuthContent}>
-            <span>{t('settings.provider.noAuth')}</span>
+            <span>No authentication configured</span>
             <span className={styles.loginHint}>
-              {t('settings.provider.loginHint')} <code>claude login</code>
+              Run in terminal to authenticate: <code>claude login</code>
             </span>
           </div>
         </div>
@@ -89,10 +73,9 @@ const ConfigInfoDisplay = ({ config, loading = false, providers = [], onSwitchPr
   const apiKey = config.apiKey || '';
   const baseUrl = config.baseUrl || '';
 
-  // API Key 预览（显示前后各几位，中间用省略号）
   const getApiKeyPreview = () => {
     if (!apiKey) {
-      return t('settings.provider.notConfigured');
+      return 'Not configured';
     }
     if (showApiKey) {
       return apiKey;
@@ -114,23 +97,22 @@ const ConfigInfoDisplay = ({ config, loading = false, providers = [], onSwitchPr
     if (!text) return;
     navigator.clipboard.writeText(text).then(() => {
       if (addToast) {
-        addToast(t('toast.copySuccess', { label }), 'success');
+        addToast(`${label} copied to clipboard`, 'success');
       }
     }).catch(err => {
       console.error('Failed to copy: ', err);
       if (addToast) {
-        addToast(t('toast.copyFailed'), 'error');
+        addToast('Copy failed', 'error');
       }
     });
   };
 
   return (
     <div className={styles.container}>
-      {/* 第一行：当前供应商 + 徽章 + 切换按钮 */}
       <div className={styles.header}>
         <div className={styles.headerLeft}>
           <span className={styles.title}>
-            {t('settings.provider.currentConfig')}
+            Current ClaudeCode Configuration
           </span>
           {activeProvider && (
             <span className={styles.badge}>
@@ -144,10 +126,10 @@ const ConfigInfoDisplay = ({ config, loading = false, providers = [], onSwitchPr
               type="button"
               className={styles.switchBtn}
               onClick={() => setShowDropdown(!showDropdown)}
-              title={t('config.switchProvider')}
+              title="Switch provider"
             >
               <span className="codicon codicon-arrow-swap" />
-              <span>{t('config.switch')}</span>
+              <span>Switch</span>
               <span className={`codicon codicon-chevron-${showDropdown ? 'up' : 'down'}`} />
             </button>
             {showDropdown && (
@@ -172,14 +154,12 @@ const ConfigInfoDisplay = ({ config, loading = false, providers = [], onSwitchPr
         )}
       </div>
 
-      {/* 第二行：API Key / CLI Session 和 Base URL 并排 */}
       <div className={styles.content}>
-        {/* API Key 预览 或 CLI Session 状态 */}
         {config.authType === 'cli_session' ? (
           <div className={styles.field}>
             <span className={`codicon codicon-account ${styles.icon}`} />
             <span className={styles.cliSessionLabel}>
-              {t('settings.provider.cliSession')}
+              CLI Session (logged in via claude login)
             </span>
           </div>
         ) : (
@@ -187,8 +167,8 @@ const ConfigInfoDisplay = ({ config, loading = false, providers = [], onSwitchPr
             <span className={`codicon codicon-key ${styles.icon}`} />
             <code
               className={`${styles.value} ${styles.clickable}`}
-              onClick={() => handleCopy(apiKey, t('settings.provider.apiKey'))}
-              title={t('config.clickToCopy')}
+              onClick={() => handleCopy(apiKey, 'API Key')}
+              title="Click to copy"
             >
               {getApiKeyPreview()}
             </code>
@@ -197,7 +177,7 @@ const ConfigInfoDisplay = ({ config, loading = false, providers = [], onSwitchPr
                 type="button"
                 className={styles.toggleBtn}
                 onClick={() => setShowApiKey(!showApiKey)}
-                title={showApiKey ? t('settings.provider.hide') : t('settings.provider.show')}
+                title={showApiKey ? 'Hide' : 'Show'}
               >
                 <span className={`codicon ${showApiKey ? 'codicon-eye-closed' : 'codicon-eye'}`} style={{ fontSize: '14px' }} />
               </button>
@@ -205,15 +185,14 @@ const ConfigInfoDisplay = ({ config, loading = false, providers = [], onSwitchPr
           </div>
         )}
 
-        {/* Base URL */}
         <div className={styles.field}>
           <span className={`codicon codicon-globe ${styles.icon}`} />
           <code
             className={`${styles.value} ${styles.clickable}`}
-            onClick={() => handleCopy(baseUrl, t('config.link'))}
-            title={t('config.clickToCopy')}
+            onClick={() => handleCopy(baseUrl, 'Link')}
+            title="Click to copy"
           >
-            {baseUrl || t('settings.provider.notConfigured')}
+            {baseUrl || 'Not configured'}
           </code>
         </div>
       </div>

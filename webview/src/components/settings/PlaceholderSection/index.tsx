@@ -1,4 +1,3 @@
-import { useTranslation } from 'react-i18next';
 import { McpSettingsSection } from '../../mcp/McpSettingsSection';
 import styles from './style.module.less';
 
@@ -6,36 +5,34 @@ interface PlaceholderSectionProps {
   type: 'permissions' | 'mcp' | 'agents' | 'skills';
 }
 
+const sectionConfig = {
+  permissions: {
+    title: 'Permissions',
+    desc: 'Manage Claude Code\'s file access and operation permissions',
+    icon: 'codicon-shield',
+    message: 'Permissions configuration coming soon...',
+  },
+  mcp: {
+    title: 'MCP Servers',
+    desc: 'Configure and manage Model Context Protocol servers',
+    icon: 'codicon-server',
+    message: null,
+  },
+  agents: {
+    title: 'Agents',
+    desc: 'Manage and configure AI agents',
+    icon: 'codicon-robot',
+    message: 'Agents configuration coming soon...',
+  },
+  skills: {
+    title: 'Skills',
+    desc: 'Manage and configure skill modules',
+    icon: 'codicon-book',
+    message: 'Skills configuration coming soon...',
+  },
+};
+
 const PlaceholderSection = ({ type }: PlaceholderSectionProps) => {
-  const { t } = useTranslation();
-
-  const sectionConfig = {
-    permissions: {
-      title: t('settings.permissions'),
-      desc: t('settings.permissionsDesc'),
-      icon: 'codicon-shield',
-      message: t('settings.permissionsComingSoon'),
-    },
-    mcp: {
-      title: t('settings.mcp'),
-      desc: t('settings.mcpDesc'),
-      icon: 'codicon-server',
-      message: null, // MCP有专门的组件
-    },
-    agents: {
-      title: t('settings.agents'),
-      desc: t('settings.agentsDesc'),
-      icon: 'codicon-robot',
-      message: t('settings.agentsComingSoon'),
-    },
-    skills: {
-      title: t('settings.skills'),
-      desc: t('settings.skillsDesc'),
-      icon: 'codicon-book',
-      message: t('settings.skillsComingSoon'),
-    },
-  };
-
   const config = sectionConfig[type];
 
   return (

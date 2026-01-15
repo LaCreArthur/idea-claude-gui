@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
 import type { AgentConfig } from '../../../types/agent';
 import styles from './style.module.less';
 
@@ -18,11 +17,9 @@ export default function AgentSection({
   onEdit,
   onDelete,
 }: AgentSectionProps) {
-  const { t } = useTranslation();
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // 点击外部关闭菜单
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -54,27 +51,27 @@ export default function AgentSection({
     <div className={styles.container}>
       <div className={styles.header}>
         <div className={styles.titleWrapper}>
-          <h3 className={styles.title}>{t('settings.agent.title')}</h3>
+          <h3 className={styles.title}>Agents</h3>
         </div>
         <button className={styles.addButton} onClick={onAdd}>
           <span className="codicon codicon-add" />
-          {t('settings.agent.create')}
+          Create
         </button>
       </div>
 
       <div className={styles.section}>
-        <h4 className={styles.sectionTitle}>{t('settings.agent.customAgents')}</h4>
+        <h4 className={styles.sectionTitle}>Custom Agents</h4>
 
         {loading ? (
           <div className={styles.loadingState}>
             <span className="codicon codicon-loading codicon-modifier-spin" />
-            <span>{t('settings.agent.loading')}</span>
+            <span>Loading...</span>
           </div>
         ) : agents.length === 0 ? (
           <div className={styles.emptyState}>
-            <span>{t('settings.agent.noAgents')}</span>
+            <span>No custom agents</span>
             <button className={styles.createLink} onClick={onAdd}>
-              {t('settings.agent.create')}
+              Create
             </button>
           </div>
         ) : (
@@ -98,7 +95,7 @@ export default function AgentSection({
                   <button
                     className={styles.menuButton}
                     onClick={() => handleMenuToggle(agent.id)}
-                    title={t('settings.agent.menu')}
+                    title="Menu"
                   >
                     <span className="codicon codicon-kebab-vertical" />
                   </button>
@@ -109,14 +106,14 @@ export default function AgentSection({
                         onClick={() => handleEditClick(agent)}
                       >
                         <span className="codicon codicon-edit" />
-                        {t('common.edit')}
+                        Edit
                       </button>
                       <button
                         className={`${styles.menuItem} ${styles.danger}`}
                         onClick={() => handleDeleteClick(agent)}
                       >
                         <span className="codicon codicon-trash" />
-                        {t('common.delete')}
+                        Delete
                       </button>
                     </div>
                   )}

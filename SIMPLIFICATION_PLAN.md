@@ -78,10 +78,10 @@ Each iteration:
 - [x] Remove i18n from `webview/src/components/settings/ProviderManageSection/index.tsx` ✓
 - [x] Remove i18n from `webview/src/components/settings/DependencySection/index.tsx` - also remove codex-sdk ✓
 - [x] Remove i18n from `webview/src/components/settings/UsageSection/index.tsx` ✓
-- [ ] Remove i18n from `webview/src/components/settings/AgentSection/index.tsx`
-- [ ] Remove i18n from `webview/src/components/settings/CommunitySection/index.tsx`
-- [ ] Remove i18n from `webview/src/components/settings/ConfigInfoDisplay/index.tsx`
-- [ ] Remove i18n from `webview/src/components/settings/PlaceholderSection/index.tsx`
+- [x] Remove i18n from `webview/src/components/settings/AgentSection/index.tsx` ✓
+- [x] Remove i18n from `webview/src/components/settings/CommunitySection/index.tsx` ✓
+- [x] Remove i18n from `webview/src/components/settings/ConfigInfoDisplay/index.tsx` ✓
+- [x] Remove i18n from `webview/src/components/settings/PlaceholderSection/index.tsx` ✓
 
 ## Section 8: Replace Translations in React Components (Batch 3 - ChatInputBox)
 
