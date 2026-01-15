@@ -6,7 +6,7 @@ import { McpPresetDialog } from './McpPresetDialog';
 import { McpHelpDialog } from './McpHelpDialog';
 import { McpConfirmDialog } from './McpConfirmDialog';
 import { ToastContainer, type ToastMessage } from '../Toast';
-import { copyToClipboard } from '../../utils/helpers';
+import { copyToClipboard } from '../../utils/copyUtils';
 
 /**
  * MCP Server Settings Component
