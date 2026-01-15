@@ -1,11 +1,7 @@
 /**
- * MCP (Model Context Protocol) 类型定义
+ * MCP (Model Context Protocol) type definitions
  *
- * MCP 是 Anthropic 的标准协议,让 AI 模型与外部工具和数据源通信。
- *
- * 支持两种配置来源:
- * 1. cc-switch 格式: ~/.cc-switch/config.json (主要)
- * 2. Claude 原生格式: ~/.claude.json (兼容)
+ * MCP is Anthropic's standard protocol for AI models to communicate with external tools and data sources.
  */
 
 /**
@@ -37,7 +33,7 @@ export interface McpServerSpec {
 }
 
 /**
- * MCP app enable status (cc-switch v3.7.0 format)
+ * MCP app enable status
  * Marks which clients the server applies to
  */
 export interface McpApps {
@@ -54,7 +50,7 @@ export interface McpServer {
   name?: string;
   /** 服务器连接规格 */
   server: McpServerSpec;
-  /** 应用启用状态 (cc-switch 格式) */
+  /** App enable status */
   apps?: McpApps;
   /** 描述 */
   description?: string;
@@ -76,9 +72,9 @@ export interface McpServer {
 export type McpServersMap = Record<string, McpServer>;
 
 /**
- * cc-switch 配置文件结构 (~/.cc-switch/config.json)
+ * MCP configuration file structure
  */
-export interface CCSwitchConfig {
+export interface McpConfig {
   /** MCP 配置 */
   mcp?: {
     /** 服务器列表 */

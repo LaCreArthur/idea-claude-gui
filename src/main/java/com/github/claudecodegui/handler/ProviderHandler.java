@@ -38,8 +38,6 @@ public class ProviderHandler extends BaseMessageHandler {
         "delete_provider",
         "switch_provider",
         "get_active_provider",
-        "preview_cc_switch_import",
-        "open_file_chooser_for_cc_switch",
         "save_imported_providers"
     };
 
@@ -81,12 +79,6 @@ public class ProviderHandler extends BaseMessageHandler {
                 return true;
             case "get_active_provider":
                 handleGetActiveProvider();
-                return true;
-            case "preview_cc_switch_import":
-                handlePreviewCcSwitchImport();
-                return true;
-            case "open_file_chooser_for_cc_switch":
-                handleOpenFileChooserForCcSwitch();
                 return true;
             case "save_imported_providers":
                 handleSaveImportedProviders(content);
@@ -382,175 +374,6 @@ public class ProviderHandler extends BaseMessageHandler {
         } catch (Exception e) {
             LOG.error("[ProviderHandler] Failed to get active provider: " + e.getMessage(), e);
         }
-    }
-
-    /**
-     * Preview cc-switch import
-     */
-    private void handlePreviewCcSwitchImport() {
-        com.intellij.openapi.application.ApplicationManager.getApplication().invokeLater(() -> {
-            String userHome = System.getProperty("user.home");
-            String osName = System.getProperty("os.name").toLowerCase();
-
-            File ccSwitchDir = new File(userHome, ".cc-switch");
-            File dbFile = new File(ccSwitchDir, "cc-switch.db");
-
-            LOG.info("[ProviderHandler] OS: " + osName);
-            LOG.info("[ProviderHandler] User home: " + userHome);
-            LOG.info("[ProviderHandler] cc-switch directory: " + ccSwitchDir.getAbsolutePath());
-            LOG.info("[ProviderHandler] Database file path: " + dbFile.getAbsolutePath());
-            LOG.info("[ProviderHandler] Database file exists: " + dbFile.exists());
-
-            if (!dbFile.exists()) {
-                String errorMsg = "cc-switch database file not found\n" +
-                                 "Path: " + dbFile.getAbsolutePath() + "\n" +
-                                 "You can manually select a cc-switch.db file to import, or check:\n" +
-                                 "1. cc-switch 3.8.2 or higher is installed\n" +
-                                 "2. At least one Claude provider has been configured";
-                LOG.error("[ProviderHandler] " + errorMsg);
-                sendErrorToFrontend("File not found", errorMsg);
-                return;
-            }
-
-            CompletableFuture.runAsync(() -> {
-                try {
-                    LOG.info("[ProviderHandler] Starting to read database file...");
-                    Gson gson = new Gson();
-                    List<JsonObject> providers = context.getSettingsService().parseProvidersFromCcSwitchDb(dbFile.getPath());
-
-                    if (providers.isEmpty()) {
-                        LOG.info("[ProviderHandler] No Claude provider configurations found in database");
-                        sendInfoToFrontend("No data", "No valid Claude provider configurations found in database.");
-                        return;
-                    }
-
-                    JsonArray providersArray = new JsonArray();
-                    for (JsonObject p : providers) {
-                        providersArray.add(p);
-                    }
-
-                    JsonObject response = new JsonObject();
-                    response.add("providers", providersArray);
-
-                    String jsonStr = gson.toJson(response);
-                    LOG.info("[ProviderHandler] Successfully read " + providers.size() + " provider configurations, sending to frontend");
-                    callJavaScript("import_preview_result", escapeJs(jsonStr));
-
-                } catch (Exception e) {
-                    String errorDetails = "Failed to read database: " + e.getMessage();
-                    LOG.error("[ProviderHandler] " + errorDetails, e);
-                    sendErrorToFrontend("Failed to read database", errorDetails);
-                }
-            });
-        });
-    }
-
-    /**
-     * Open file chooser to select cc-switch database file
-     */
-    private void handleOpenFileChooserForCcSwitch() {
-        ApplicationManager.getApplication().invokeLater(() -> {
-            try {
-                FileChooserDescriptor descriptor = new FileChooserDescriptor(
-                    true,   // chooseFiles
-                    false,  // chooseFolders
-                    false,  // chooseJars
-                    false,  // chooseJarsAsFiles
-                    false,  // chooseJarContents
-                    false   // chooseMultiple
-                );
-
-                descriptor.setTitle("Select cc-switch database file");
-                descriptor.setDescription("Please select cc-switch.db or a copy of it");
-                descriptor.withFileFilter(file -> {
-                    String name = file.getName().toLowerCase();
-                    return name.endsWith(".db");
-                });
-
-                String userHome = System.getProperty("user.home");
-                File defaultDir = new File(userHome, ".cc-switch");
-                VirtualFile defaultVirtualFile = null;
-                if (defaultDir.exists()) {
-                    defaultVirtualFile = com.intellij.openapi.vfs.LocalFileSystem.getInstance()
-                        .findFileByPath(defaultDir.getAbsolutePath());
-                }
-
-                LOG.info("[ProviderHandler] Opening file chooser, default directory: " +
-                    (defaultVirtualFile != null ? defaultVirtualFile.getPath() : "user home"));
-
-                VirtualFile[] selectedFiles = FileChooser.chooseFiles(
-                    descriptor,
-                    context.getProject(),
-                    defaultVirtualFile
-                );
-
-                if (selectedFiles.length == 0) {
-                    LOG.info("[ProviderHandler] User cancelled file selection");
-                    sendInfoToFrontend("Cancelled", "No file selected");
-                    return;
-                }
-
-                VirtualFile selectedFile = selectedFiles[0];
-                String dbPath = selectedFile.getPath();
-                File dbFile = new File(dbPath);
-
-                LOG.info("[ProviderHandler] User selected database file path: " + dbFile.getAbsolutePath());
-                LOG.info("[ProviderHandler] Database file exists: " + dbFile.exists());
-
-                if (!dbFile.exists()) {
-                    String errorMsg = "Database file not found\n" +
-                                     "Path: " + dbFile.getAbsolutePath();
-                    LOG.error("[ProviderHandler] " + errorMsg);
-                    sendErrorToFrontend("File not found", errorMsg);
-                    return;
-                }
-
-                if (!dbFile.canRead()) {
-                    String errorMsg = "Cannot read file\n" +
-                                     "Path: " + dbFile.getAbsolutePath() + "\n" +
-                                     "Please check file permissions";
-                    LOG.error("[ProviderHandler] " + errorMsg);
-                    sendErrorToFrontend("Permission error", errorMsg);
-                    return;
-                }
-
-                CompletableFuture.runAsync(() -> {
-                    try {
-                        LOG.info("[ProviderHandler] Starting to read user-selected database file...");
-                        Gson gson = new Gson();
-                        List<JsonObject> providers = context.getSettingsService().parseProvidersFromCcSwitchDb(dbFile.getPath());
-
-                        if (providers.isEmpty()) {
-                            LOG.info("[ProviderHandler] No Claude provider configurations found in database");
-                            sendInfoToFrontend("No data", "No valid Claude provider configurations found in database.");
-                            return;
-                        }
-
-                        JsonArray providersArray = new JsonArray();
-                        for (JsonObject p : providers) {
-                            providersArray.add(p);
-                        }
-
-                        JsonObject response = new JsonObject();
-                        response.add("providers", providersArray);
-
-                        String jsonStr = gson.toJson(response);
-                        LOG.info("[ProviderHandler] Successfully read " + providers.size() + " provider configurations, sending to frontend");
-                        callJavaScript("import_preview_result", escapeJs(jsonStr));
-
-                    } catch (Exception e) {
-                        String errorDetails = "Failed to read database: " + e.getMessage();
-                        LOG.error("[ProviderHandler] " + errorDetails, e);
-                        sendErrorToFrontend("Failed to read database", errorDetails);
-                    }
-                });
-
-            } catch (Exception e) {
-                String errorDetails = "Failed to open file chooser: " + e.getMessage();
-                LOG.error("[ProviderHandler] " + errorDetails, e);
-                sendErrorToFrontend("File selection failed", errorDetails);
-            }
-        });
     }
 
     /**

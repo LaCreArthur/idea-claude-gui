@@ -13,7 +13,6 @@ export interface ProviderConfig {
   category?: ProviderCategory;
   createdAt?: number;
   isActive?: boolean;
-  source?: 'cc-switch' | string;
   isLocalProvider?: boolean;
   settingsConfig?: {
     env?: {

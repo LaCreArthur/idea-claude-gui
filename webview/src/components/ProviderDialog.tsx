@@ -363,7 +363,7 @@ export default function ProviderDialog({
             </summary>
             <div className="json-config-section">
               <p className="section-desc" style={{ marginBottom: '12px', fontSize: '12px', color: '#999' }}>
-                Configure complete settings.json content here, supporting all fields (e.g., model, alwaysThinkingEnabled, ccSwitchProviderId, codemossProviderId, etc.)
+                Configure complete settings.json content here, supporting all fields (e.g., model, alwaysThinkingEnabled, etc.)
               </p>
 
               <div className="json-toolbar">
@@ -394,9 +394,7 @@ export default function ProviderDialog({
     "ANTHROPIC_DEFAULT_HAIKU_MODEL": ""
   },
   "model": "sonnet",
-  "alwaysThinkingEnabled": true,
-  "ccSwitchProviderId": "default",
-  "codemossProviderId": ""
+  "alwaysThinkingEnabled": true
 }`}
                 />
                 {jsonError && (

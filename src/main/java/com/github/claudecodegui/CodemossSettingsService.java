@@ -368,10 +368,6 @@ public class CodemossSettingsService {
         providerManager.switchClaudeProvider(id);
     }
 
-    public List<JsonObject> parseProvidersFromCcSwitchDb(String dbPath) throws IOException {
-        return providerManager.parseProvidersFromCcSwitchDb(dbPath);
-    }
-
     public int saveProviders(List<JsonObject> providers) throws IOException {
         return providerManager.saveProviders(providers);
     }

@@ -3,9 +3,7 @@
   "version": "1.0.0",
   "description": "Unified bridge for Claude and Codex SDKs from Java",
   "type": "module",
-  "dependencies": {
-    "sql.js": "^1.12.0"
-  },
+  "dependencies": {},
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
