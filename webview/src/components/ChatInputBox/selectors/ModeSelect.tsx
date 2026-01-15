@@ -1,69 +1,68 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { AVAILABLE_MODES, type PermissionMode } from '../types';
 
 interface ModeSelectProps {
   value: PermissionMode;
   onChange: (mode: PermissionMode) => void;
-  provider?: string;
 }
 
+const MODE_LABELS: Record<string, string> = {
+  default: 'Default',
+  plan: 'Plan',
+  agent: 'Agent',
+  bypassPermissions: 'Auto-accept',
+  acceptEdits: 'Accept Edits',
+};
+
+const MODE_TOOLTIPS: Record<string, string> = {
+  default: 'Default mode - manual approval for all operations',
+  plan: 'Plan mode - think before acting',
+  agent: 'Agent mode - agentic autonomous execution',
+  bypassPermissions: 'Auto-accept - automatically approve all operations',
+  acceptEdits: 'Accept Edits - auto-approve edits only',
+};
+
+const MODE_DESCRIPTIONS: Record<string, string> = {
+  default: 'Ask permission for each operation',
+  plan: 'Plan first, then execute',
+  agent: 'Autonomous task completion',
+  bypassPermissions: 'No confirmations needed',
+  acceptEdits: 'Auto-approve file edits',
+};
+
 /**
- * ModeSelect - 模式选择器组件
- * 支持默认模式、代理模式、规划模式、自动模式切换
+ * ModeSelect - Permission mode selector
  */
-export const ModeSelect = ({ value, onChange, provider }: ModeSelectProps) => {
-  const { t } = useTranslation();
+export const ModeSelect = ({ value, onChange }: ModeSelectProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const modeOptions = useMemo(() => {
-    if (provider === 'codex') {
-      // Codex 只有三个模式：默认模式、代理模式、自动模式（过滤掉规划模式）
-      return AVAILABLE_MODES.filter((mode) => mode.id !== 'plan').map((mode) => {
-        if (mode.id === 'default' || mode.id === 'acceptEdits') {
-          return { ...mode, disabled: true };
-        }
-        return mode;
-      });
-    }
-    return AVAILABLE_MODES;
-  }, [provider]);
+  const currentMode = AVAILABLE_MODES.find(m => m.id === value) || AVAILABLE_MODES[0];
 
-  const currentMode = modeOptions.find(m => m.id === value) || modeOptions[0];
-
-  // Helper function to get translated mode text
-  const getModeText = (modeId: PermissionMode, field: 'label' | 'tooltip' | 'description') => {
-    if (provider === 'codex') {
-      const codexKey = `codexModes.${modeId}.${field}`;
-      const fallbackKey = `modes.${modeId}.${field}`;
-      return t(codexKey, { defaultValue: t(fallbackKey) });
-    }
-
-    return t(`modes.${modeId}.${field}`);
+  const getModeLabel = (modeId: PermissionMode): string => {
+    return MODE_LABELS[modeId] || modeId;
   };
 
-  /**
-   * 切换下拉菜单
-   */
+  const getModeTooltip = (modeId: PermissionMode): string => {
+    return MODE_TOOLTIPS[modeId] || '';
+  };
+
+  const getModeDescription = (modeId: PermissionMode): string => {
+    return MODE_DESCRIPTIONS[modeId] || '';
+  };
+
   const handleToggle = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     setIsOpen(!isOpen);
   }, [isOpen]);
 
-  /**
-   * 选择模式
-   */
   const handleSelect = useCallback((mode: PermissionMode, disabled?: boolean) => {
-    if (disabled) return; // 禁用的选项不能选择
+    if (disabled) return;
     onChange(mode);
     setIsOpen(false);
   }, [onChange]);
 
-  /**
-   * 点击外部关闭
-   */
   useEffect(() => {
     if (!isOpen) return;
 
@@ -78,7 +77,6 @@ export const ModeSelect = ({ value, onChange, provider }: ModeSelectProps) => {
       }
     };
 
-    // 延迟添加事件监听，避免立即触发
     const timer = setTimeout(() => {
       document.addEventListener('mousedown', handleClickOutside);
     }, 0);
@@ -95,10 +93,10 @@ export const ModeSelect = ({ value, onChange, provider }: ModeSelectProps) => {
         ref={buttonRef}
         className="selector-button"
         onClick={handleToggle}
-        title={getModeText(currentMode.id, 'tooltip') || `${t('chat.currentMode', { mode: getModeText(currentMode.id, 'label') })}`}
+        title={getModeTooltip(currentMode.id) || `Current mode: ${getModeLabel(currentMode.id)}`}
       >
         <span className={`codicon ${currentMode.icon}`} />
-        <span className="selector-button-text">{getModeText(currentMode.id, 'label')}</span>
+        <span className="selector-button-text">{getModeLabel(currentMode.id)}</span>
         <span className={`codicon codicon-chevron-${isOpen ? 'up' : 'down'}`} style={{ fontSize: '10px', marginLeft: '2px' }} />
       </button>
 
@@ -114,12 +112,12 @@ export const ModeSelect = ({ value, onChange, provider }: ModeSelectProps) => {
             zIndex: 10000,
           }}
         >
-          {modeOptions.map((mode) => (
+          {AVAILABLE_MODES.map((mode) => (
             <div
               key={mode.id}
               className={`selector-option ${mode.id === value ? 'selected' : ''} ${mode.disabled ? 'disabled' : ''}`}
               onClick={() => handleSelect(mode.id, mode.disabled)}
-              title={getModeText(mode.id, 'tooltip')}
+              title={getModeTooltip(mode.id)}
               style={{
                 opacity: mode.disabled ? 0.5 : 1,
                 cursor: mode.disabled ? 'not-allowed' : 'pointer',
@@ -127,8 +125,8 @@ export const ModeSelect = ({ value, onChange, provider }: ModeSelectProps) => {
             >
               <span className={`codicon ${mode.icon}`} />
               <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-                <span>{getModeText(mode.id, 'label')}</span>
-                <span className="mode-description">{getModeText(mode.id, 'description')}</span>
+                <span>{getModeLabel(mode.id)}</span>
+                <span className="mode-description">{getModeDescription(mode.id)}</span>
               </div>
               {mode.id === value && (
                 <span className="codicon codicon-check check-mark" />

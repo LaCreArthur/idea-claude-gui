@@ -1,14 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Claude, OpenAI, Gemini } from '@lobehub/icons';
+import { Claude } from '@lobehub/icons';
 import { AVAILABLE_MODELS } from '../types';
 import type { ModelInfo } from '../types';
 
 interface ModelSelectProps {
   value: string;
   onChange: (modelId: string) => void;
-  models?: ModelInfo[];  // 新增: 可选的动态模型列表
-  currentProvider?: string;  // 当前提供商类型
+  models?: ModelInfo[];
+  currentProvider?: string;
 }
 
 const DEFAULT_MODEL_MAP: Record<string, ModelInfo> = AVAILABLE_MODELS.reduce(
@@ -19,47 +18,22 @@ const DEFAULT_MODEL_MAP: Record<string, ModelInfo> = AVAILABLE_MODELS.reduce(
   {} as Record<string, ModelInfo>
 );
 
-const MODEL_LABEL_KEYS: Record<string, string> = {
-  'claude-sonnet-4-5': 'models.claude.sonnet45.label',
-  'claude-opus-4-5-20251101': 'models.claude.opus45.label',
-  'claude-haiku-4-5': 'models.claude.haiku45.label',
-  'gpt-5.2-codex': 'models.codex.gpt52codex.label',
-  'gpt-5.1-codex-max': 'models.codex.gpt51codexMax.label',
-  'gpt-5.1-codex-mini': 'models.codex.gpt51codexMini.label',
-  'gpt-5.2': 'models.codex.gpt52.label',
+const MODEL_LABELS: Record<string, string> = {
+  'claude-sonnet-4-5': 'Sonnet 4.5',
+  'claude-opus-4-5-20251101': 'Opus 4.5',
+  'claude-haiku-4-5': 'Haiku 4.5',
 };
 
-const MODEL_DESCRIPTION_KEYS: Record<string, string> = {
-  'claude-sonnet-4-5': 'models.claude.sonnet45.description',
-  'claude-opus-4-5-20251101': 'models.claude.opus45.description',
-  'claude-haiku-4-5': 'models.claude.haiku45.description',
-  'gpt-5.2-codex': 'models.codex.gpt52codex.description',
-  'gpt-5.1-codex-max': 'models.codex.gpt51codexMax.description',
-  'gpt-5.1-codex-mini': 'models.codex.gpt51codexMini.description',
-  'gpt-5.2': 'models.codex.gpt52.description',
+const MODEL_DESCRIPTIONS: Record<string, string> = {
+  'claude-sonnet-4-5': 'Best balance of speed and intelligence',
+  'claude-opus-4-5-20251101': 'Most powerful, best for complex tasks',
+  'claude-haiku-4-5': 'Fastest, best for simple tasks',
 };
 
 /**
- * 模型图标组件 - 根据提供商类型显示不同图标
+ * ModelSelect - Model selector component
  */
-const ModelIcon = ({ provider, size = 16 }: { provider?: string; size?: number }) => {
-  switch (provider) {
-    case 'codex':
-      return <OpenAI.Avatar size={size} />;
-    case 'gemini':
-      return <Gemini.Color size={size} />;
-    case 'claude':
-    default:
-      return <Claude.Color size={size} />;
-  }
-};
-
-/**
- * ModelSelect - 模型选择器组件
- * 支持 Sonnet 4.5、Opus 4.5 等模型切换，以及 Codex 模型
- */
-export const ModelSelect = ({ value, onChange, models = AVAILABLE_MODELS, currentProvider = 'claude' }: ModelSelectProps) => {
-  const { t } = useTranslation();
+export const ModelSelect = ({ value, onChange, models = AVAILABLE_MODELS }: ModelSelectProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -68,47 +42,29 @@ export const ModelSelect = ({ value, onChange, models = AVAILABLE_MODELS, curren
 
   const getModelLabel = (model: ModelInfo): string => {
     const defaultModel = DEFAULT_MODEL_MAP[model.id];
-    const labelKey = MODEL_LABEL_KEYS[model.id];
     const hasCustomLabel = defaultModel && model.label && model.label !== defaultModel.label;
 
     if (hasCustomLabel) {
       return model.label;
     }
 
-    if (labelKey) {
-      return t(labelKey);
-    }
-
-    return model.label;
+    return MODEL_LABELS[model.id] || model.label;
   };
 
   const getModelDescription = (model: ModelInfo): string | undefined => {
-    const descriptionKey = MODEL_DESCRIPTION_KEYS[model.id];
-    if (descriptionKey) {
-      return t(descriptionKey);
-    }
-    return model.description;
+    return MODEL_DESCRIPTIONS[model.id] || model.description;
   };
 
-  /**
-   * 切换下拉菜单
-   */
   const handleToggle = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     setIsOpen(!isOpen);
   }, [isOpen]);
 
-  /**
-   * 选择模型
-   */
   const handleSelect = useCallback((modelId: string) => {
     onChange(modelId);
     setIsOpen(false);
   }, [onChange]);
 
-  /**
-   * 点击外部关闭
-   */
   useEffect(() => {
     if (!isOpen) return;
 
@@ -123,7 +79,6 @@ export const ModelSelect = ({ value, onChange, models = AVAILABLE_MODELS, curren
       }
     };
 
-    // 延迟添加事件监听，避免立即触发
     const timer = setTimeout(() => {
       document.addEventListener('mousedown', handleClickOutside);
     }, 0);
@@ -140,9 +95,9 @@ export const ModelSelect = ({ value, onChange, models = AVAILABLE_MODELS, curren
         ref={buttonRef}
         className="selector-button"
         onClick={handleToggle}
-        title={t('chat.currentModel', { model: getModelLabel(currentModel) })}
+        title={`Current model: ${getModelLabel(currentModel)}`}
       >
-        <ModelIcon provider={currentProvider} size={12} />
+        <Claude.Color size={12} />
         <span className="selector-button-text">{getModelLabel(currentModel)}</span>
         <span className={`codicon codicon-chevron-${isOpen ? 'up' : 'down'}`} style={{ fontSize: '10px', marginLeft: '2px' }} />
       </button>
@@ -165,7 +120,7 @@ export const ModelSelect = ({ value, onChange, models = AVAILABLE_MODELS, curren
               className={`selector-option ${model.id === value ? 'selected' : ''}`}
               onClick={() => handleSelect(model.id)}
             >
-              <ModelIcon provider={currentProvider} size={16} />
+              <Claude.Color size={16} />
               <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
                 <span>{getModelLabel(model)}</span>
                 {getModelDescription(model) && (

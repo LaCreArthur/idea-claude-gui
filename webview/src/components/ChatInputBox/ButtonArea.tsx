@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
-import type { ButtonAreaProps, ModelInfo, PermissionMode, ReasoningEffort } from './types';
-import { ConfigSelect, ModelSelect, ModeSelect, ReasoningSelect } from './selectors';
-import { CLAUDE_MODELS, CODEX_MODELS } from './types';
+import type { ButtonAreaProps, ModelInfo, PermissionMode } from './types';
+import { ConfigSelect, ModelSelect, ModeSelect } from './selectors';
+import { CLAUDE_MODELS } from './types';
 
 /**
  * ButtonArea - Bottom toolbar component
@@ -14,13 +14,11 @@ export const ButtonArea = ({
   selectedModel = 'claude-sonnet-4-5',
   permissionMode = 'bypassPermissions',
   currentProvider = 'claude',
-  reasoningEffort = 'medium',
   onSubmit,
   onStop,
   onModeSelect,
   onModelSelect,
   onProviderSelect,
-  onReasoningChange,
   onEnhancePrompt,
   alwaysThinkingEnabled = false,
   onToggleThinking,
@@ -48,9 +46,6 @@ export const ButtonArea = ({
   };
 
   const availableModels = (() => {
-    if (currentProvider === 'codex') {
-      return CODEX_MODELS;
-    }
     if (typeof window === 'undefined' || !window.localStorage) {
       return CLAUDE_MODELS;
     }
@@ -93,10 +88,6 @@ export const ButtonArea = ({
     onProviderSelect?.(providerId);
   }, [onProviderSelect]);
 
-  const handleReasoningChange = useCallback((effort: ReasoningEffort) => {
-    onReasoningChange?.(effort);
-  }, [onReasoningChange]);
-
   const handleEnhanceClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     onEnhancePrompt?.();
@@ -116,11 +107,8 @@ export const ButtonArea = ({
           onAgentSelect={onAgentSelect}
           onOpenAgentSettings={onOpenAgentSettings}
         />
-        <ModeSelect value={permissionMode} onChange={handleModeSelect} provider={currentProvider} />
-        <ModelSelect value={selectedModel} onChange={handleModelSelect} models={availableModels} currentProvider={currentProvider} />
-        {currentProvider === 'codex' && (
-          <ReasoningSelect value={reasoningEffort} onChange={handleReasoningChange} />
-        )}
+        <ModeSelect value={permissionMode} onChange={handleModeSelect} />
+        <ModelSelect value={selectedModel} onChange={handleModelSelect} models={availableModels} />
       </div>
 
       <div className="button-area-right">

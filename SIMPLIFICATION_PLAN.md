@@ -95,11 +95,11 @@ Each iteration:
 
 ## Section 9: Replace Translations + Remove Codex (ChatInputBox selectors)
 
-- [ ] Remove i18n and Codex models from `webview/src/components/ChatInputBox/selectors/ModelSelect.tsx`
-- [ ] Remove i18n from `webview/src/components/ChatInputBox/selectors/ModeSelect.tsx`
-- [ ] Remove i18n from `webview/src/components/ChatInputBox/selectors/ConfigSelect.tsx`
-- [ ] Remove i18n and Codex provider from `webview/src/components/ChatInputBox/selectors/ProviderSelect.tsx`
-- [ ] Remove i18n from `webview/src/components/ChatInputBox/selectors/ReasoningSelect.tsx` (or delete if Codex-only)
+- [x] Remove i18n and Codex models from `webview/src/components/ChatInputBox/selectors/ModelSelect.tsx` ✓
+- [x] Remove i18n from `webview/src/components/ChatInputBox/selectors/ModeSelect.tsx` ✓
+- [x] Remove i18n from `webview/src/components/ChatInputBox/selectors/ConfigSelect.tsx` ✓
+- [x] Remove i18n and Codex provider from `webview/src/components/ChatInputBox/selectors/ProviderSelect.tsx` ✓
+- [x] Delete `webview/src/components/ChatInputBox/selectors/ReasoningSelect.tsx` (Codex-only) ✓
 
 ## Section 10: Replace Translations in React Components (Batch 4 - Dialogs & Tools)
 

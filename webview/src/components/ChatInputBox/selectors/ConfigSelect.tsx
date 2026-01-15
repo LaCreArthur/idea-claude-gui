@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useTranslation } from 'react-i18next';
 import { Switch } from 'antd';
-import { Claude, OpenAI, Gemini } from '@lobehub/icons';
+import { Claude } from '@lobehub/icons';
 import { AVAILABLE_PROVIDERS } from '../types';
 import { agentProvider, CREATE_NEW_AGENT_ID, EMPTY_STATE_ID, type AgentItem } from '../providers/agentProvider';
 import type { SelectedAgent } from '../types';
@@ -20,22 +19,6 @@ interface ConfigSelectProps {
 }
 
 /**
- * Provider Icon Component
- */
-const ProviderIcon = ({ providerId, size = 16, colored = false }: { providerId: string; size?: number; colored?: boolean }) => {
-  switch (providerId) {
-    case 'claude':
-      return colored ? <Claude.Color size={size} /> : <Claude size={size} />;
-    case 'codex':
-      return <OpenAI.Avatar size={size} />;
-    case 'gemini':
-      return colored ? <Gemini.Color size={size} /> : <Gemini.Avatar size={size} />;
-    default:
-      return colored ? <Claude.Color size={size} /> : <Claude size={size} />;
-  }
-};
-
-/**
  * ConfigSelect - Combined Configuration Selector
  * Contains CLI Tool Selection and Thinking Switch
  */
@@ -50,14 +33,13 @@ export const ConfigSelect = ({
   onAgentSelect,
   onOpenAgentSettings,
 }: ConfigSelectProps) => {
-  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [activeSubmenu, setActiveSubmenu] = useState<'none' | 'provider' | 'agent'>('none');
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [agentItems, setAgentItems] = useState<AgentItem[]>([]);
   const [agentsLoading, setAgentsLoading] = useState(false);
-  
+
   const buttonRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const agentAbortControllerRef = useRef<AbortController | null>(null);
@@ -85,14 +67,14 @@ export const ConfigSelect = ({
     if (!provider) return;
 
     if (!provider.enabled) {
-      showToastMessage(t('settings.provider.featureComingSoon'));
+      showToastMessage('Feature coming soon');
       return;
     }
 
     onProviderChange(pId);
     setIsOpen(false);
     setActiveSubmenu('none');
-  }, [onProviderChange, showToastMessage, t]);
+  }, [onProviderChange, showToastMessage]);
 
   const loadAgents = useCallback(async () => {
     if (agentAbortControllerRef.current) {
@@ -111,11 +93,11 @@ export const ConfigSelect = ({
       if ((error as Error).name === 'AbortError') return;
       setAgentItems([{
         id: EMPTY_STATE_ID,
-        name: t('settings.agent.loadFailed'),
+        name: 'Failed to load agents',
         prompt: '',
       }, {
         id: CREATE_NEW_AGENT_ID,
-        name: t('settings.agent.createAgent'),
+        name: 'Create New Agent',
         prompt: '',
       }]);
     } finally {
@@ -185,7 +167,7 @@ export const ConfigSelect = ({
           }}
         >
           <div style={{ width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <ProviderIcon providerId={provider.id} size={14} colored={true} />
+            <Claude.Color size={14} />
           </div>
           <span>{provider.label}</span>
           {provider.id === providerId && <span className="codicon codicon-check check-mark" />}
@@ -214,7 +196,7 @@ export const ConfigSelect = ({
       {agentsLoading ? (
         <div className="selector-option" style={{ cursor: 'default' }}>
           <span className="codicon codicon-loading codicon-modifier-spin" />
-          <span>{t('chat.loadingDropdown')}</span>
+          <span>Loading...</span>
         </div>
       ) : (
         agentItems.map((agent) => {
@@ -254,7 +236,7 @@ export const ConfigSelect = ({
                     {agent.prompt.length > 60 ? agent.prompt.substring(0, 60) + '...' : agent.prompt}
                   </span>
                 ) : isCreate ? (
-                  <span className="model-description" style={{ fontStyle: 'normal' }}>{t('settings.agent.createAgentHint')}</span>
+                  <span className="model-description" style={{ fontStyle: 'normal' }}>Configure a custom agent</span>
                 ) : null}
               </div>
               {isSelected && <span className="codicon codicon-check check-mark" />}
@@ -272,7 +254,7 @@ export const ConfigSelect = ({
         className="selector-button"
         onClick={handleToggle}
         style={{ marginLeft: '5px', marginRight: '-2px' }}
-        title={t('settings.configure', 'Configure')}
+        title="Configure"
       >
         <span className="codicon codicon-settings" />
       </button>
@@ -291,20 +273,20 @@ export const ConfigSelect = ({
           }}
         >
           {/* CLI Tool Item */}
-          <div 
-            className="selector-option" 
+          <div
+            className="selector-option"
             onMouseEnter={() => setActiveSubmenu('provider')}
             onMouseLeave={() => setActiveSubmenu('none')}
             style={{ position: 'relative' }}
           >
             <div style={{ width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <ProviderIcon providerId={currentProviderInfo.id} size={14} />
+              <Claude.Color size={14} />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
               <span>{currentProviderInfo.label}</span>
             </div>
-            <div 
-              style={{ 
+            <div
+              style={{
                 marginLeft: 'auto',
                 display: 'flex',
                 alignItems: 'center',
@@ -315,7 +297,7 @@ export const ConfigSelect = ({
             >
               <span className="codicon codicon-chevron-right" style={{ fontSize: '12px' }} />
             </div>
-            
+
             {activeSubmenu === 'provider' && renderProviderSubmenu()}
           </div>
 
@@ -328,12 +310,12 @@ export const ConfigSelect = ({
             style={{ position: 'relative', opacity: 0.5, cursor: 'not-allowed' }}
             onClick={(e) => {
               e.stopPropagation();
-              showToastMessage(t('settings.provider.featureComingSoon'));
+              showToastMessage('Feature coming soon');
             }}
           >
             <span className="codicon codicon-vm-connect" />
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-              <span>{t('settings.provider.provider')}</span>
+              <span>Provider</span>
             </div>
             <span className="codicon codicon-chevron-right" style={{ marginLeft: 'auto', fontSize: '12px' }} />
           </div>
@@ -347,7 +329,7 @@ export const ConfigSelect = ({
             style={{ position: 'relative', opacity: 0.5, cursor: 'not-allowed' }}
             onClick={(e) => {
               e.stopPropagation();
-              showToastMessage(t('settings.provider.featureComingSoon'));
+              showToastMessage('Feature coming soon');
             }}
           >
             <span className="codicon codicon-server" />
@@ -360,7 +342,7 @@ export const ConfigSelect = ({
           {/* Divider */}
           <div style={{ height: 1, background: 'var(--dropdown-border)', margin: '4px 0', opacity: 0.5 }} />
 
-          {/* Agent Item (Disabled) */}
+          {/* Agent Item */}
           <div
             className="selector-option"
             onMouseEnter={() => setActiveSubmenu('agent')}
@@ -376,8 +358,8 @@ export const ConfigSelect = ({
                 </span>
               ) : null}
             </div>
-            <div 
-              style={{ 
+            <div
+              style={{
                 marginLeft: 'auto',
                 display: 'flex',
                 alignItems: 'center',
@@ -407,7 +389,7 @@ export const ConfigSelect = ({
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span className="codicon codicon-sync" />
-              <span>{t('settings.basic.streaming.label')}</span>
+              <span>Streaming</span>
             </div>
             <Switch
               size="small"
@@ -434,7 +416,7 @@ export const ConfigSelect = ({
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span className="codicon codicon-lightbulb" />
-              <span>{t('common.thinking')}</span>
+              <span>Thinking</span>
             </div>
             <Switch
               size="small"

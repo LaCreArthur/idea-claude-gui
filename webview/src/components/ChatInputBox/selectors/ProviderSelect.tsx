@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Claude, OpenAI, Gemini } from '@lobehub/icons';
+import { Claude } from '@lobehub/icons';
 import { AVAILABLE_PROVIDERS } from '../types';
 
 interface ProviderSelectProps {
@@ -9,27 +8,9 @@ interface ProviderSelectProps {
 }
 
 /**
- * 提供商图标映射
- */
-const ProviderIcon = ({ providerId, size = 16, colored = false }: { providerId: string; size?: number; colored?: boolean }) => {
-  switch (providerId) {
-    case 'claude':
-      return colored ? <Claude.Color size={size} /> : <Claude.Avatar size={size} />;
-    case 'codex':
-      return <OpenAI.Avatar size={size} />;
-    case 'gemini':
-      return colored ? <Gemini.Color size={size} /> : <Gemini.Avatar size={size} />;
-    default:
-      return colored ? <Claude.Color size={size} /> : <Claude.Avatar size={size} />;
-  }
-};
-
-/**
- * ProviderSelect - AI 提供商选择器组件
- * 支持 Claude、Codex、Gemini 等提供商切换
+ * ProviderSelect - AI Provider selector
  */
 export const ProviderSelect = ({ value, onChange }: ProviderSelectProps) => {
-  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
@@ -38,22 +19,11 @@ export const ProviderSelect = ({ value, onChange }: ProviderSelectProps) => {
 
   const currentProvider = AVAILABLE_PROVIDERS.find(p => p.id === value) || AVAILABLE_PROVIDERS[0];
 
-  // Helper function to get translated provider label
-  const getProviderLabel = (providerId: string) => {
-    return t(`providers.${providerId}.label`);
-  };
-
-  /**
-   * 切换下拉菜单
-   */
   const handleToggle = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     setIsOpen(!isOpen);
   }, [isOpen]);
 
-  /**
-   * 显示提示信息
-   */
   const showToastMessage = useCallback((message: string) => {
     setToastMessage(message);
     setShowToast(true);
@@ -62,29 +32,21 @@ export const ProviderSelect = ({ value, onChange }: ProviderSelectProps) => {
     }, 1500);
   }, []);
 
-  /**
-   * 选择提供商
-   */
   const handleSelect = useCallback((providerId: string) => {
     const provider = AVAILABLE_PROVIDERS.find(p => p.id === providerId);
 
     if (!provider) return;
 
     if (!provider.enabled) {
-      // 如果提供商不可用，显示提示
-      showToastMessage(t('settings.provider.featureComingSoon'));
+      showToastMessage('Feature coming soon');
       setIsOpen(false);
       return;
     }
 
-    // 提供商可用，执行切换
     onChange?.(providerId);
     setIsOpen(false);
   }, [onChange, showToastMessage]);
 
-  /**
-   * 点击外部关闭
-   */
   useEffect(() => {
     if (!isOpen) return;
 
@@ -99,7 +61,6 @@ export const ProviderSelect = ({ value, onChange }: ProviderSelectProps) => {
       }
     };
 
-    // 延迟添加事件监听，避免立即触发
     const timer = setTimeout(() => {
       document.addEventListener('mousedown', handleClickOutside);
     }, 0);
@@ -117,10 +78,10 @@ export const ProviderSelect = ({ value, onChange }: ProviderSelectProps) => {
           ref={buttonRef}
           className="selector-button"
           onClick={handleToggle}
-          title={`${t('config.switchProvider')}: ${getProviderLabel(currentProvider.id)}`}
+          title={`Switch provider: ${currentProvider.label}`}
         >
-          <ProviderIcon providerId={currentProvider.id} size={12} />
-          <span>{getProviderLabel(currentProvider.id)}</span>
+          <Claude.Color size={12} />
+          <span>{currentProvider.label}</span>
           <span className={`codicon codicon-chevron-${isOpen ? 'up' : 'down'}`} style={{ fontSize: '10px', marginLeft: '2px' }} />
         </button>
 
@@ -146,8 +107,8 @@ export const ProviderSelect = ({ value, onChange }: ProviderSelectProps) => {
                   cursor: provider.enabled ? 'pointer' : 'not-allowed',
                 }}
               >
-                <ProviderIcon providerId={provider.id} size={16} colored={true} />
-                <span>{getProviderLabel(provider.id)}</span>
+                <Claude.Color size={16} />
+                <span>{provider.label}</span>
                 {provider.id === value && (
                   <span className="codicon codicon-check check-mark" />
                 )}
@@ -157,7 +118,6 @@ export const ProviderSelect = ({ value, onChange }: ProviderSelectProps) => {
         )}
       </div>
 
-      {/* 提示信息 */}
       {showToast && (
         <div className="selector-toast">
           {toastMessage}
