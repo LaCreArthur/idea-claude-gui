@@ -22,7 +22,7 @@ Each iteration:
 
 - [x] Delete `webview/src/i18n/locales/zh.json` ✓
 - [x] Delete `webview/src/i18n/locales/zh-TW.json` ✓
-- [ ] Delete `webview/src/i18n/locales/ja.json`
+- [x] Delete `webview/src/i18n/locales/ja.json` ✓
 - [ ] Delete `webview/src/i18n/locales/es.json`
 - [ ] Delete `webview/src/i18n/locales/fr.json`
 - [ ] Delete `webview/src/i18n/locales/hi.json`
