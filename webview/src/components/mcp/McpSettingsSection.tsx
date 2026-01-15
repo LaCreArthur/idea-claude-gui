@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react';
-import { useTranslation } from 'react-i18next';
 import type { McpServer, McpPreset, McpServerStatusInfo } from '../../types/mcp';
 import { sendToJava } from '../../utils/bridge';
 import { McpServerDialog } from './McpServerDialog';
@@ -10,10 +9,9 @@ import { ToastContainer, type ToastMessage } from '../Toast';
 import { copyToClipboard } from '../../utils/helpers';
 
 /**
- * MCP 服务器设置组件
+ * MCP Server Settings Component
  */
 export function McpSettingsSection() {
-  const { t } = useTranslation();
   const [servers, setServers] = useState<McpServer[]>([]);
   const [serverStatus, setServerStatus] = useState<Map<string, McpServerStatusInfo>>(new Map());
   const [loading, setLoading] = useState(true);
@@ -23,7 +21,6 @@ export function McpSettingsSection() {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const refreshTimersRef = useRef<number[]>([]);
 
-  // 弹窗状态
   const [showServerDialog, setShowServerDialog] = useState(false);
   const [showPresetDialog, setShowPresetDialog] = useState(false);
   const [showHelpDialog, setShowHelpDialog] = useState(false);
@@ -31,10 +28,8 @@ export function McpSettingsSection() {
   const [editingServer, setEditingServer] = useState<McpServer | null>(null);
   const [deletingServer, setDeletingServer] = useState<McpServer | null>(null);
 
-  // Toast 状态管理
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
-  // Toast 辅助函数
   const addToast = (message: string, type: ToastMessage['type'] = 'info') => {
     const id = `toast-${Date.now()}-${Math.random()}`;
     setToasts((prev) => [...prev, { id, message, type }]);
@@ -44,31 +39,19 @@ export function McpSettingsSection() {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
   };
 
-  // 服务器图标颜色
   const iconColors = [
-    '#3B82F6', // blue
-    '#10B981', // green
-    '#8B5CF6', // purple
-    '#F59E0B', // amber
-    '#EF4444', // red
-    '#EC4899', // pink
-    '#06B6D4', // cyan
-    '#6366F1', // indigo
+    '#3B82F6', '#10B981', '#8B5CF6', '#F59E0B',
+    '#EF4444', '#EC4899', '#06B6D4', '#6366F1',
   ];
 
-  // Initialize
   useEffect(() => {
-    // Clear all pending refresh timers
     const clearRefreshTimers = () => {
       refreshTimersRef.current.forEach((timerId) => window.clearTimeout(timerId));
       refreshTimersRef.current = [];
     };
 
-    // Schedule smart refresh after toggle (with multiple delays for connection status)
     const scheduleRefresh = (enabled: boolean) => {
       clearRefreshTimers();
-
-      // Different refresh schedules based on enable/disable
       const serverRefreshDelays = enabled ? [200, 1000] : [200];
       const statusRefreshDelays = enabled ? [400, 1500, 3500, 7000, 12000] : [400];
 
@@ -80,7 +63,6 @@ export function McpSettingsSection() {
       });
     };
 
-    // Register callbacks
     window.updateMcpServers = (jsonStr: string) => {
       try {
         const serverList: McpServer[] = JSON.parse(jsonStr);
@@ -93,7 +75,6 @@ export function McpSettingsSection() {
       }
     };
 
-    // Register status callback
     window.updateMcpServerStatus = (jsonStr: string) => {
       try {
         const statusList: McpServerStatusInfo[] = JSON.parse(jsonStr);
@@ -104,14 +85,12 @@ export function McpSettingsSection() {
         setServerStatus(statusMap);
         setStatusLoading(false);
         console.log('[McpSettings] Loaded server status:', statusList);
-        console.log('[McpSettings] Status map keys:', Array.from(statusMap.keys()));
       } catch (error) {
         console.error('[McpSettings] Failed to parse server status:', error);
         setStatusLoading(false);
       }
     };
 
-    // Register toggle callback for smart refresh
     window.mcpServerToggled = (jsonStr: string) => {
       try {
         const toggledServer: McpServer = JSON.parse(jsonStr);
@@ -121,11 +100,9 @@ export function McpSettingsSection() {
       }
     };
 
-    // Load servers
     loadServers();
     loadServerStatus();
 
-    // Close dropdown on outside click
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setShowDropdown(false);
@@ -153,18 +130,14 @@ export function McpSettingsSection() {
   };
 
   const getServerStatusInfo = (server: McpServer): McpServerStatusInfo | undefined => {
-    // Try multiple matching strategies
-    // 1. Try by id
     let statusInfo = serverStatus.get(server.id);
     if (statusInfo) return statusInfo;
 
-    // 2. Try by name
     if (server.name) {
       statusInfo = serverStatus.get(server.name);
       if (statusInfo) return statusInfo;
     }
 
-    // 3. Try case-insensitive fuzzy matching
     for (const [key, value] of serverStatus.entries()) {
       if (key.toLowerCase() === server.id.toLowerCase() ||
           (server.name && key.toLowerCase() === server.name.toLowerCase())) {
@@ -176,62 +149,41 @@ export function McpSettingsSection() {
   };
 
   const getStatusIcon = (server: McpServer, status: McpServerStatusInfo['status'] | undefined): string => {
-    // Show disabled icon if server is disabled
     if (!isServerEnabled(server)) {
       return 'codicon-circle-slash';
     }
-
     switch (status) {
-      case 'connected':
-        return 'codicon-check';
-      case 'failed':
-        return 'codicon-error';
-      case 'needs-auth':
-        return 'codicon-key';
-      case 'pending':
-        return 'codicon-loading codicon-modifier-spin';
-      default:
-        return 'codicon-circle-outline';
+      case 'connected': return 'codicon-check';
+      case 'failed': return 'codicon-error';
+      case 'needs-auth': return 'codicon-key';
+      case 'pending': return 'codicon-loading codicon-modifier-spin';
+      default: return 'codicon-circle-outline';
     }
   };
 
   const getStatusColor = (server: McpServer, status: McpServerStatusInfo['status'] | undefined): string => {
-    // Show gray if server is disabled
     if (!isServerEnabled(server)) {
       return '#9CA3AF';
     }
-
     switch (status) {
-      case 'connected':
-        return '#10B981';
-      case 'failed':
-        return '#EF4444';
-      case 'needs-auth':
-        return '#F59E0B';
-      case 'pending':
-        return '#6B7280';
-      default:
-        return '#6B7280';
+      case 'connected': return '#10B981';
+      case 'failed': return '#EF4444';
+      case 'needs-auth': return '#F59E0B';
+      case 'pending': return '#6B7280';
+      default: return '#6B7280';
     }
   };
 
   const getStatusText = (server: McpServer, status: McpServerStatusInfo['status'] | undefined): string => {
-    // Show disabled text if server is disabled
     if (!isServerEnabled(server)) {
-      return t('mcp.disabled');
+      return 'Disabled';
     }
-
     switch (status) {
-      case 'connected':
-        return t('mcp.statusConnected');
-      case 'failed':
-        return t('mcp.statusFailed');
-      case 'needs-auth':
-        return t('mcp.statusNeedsAuth');
-      case 'pending':
-        return t('mcp.statusPending');
-      default:
-        return t('mcp.statusUnknown');
+      case 'connected': return 'Connected';
+      case 'failed': return 'Connection Failed';
+      case 'needs-auth': return 'Needs Authentication';
+      case 'pending': return 'Connecting...';
+      default: return 'Unknown';
     }
   };
 
@@ -276,20 +228,14 @@ export function McpSettingsSection() {
       enabled,
       apps: {
         claude: enabled,
-        codex: server.apps?.codex ?? false,
-        gemini: server.apps?.gemini ?? false,
       }
     };
 
-    // Use dedicated toggle action for cleaner semantics
     sendToJava('toggle_mcp_server', updatedServer);
 
-    // Show toast notification
     const serverName = server.name || server.id;
-    const statusKey = enabled ? t('mcp.enabled') : t('mcp.disabled');
-    addToast(`${statusKey}: ${serverName}`, 'success');
-
-    // Note: Smart refresh is handled by mcpServerToggled callback
+    const statusText = enabled ? 'Enabled' : 'Disabled';
+    addToast(`${statusText}: ${serverName}`, 'success');
   };
 
   const handleEdit = (server: McpServer) => {
@@ -305,9 +251,8 @@ export function McpSettingsSection() {
   const confirmDelete = () => {
     if (deletingServer) {
       sendToJava('delete_mcp_server', { id: deletingServer.id });
-      addToast(`${t('mcp.deleted')} ${deletingServer.name || deletingServer.id}`, 'success');
+      addToast(`Deleted ${deletingServer.name || deletingServer.id}`, 'success');
 
-      // 刷新服务器列表
       setTimeout(() => {
         loadServers();
       }, 100);
@@ -329,29 +274,24 @@ export function McpSettingsSection() {
 
   const handleAddFromMarket = () => {
     setShowDropdown(false);
-    alert(t('mcp.marketComingSoon'));
+    alert('MCP market feature not yet implemented, coming soon');
   };
 
   const handleSaveServer = (server: McpServer) => {
     if (editingServer) {
-      // 更新服务器：如果 ID 改变了，需要先删除旧的
       if (editingServer.id !== server.id) {
-        // ID 改变了，先删除旧的，再添加新的
         sendToJava('delete_mcp_server', { id: editingServer.id });
         sendToJava('add_mcp_server', server);
-        addToast(`${t('mcp.updated')} ${server.name || server.id}`, 'success');
+        addToast(`Updated ${server.name || server.id}`, 'success');
       } else {
-        // ID 没变，直接更新
         sendToJava('update_mcp_server', server);
-        addToast(`${t('mcp.saved')} ${server.name || server.id}`, 'success');
+        addToast(`Saved ${server.name || server.id}`, 'success');
       }
     } else {
-      // 添加服务器
       sendToJava('add_mcp_server', server);
-      addToast(`${t('mcp.added')} ${server.name || server.id}`, 'success');
+      addToast(`Added ${server.name || server.id}`, 'success');
     }
 
-    // 刷新服务器列表
     setTimeout(() => {
       loadServers();
     }, 100);
@@ -361,7 +301,6 @@ export function McpSettingsSection() {
   };
 
   const handleSelectPreset = (preset: McpPreset) => {
-    // 从预设创建服务器
     const server: McpServer = {
       id: preset.id,
       name: preset.name,
@@ -370,17 +309,14 @@ export function McpSettingsSection() {
       server: { ...preset.server },
       apps: {
         claude: true,
-        codex: false,
-        gemini: false,
       },
       homepage: preset.homepage,
       docs: preset.docs,
       enabled: true,
     };
     sendToJava('add_mcp_server', server);
-    addToast(`${t('mcp.added')} ${preset.name}`, 'success');
+    addToast(`Added ${preset.name}`, 'success');
 
-    // 刷新服务器列表
     setTimeout(() => {
       loadServers();
     }, 100);
@@ -391,22 +327,21 @@ export function McpSettingsSection() {
   const handleCopyUrl = async (url: string) => {
     const success = await copyToClipboard(url);
     if (success) {
-      addToast(t('mcp.linkCopied'), 'success');
+      addToast('Link copied, please open in browser', 'success');
     } else {
-      addToast(t('mcp.copyFailed'), 'error');
+      addToast('Copy failed, please copy manually', 'error');
     }
   };
 
   return (
     <div className="mcp-settings-section">
-      {/* 头部 */}
       <div className="mcp-header">
         <div className="header-left">
-          <span className="header-title">{t('mcp.title')}</span>
+          <span className="header-title">MCP Servers</span>
           <button
             className="help-btn"
             onClick={() => setShowHelpDialog(true)}
-            title={t('mcp.whatIsMcp')}
+            title="What is MCP?"
           >
             <span className="codicon codicon-question"></span>
           </button>
@@ -416,25 +351,25 @@ export function McpSettingsSection() {
             className="refresh-btn"
             onClick={handleRefresh}
             disabled={loading || statusLoading}
-            title={t('mcp.refreshStatus')}
+            title="Refresh server status"
           >
             <span className={`codicon codicon-refresh ${loading || statusLoading ? 'spinning' : ''}`}></span>
           </button>
           <div className="add-dropdown" ref={dropdownRef}>
             <button className="add-btn" onClick={() => setShowDropdown(!showDropdown)}>
               <span className="codicon codicon-add"></span>
-              {t('mcp.add')}
+              Add
               <span className="codicon codicon-chevron-down"></span>
             </button>
             {showDropdown && (
               <div className="dropdown-menu">
                 <div className="dropdown-item" onClick={handleAddManual}>
                   <span className="codicon codicon-json"></span>
-                  {t('mcp.manualConfig')}
+                  Manual config
                 </div>
                 <div className="dropdown-item" onClick={handleAddFromMarket}>
                   <span className="codicon codicon-extensions"></span>
-                  {t('mcp.addFromMarket')}
+                  Add from MCP market
                 </div>
               </div>
             )}
@@ -442,7 +377,6 @@ export function McpSettingsSection() {
         </div>
       </div>
 
-      {/* 服务器列表 */}
       {!loading || servers.length > 0 ? (
         <div className="server-list">
           {servers.map(server => (
@@ -450,7 +384,6 @@ export function McpSettingsSection() {
               key={server.id}
               className={`server-card ${expandedServers.has(server.id) ? 'expanded' : ''} ${!isServerEnabled(server) ? 'disabled' : ''}`}
             >
-              {/* 卡片头部 */}
               <div className="card-header" onClick={() => toggleExpand(server.id)}>
                 <div className="header-left-section">
                   <span className={`expand-icon codicon ${expandedServers.has(server.id) ? 'codicon-chevron-down' : 'codicon-chevron-right'}`}></span>
@@ -458,7 +391,6 @@ export function McpSettingsSection() {
                     {getServerInitial(server)}
                   </div>
                   <span className="server-name">{server.name || server.id}</span>
-                  {/* Connection status indicator */}
                   {(() => {
                     const statusInfo = getServerStatusInfo(server);
                     const status = statusInfo?.status;
@@ -485,18 +417,14 @@ export function McpSettingsSection() {
                 </div>
               </div>
 
-              {/* Expanded content */}
               {expandedServers.has(server.id) && (
                 <div className="card-content">
-                  {/* Connection status info */}
                   {(() => {
                     const statusInfo = getServerStatusInfo(server);
-                    // 对于已启用的服务器，始终显示状态信息（即使是未知状态）
-                    // 对于已禁用的服务器，也显示禁用状态
                     return (
                       <div className="status-section">
                         <div className="info-row">
-                          <span className="info-label">{t('mcp.connectionStatus')}:</span>
+                          <span className="info-label">Connection Status:</span>
                           <span
                             className="info-value status-value"
                             style={{ color: getStatusColor(server, statusInfo?.status) }}
@@ -507,7 +435,7 @@ export function McpSettingsSection() {
                         </div>
                         {statusInfo?.serverInfo && (
                           <div className="info-row">
-                            <span className="info-label">{t('mcp.serverVersion')}:</span>
+                            <span className="info-label">Server Version:</span>
                             <span className="info-value">
                               {statusInfo.serverInfo.name} v{statusInfo.serverInfo.version}
                             </span>
@@ -517,17 +445,16 @@ export function McpSettingsSection() {
                     );
                   })()}
 
-                   {/* 服务器信息 */}
                    <div className="info-section">
                      {server.description && (
                        <div className="info-row">
-                         <span className="info-label">{t('mcp.description')}:</span>
+                         <span className="info-label">Description:</span>
                          <span className="info-value">{server.description}</span>
                        </div>
                      )}
                      {server.server.command && (
                        <div className="info-row">
-                         <span className="info-label">{t('mcp.command')}:</span>
+                         <span className="info-label">Command:</span>
                          <code className="info-value command">
                            {server.server.command} {(server.server.args || []).join(' ')}
                          </code>
@@ -535,13 +462,12 @@ export function McpSettingsSection() {
                      )}
                      {server.server.url && (
                        <div className="info-row">
-                         <span className="info-label">{t('mcp.url')}:</span>
+                         <span className="info-label">URL:</span>
                          <code className="info-value command">{server.server.url}</code>
                        </div>
                      )}
                    </div>
 
-                  {/* 标签 */}
                   {server.tags && server.tags.length > 0 && (
                     <div className="tags-section">
                       {server.tags.map(tag => (
@@ -550,43 +476,42 @@ export function McpSettingsSection() {
                     </div>
                   )}
 
-                  {/* 操作按钮 */}
                   <div className="actions-section">
                     {server.homepage && (
                       <button
                         className="action-btn"
                         onClick={() => handleCopyUrl(server.homepage!)}
-                        title={t('chat.copyHomepageLink')}
+                        title="Copy homepage link"
                       >
                         <span className="codicon codicon-home"></span>
-                        {t('mcp.homepage')}
+                        Homepage
                       </button>
                     )}
                     {server.docs && (
                       <button
                         className="action-btn"
                         onClick={() => handleCopyUrl(server.docs!)}
-                        title={t('chat.copyDocsLink')}
+                        title="Copy docs link"
                       >
                         <span className="codicon codicon-book"></span>
-                        {t('mcp.docs')}
+                        Docs
                       </button>
                     )}
                     <button
                       className="action-btn edit-btn"
                       onClick={() => handleEdit(server)}
-                      title={t('chat.editConfig')}
+                      title="Edit config"
                     >
                       <span className="codicon codicon-edit"></span>
-                      {t('mcp.edit')}
+                      Edit
                     </button>
                     <button
                       className="action-btn delete-btn"
                       onClick={() => handleDelete(server)}
-                      title={t('chat.deleteServer')}
+                      title="Delete server"
                     >
                       <span className="codicon codicon-trash"></span>
-                      {t('mcp.delete')}
+                      Delete
                     </button>
                   </div>
                 </div>
@@ -594,26 +519,23 @@ export function McpSettingsSection() {
             </div>
           ))}
 
-          {/* 空状态 */}
           {servers.length === 0 && !loading && (
             <div className="empty-state">
               <span className="codicon codicon-server"></span>
-              <p>{t('mcp.noServers')}</p>
-              <p className="hint">{t('mcp.addServerHint')}</p>
+              <p>No MCP servers</p>
+              <p className="hint">Click 'Add' button to add a server</p>
             </div>
           )}
         </div>
       ) : null}
 
-      {/* 加载状态 */}
       {loading && servers.length === 0 && (
         <div className="loading-state">
           <span className="codicon codicon-loading codicon-modifier-spin"></span>
-          <p>{t('mcp.loading')}</p>
+          <p>Loading...</p>
         </div>
       )}
 
-      {/* 弹窗 */}
       {showServerDialog && (
         <McpServerDialog
           server={editingServer}
@@ -639,16 +561,15 @@ export function McpSettingsSection() {
 
       {showConfirmDialog && deletingServer && (
         <McpConfirmDialog
-          title={t('mcp.deleteTitle')}
-          message={t('mcp.deleteMessage', { name: deletingServer.name || deletingServer.id })}
-          confirmText={t('mcp.deleteConfirm')}
-          cancelText={t('mcp.cancel')}
+          title="Delete MCP server"
+          message={`Are you sure you want to delete server "${deletingServer.name || deletingServer.id}"?\n\nThis action cannot be undone.`}
+          confirmText="Delete"
+          cancelText="Cancel"
           onConfirm={confirmDelete}
           onCancel={cancelDelete}
         />
       )}
 
-      {/* Toast 通知 */}
       <ToastContainer messages={toasts} onDismiss={dismissToast} />
     </div>
   );

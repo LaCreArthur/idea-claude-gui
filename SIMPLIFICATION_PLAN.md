@@ -104,7 +104,7 @@ Each iteration:
 ## Section 10: Replace Translations in React Components (Batch 4 - Dialogs & Tools)
 
 - [x] Remove i18n from `webview/src/components/history/HistoryView.tsx` ✓
-- [ ] Remove i18n from `webview/src/components/mcp/McpSettingsSection.tsx`
+- [x] Remove i18n from `webview/src/components/mcp/McpSettingsSection.tsx` ✓
 - [ ] Remove i18n from `webview/src/components/mcp/McpHelpDialog.tsx`
 - [ ] Remove i18n from `webview/src/components/mcp/McpPresetDialog.tsx`
 - [ ] Remove i18n from `webview/src/components/mcp/McpServerDialog.tsx`
