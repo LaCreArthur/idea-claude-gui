@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import type { ProviderConfig, CodexProviderConfig } from '../../types/provider';
+import type { ProviderConfig } from '../../types/provider';
 import type { AgentConfig } from '../../types/agent';
 import { type ClaudeConfig } from './ConfigInfoDisplay';
 import AlertDialog from '../AlertDialog';
@@ -8,7 +7,6 @@ import type { AlertType } from '../AlertDialog';
 import ConfirmDialog from '../ConfirmDialog';
 import { ToastContainer, type ToastMessage } from '../Toast';
 import ProviderDialog from '../ProviderDialog';
-import CodexProviderDialog from '../CodexProviderDialog';
 import AgentDialog from '../AgentDialog';
 
 // 导入拆分后的组件
@@ -49,7 +47,6 @@ const sendToJava = (message: string) => {
 const AUTO_COLLAPSE_THRESHOLD = 900;
 
 const SettingsView = ({ onClose, initialTab, currentProvider, streamingEnabled: streamingEnabledProp, onStreamingEnabledChange: onStreamingEnabledChangeProp, sendShortcut: sendShortcutProp, onSendShortcutChange: onSendShortcutChangeProp }: SettingsViewProps) => {
-  const { t } = useTranslation();
   const isCodexMode = currentProvider === 'codex';
   // Codex mode: allow providers and usage tabs, disable other features
   // Note: 'usage' is now enabled for Codex as it supports usage statistics
@@ -212,7 +209,7 @@ const SettingsView = ({ onClose, initialTab, currentProvider, streamingEnabled: 
 
   const handleTabChange = (tab: SettingsTab) => {
     if (isCodexMode && disabledTabs.includes(tab)) {
-      addToast(t('settings.codexFeatureUnavailable'), 'warning');
+      addToast('This settings section is not available in Codex yet. Please switch to Claude Code.', 'warning');
       return;
     }
     setCurrentTab(tab);
@@ -231,7 +228,7 @@ const SettingsView = ({ onClose, initialTab, currentProvider, streamingEnabled: 
   // 显示切换成功弹窗
   const showSwitchSuccess = (message: string) => {
     console.log('[SettingsView] showSwitchSuccess called:', message);
-    showAlert('success', t('toast.switchSuccess'), message);
+    showAlert('success', 'Switched successfully', message);
   };
 
   useEffect(() => {
@@ -280,7 +277,7 @@ const SettingsView = ({ onClose, initialTab, currentProvider, streamingEnabled: 
 
     window.showError = (message: string) => {
       console.log('[SettingsView] window.showError called:', message);
-      showAlert('error', t('toast.operationFailed'), message);
+      showAlert('error', 'Operation failed', message);
       setLoading(false);
       setSavingNodePath(false);
       setSavingWorkingDirectory(false);
@@ -322,7 +319,7 @@ const SettingsView = ({ onClose, initialTab, currentProvider, streamingEnabled: 
 
     window.showSuccess = (message: string) => {
       console.log('[SettingsView] window.showSuccess called:', message);
-      showAlert('success', t('toast.operationSuccess'), message);
+      showAlert('success', 'Operation successful', message);
       setSavingNodePath(false);
       setSavingWorkingDirectory(false);
     };
@@ -390,13 +387,13 @@ const SettingsView = ({ onClose, initialTab, currentProvider, streamingEnabled: 
         const result = JSON.parse(jsonStr);
         if (result.success) {
           const operationMessages: Record<string, string> = {
-            add: t('settings.agent.addSuccess'),
-            update: t('settings.agent.updateSuccess'),
-            delete: t('settings.agent.deleteSuccess'),
+            add: 'Agent created successfully',
+            update: 'Agent updated successfully',
+            delete: 'Agent deleted successfully',
           };
-          addToast(operationMessages[result.operation] || t('settings.agent.operationSuccess'), 'success');
+          addToast(operationMessages[result.operation] || 'Operation successful', 'success');
         } else {
-          addToast(result.error || t('settings.agent.operationFailed'), 'error');
+          addToast(result.error || 'Operation failed', 'error');
         }
       } catch (error) {
         console.error('[SettingsView] Failed to parse agent operation result:', error);
@@ -653,7 +650,7 @@ const SettingsView = ({ onClose, initialTab, currentProvider, streamingEnabled: 
     jsonConfig: string;
   }) => {
     if (!data.providerName) {
-      showAlert('warning', t('common.warning'), t('toast.pleaseEnterProviderName'));
+      showAlert('warning', 'Warning', 'Please enter provider name');
       return;
     }
 
@@ -662,7 +659,7 @@ const SettingsView = ({ onClose, initialTab, currentProvider, streamingEnabled: 
     try {
       parsedConfig = JSON.parse(data.jsonConfig || '{}');
     } catch (e) {
-      showAlert('error', t('common.error'), t('toast.invalidJsonConfig'));
+      showAlert('error', 'Error', 'Invalid JSON config format');
       return;
     }
 
@@ -682,7 +679,7 @@ const SettingsView = ({ onClose, initialTab, currentProvider, streamingEnabled: 
         ...updates
       };
       sendToJava(`add_provider:${JSON.stringify(newProvider)}`);
-      addToast(t('toast.providerAdded'), 'success');
+      addToast('Provider added', 'success');
     } else {
       // 更新现有供应商
       if (!providerDialog.provider) return;
@@ -698,7 +695,7 @@ const SettingsView = ({ onClose, initialTab, currentProvider, streamingEnabled: 
         updates,
       };
       sendToJava(`update_provider:${JSON.stringify(updateData)}`);
-      addToast(t('toast.providerUpdated'), 'success');
+      addToast('Provider updated', 'success');
 
       // 如果是当前正在使用的供应商，更新后立即重新应用配置
       if (isActive) {
@@ -743,7 +740,7 @@ const SettingsView = ({ onClose, initialTab, currentProvider, streamingEnabled: 
     console.log('[SettingsView] confirmDeleteProvider - sending delete_provider:', provider.id);
     const data = { id: provider.id };
     sendToJava(`delete_provider:${JSON.stringify(data)}`);
-    addToast(t('toast.providerDeleted'), 'success');
+    addToast('Provider deleted', 'success');
     setLoading(true);
     setDeleteConfirm({ isOpen: false, provider: null });
   };
@@ -770,7 +767,7 @@ const SettingsView = ({ onClose, initialTab, currentProvider, streamingEnabled: 
 
     if (isAdding) {
       sendToJava(`add_codex_provider:${JSON.stringify(providerData)}`);
-      addToast(t('toast.providerAdded'), 'success');
+      addToast('Provider added', 'success');
     } else {
       const updateData = {
         id: providerData.id,
@@ -782,7 +779,7 @@ const SettingsView = ({ onClose, initialTab, currentProvider, streamingEnabled: 
         },
       };
       sendToJava(`update_codex_provider:${JSON.stringify(updateData)}`);
-      addToast(t('toast.providerUpdated'), 'success');
+      addToast('Provider updated', 'success');
     }
 
     setCodexProviderDialog({ isOpen: false, provider: null });
@@ -805,7 +802,7 @@ const SettingsView = ({ onClose, initialTab, currentProvider, streamingEnabled: 
 
     const data = { id: provider.id };
     sendToJava(`delete_codex_provider:${JSON.stringify(data)}`);
-    addToast(t('toast.providerDeleted'), 'success');
+    addToast('Provider deleted', 'success');
     setCodexLoading(true);
     setDeleteCodexConfirm({ isOpen: false, provider: null });
   };
@@ -888,7 +885,7 @@ const SettingsView = ({ onClose, initialTab, currentProvider, streamingEnabled: 
           isCollapsed={isCollapsed}
           onToggleCollapse={toggleManualCollapse}
           disabledTabs={disabledTabs}
-          onDisabledTabClick={() => addToast(t('settings.codexFeatureUnavailable'), 'warning')}
+          onDisabledTabClick={() => addToast('This settings section is not available in Codex yet. Please switch to Claude Code.', 'warning')}
         />
 
         {/* 内容区域 */}
@@ -936,23 +933,23 @@ const SettingsView = ({ onClose, initialTab, currentProvider, streamingEnabled: 
           {/* Codex 供应商管理 */}
           {currentTab === 'providers' && isCodexMode && (
             <div className={styles.configSection}>
-              <h3 className={styles.sectionTitle}>{t('settings.codexProvider.title')}</h3>
-              <p className={styles.sectionDesc}>{t('settings.codexProvider.description')}</p>
+              <h3 className={styles.sectionTitle}>{'Codex Provider Management'}</h3>
+              <p className={styles.sectionDesc}>{'Manage Codex provider configurations'}</p>
 
               {codexLoading && (
                 <div className={styles.tempNotice}>
                   <span className="codicon codicon-loading codicon-modifier-spin" />
-                  <p>{t('settings.provider.loading')}</p>
+                  <p>{'Loading...'}</p>
                 </div>
               )}
 
               {!codexLoading && (
                 <div className={styles.providerListContainer}>
                   <div className={styles.providerListHeader}>
-                    <h4>{t('settings.provider.allProviders')}</h4>
+                    <h4>{'All Providers'}</h4>
                     <button className="btn btn-primary" onClick={handleAddCodexProvider}>
                       <span className="codicon codicon-add" />
-                      {t('common.add')}
+                      {'Add'}
                     </button>
                   </div>
 
@@ -974,7 +971,7 @@ const SettingsView = ({ onClose, initialTab, currentProvider, streamingEnabled: 
                             {provider.isActive ? (
                               <div className={styles.activeBadge}>
                                 <span className="codicon codicon-check" />
-                                {t('settings.provider.inUse')}
+                                {'In Use'}
                               </div>
                             ) : (
                               <button
@@ -982,7 +979,7 @@ const SettingsView = ({ onClose, initialTab, currentProvider, streamingEnabled: 
                                 onClick={() => handleSwitchCodexProvider(provider.id)}
                               >
                                 <span className="codicon codicon-play" />
-                                {t('settings.provider.enable')}
+                                {'Enable'}
                               </button>
                             )}
 
@@ -990,14 +987,14 @@ const SettingsView = ({ onClose, initialTab, currentProvider, streamingEnabled: 
                               <button
                                 className={styles.iconBtn}
                                 onClick={() => handleEditCodexProvider(provider)}
-                                title={t('common.edit')}
+                                title={'Edit'}
                               >
                                 <span className="codicon codicon-edit" />
                               </button>
                               <button
                                 className={styles.iconBtn}
                                 onClick={() => handleDeleteCodexProvider(provider)}
-                                title={t('common.delete')}
+                                title={'Delete'}
                               >
                                 <span className="codicon codicon-trash" />
                               </button>
@@ -1008,7 +1005,7 @@ const SettingsView = ({ onClose, initialTab, currentProvider, streamingEnabled: 
                     ) : (
                       <div className={styles.emptyState}>
                         <span className="codicon codicon-info" />
-                        <p>{t('settings.codexProvider.emptyProvider')}</p>
+                        <p>{'No Codex providers configured'}</p>
                       </div>
                     )}
                   </div>
@@ -1060,10 +1057,10 @@ const SettingsView = ({ onClose, initialTab, currentProvider, streamingEnabled: 
       {/* 删除确认弹窗 */}
       <ConfirmDialog
         isOpen={deleteConfirm.isOpen}
-        title={t('settings.provider.deleteConfirm')}
-        message={t('settings.provider.deleteProviderMessage', { name: deleteConfirm.provider?.name || '' })}
-        confirmText={t('common.delete')}
-        cancelText={t('common.cancel')}
+        title={'Confirm Delete Provider'}
+        message={`Are you sure you want to delete provider "${deleteConfirm.provider?.name || ''}"?\n\nThis action cannot be undone.`}
+        confirmText={'Delete'}
+        cancelText={'Cancel'}
         onConfirm={confirmDeleteProvider}
         onCancel={cancelDeleteProvider}
       />
@@ -1090,10 +1087,10 @@ const SettingsView = ({ onClose, initialTab, currentProvider, streamingEnabled: 
       {/* 智能体删除确认弹窗 */}
       <ConfirmDialog
         isOpen={deleteAgentConfirm.isOpen}
-        title={t('settings.agent.deleteConfirmTitle')}
-        message={t('settings.agent.deleteConfirmMessage', { name: deleteAgentConfirm.agent?.name || '' })}
-        confirmText={t('common.delete')}
-        cancelText={t('common.cancel')}
+        title={'Confirm Delete'}
+        message={`Are you sure you want to delete agent "${deleteAgentConfirm.agent?.name || ''}"? This action cannot be undone.`}
+        confirmText={'Delete'}
+        cancelText={'Cancel'}
         onConfirm={confirmDeleteAgent}
         onCancel={cancelDeleteAgent}
       />
@@ -1110,10 +1107,10 @@ const SettingsView = ({ onClose, initialTab, currentProvider, streamingEnabled: 
       {/* Codex 供应商删除确认弹窗 */}
       <ConfirmDialog
         isOpen={deleteCodexConfirm.isOpen}
-        title={t('settings.codexProvider.deleteConfirmTitle')}
-        message={t('settings.codexProvider.deleteConfirmMessage', { name: deleteCodexConfirm.provider?.name || '' })}
-        confirmText={t('common.delete')}
-        cancelText={t('common.cancel')}
+        title={'Confirm Delete'}
+        message={`Are you sure you want to delete provider "${deleteCodexConfirm.provider?.name || ''}"? This action cannot be undone.`}
+        confirmText={'Delete'}
+        cancelText={'Cancel'}
         onConfirm={confirmDeleteCodexProvider}
         onCancel={cancelDeleteCodexProvider}
       />
