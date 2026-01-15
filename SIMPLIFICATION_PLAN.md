@@ -178,13 +178,12 @@ Each iteration:
 
 ## Section 19: Remove i18n Config Files
 
-- [ ] Remove resource-bundle from `src/main/resources/META-INF/plugin.xml`
-- [ ] Delete `webview/src/i18n/` directory entirely
-- [ ] Delete `src/main/resources/messages/ClaudeCodeGuiBundle.properties`
-- [ ] Delete `webview/src/i18n/locales/en.json`
-- [ ] Delete `webview/src/i18n/config.ts`
-- [ ] Delete `src/main/java/com/github/claudecodegui/ClaudeCodeGuiBundle.java`
-- [ ] Delete `src/main/java/com/github/claudecodegui/util/LanguageConfigService.java`
+- [x] Remove resource-bundle from `src/main/resources/META-INF/plugin.xml` ✓
+- [x] Delete `webview/src/i18n/` directory entirely ✓ (already deleted)
+- [x] Delete `src/main/resources/messages/ClaudeCodeGuiBundle.properties` ✓
+- [x] Delete `src/main/java/com/github/claudecodegui/ClaudeCodeGuiBundle.java` ✓
+- [x] Delete `src/main/java/com/github/claudecodegui/util/LanguageConfigService.java` ✓
+- [x] Remove language config injection from ClaudeSDKToolWindow.java ✓
 
 ## Section 20: Update Documentation
 

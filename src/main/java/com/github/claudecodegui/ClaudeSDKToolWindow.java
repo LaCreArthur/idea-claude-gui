@@ -14,7 +14,6 @@ import com.github.claudecodegui.util.FontConfigService;
 import com.github.claudecodegui.util.HtmlLoader;
 import com.github.claudecodegui.util.JBCefBrowserFactory;
 import com.github.claudecodegui.util.JsUtils;
-import com.github.claudecodegui.util.LanguageConfigService;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -778,20 +777,9 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
                             fontConfig, fontConfig
                         );
                         cefBrowser.executeJavaScript(fontConfigInjection, cefBrowser.getURL(), 0);
-                        LOG.info("[FontSync] 字体配置已注入到前端");
+                        LOG.info("[FontSync] Font config injected to frontend");
 
-                        // 传递 IDEA 语言配置到前端
-                        String languageConfig = LanguageConfigService.getLanguageConfigJson();
-                        LOG.info("[LanguageSync] 获取到的语言配置: " + languageConfig);
-                        String languageConfigInjection = String.format(
-                            "if (window.applyIdeaLanguageConfig) { window.applyIdeaLanguageConfig(%s); } " +
-                            "else { window.__pendingLanguageConfig = %s; }",
-                            languageConfig, languageConfig
-                        );
-                        cefBrowser.executeJavaScript(languageConfigInjection, cefBrowser.getURL(), 0);
-                        LOG.info("[LanguageSync] 语言配置已注入到前端");
-
-                        // 斜杠命令的加载现在由前端发起，通过 frontend_ready 事件触发
+                        // Slash command loading is now initiated by frontend via frontend_ready event
                         // 不再在 onLoadEnd 中主动调用，避免时序问题
                         LOG.debug("onLoadEnd completed, waiting for frontend_ready signal");
                     }

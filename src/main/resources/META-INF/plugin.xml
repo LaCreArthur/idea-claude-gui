@@ -3,16 +3,12 @@
     <name>Claude GUI</name>
     <vendor>Arthur Scheidel</vendor>
 
-    <!-- Resource bundle for i18n -->
-    <resource-bundle>messages.ClaudeCodeGuiBundle</resource-bundle>
-
     <description><![CDATA[
-        <p><strong>Claude GUI</strong> - A powerful visual interface plugin that brings <strong>Claude Code</strong> and <strong>OpenAI Codex</strong> dual AI tools directly into IntelliJ IDEA, making AI-assisted programming more efficient and intuitive.</p>
+        <p><strong>Claude GUI</strong> - A powerful visual interface plugin that brings <strong>Claude Code</strong> directly into IntelliJ IDEA, making AI-assisted programming more efficient and intuitive.</p>
 
-        <h2>Dual AI Engine Support</h2>
+        <h2>Claude Code Support</h2>
         <ul>
             <li><strong>Claude Code</strong> - Anthropic's official AI programming assistant (Opus 4.5 and more)</li>
-            <li><strong>OpenAI Codex</strong> - OpenAI's powerful code generation engine</li>
         </ul>
 
         <h2>Key Features</h2>
