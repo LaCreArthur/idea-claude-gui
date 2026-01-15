@@ -99,7 +99,7 @@ const getToolDisplayName = (name?: string, input?: ToolInput) => {
 };
 
 /**
- * Extract file/directory path from command string (for Codex commands)
+ * Extract file/directory path from command string.
  * Returns the path with optional metadata suffix (e.g., ":700-780" for line ranges, "/" for directories)
  */
 const extractFilePathFromCommand = (command: string | undefined, workdir?: string): string | undefined => {
@@ -191,7 +191,7 @@ const pickFilePath = (input: ToolInput, name?: string) => {
 
   if (standardPath) return standardPath;
 
-  // For Codex read or shell_command commands, extract from command string
+  // For read or shell_command commands, extract from command string
   const lowerName = (name ?? '').toLowerCase();
   if ((lowerName === 'read' || lowerName === 'shell_command') && input.command) {
     const workdir = (input.workdir as string | undefined) ?? undefined;
@@ -208,8 +208,8 @@ const omitFields = new Set([
   'notebook_path',
   'command',
   'search_term',
-  'description',  // Omit Codex description field
-  'workdir',      // Omit Codex workdir field
+  'description',
+  'workdir',
 ]);
 
 interface GenericToolBlockProps {

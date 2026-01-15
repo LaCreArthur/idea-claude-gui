@@ -47,7 +47,7 @@ export interface HistorySessionSummary {
   lastTimestamp?: string;
   isFavorited?: boolean;
   favoritedAt?: number;
-  provider?: string; // 'claude' 或 'codex'
+  provider?: string;
 }
 
 export interface HistoryData {

@@ -166,9 +166,9 @@ public class HistoryHandler extends BaseMessageHandler {
     }
 
     /**
-     * 将 Codex 的 content 转换为 Claude 格式的 content blocks
-     * Codex: [{type: "input_text", text: "..."}, {type: "text", text: "..."}]
-     * Claude: [{type: "text", text: "..."}]
+     * Convert content to Claude format content blocks.
+     * Handles various formats: [{type: "input_text", text: "..."}, {type: "text", text: "..."}]
+     * Output: [{type: "text", text: "..."}]
      */
     private com.google.gson.JsonArray convertToClaudeContentBlocks(com.google.gson.JsonElement contentElem) {
         com.google.gson.JsonArray claudeBlocks = new com.google.gson.JsonArray();
@@ -198,7 +198,7 @@ public class HistoryHandler extends BaseMessageHandler {
                     if (type != null) {
                         com.google.gson.JsonObject claudeBlock = new com.google.gson.JsonObject();
 
-                        // Codex 的 "input_text" 和 "output_text" 转换为 Claude 的 "text"
+                        // Convert "input_text" and "output_text" to "text"
                         if ("input_text".equals(type) || "output_text".equals(type) || "text".equals(type)) {
                             claudeBlock.addProperty("type", "text");
                             if (itemObj.has("text")) {
@@ -206,7 +206,7 @@ public class HistoryHandler extends BaseMessageHandler {
                             }
                             claudeBlocks.add(claudeBlock);
                         }
-                        // 处理工具使用（如果 Codex 有的话）
+                        // Handle tool use
                         else if ("tool_use".equals(type)) {
                             claudeBlock.addProperty("type", "tool_use");
                             if (itemObj.has("id")) {
@@ -280,8 +280,8 @@ public class HistoryHandler extends BaseMessageHandler {
     }
 
     /**
-     * 从 Codex content 字段提取文本内容
-     * Codex 的 content 可能是字符串、对象或数组格式
+     * Extract text content from content field.
+     * Content can be a string, object, or array format.
      */
     private String extractContentAsString(com.google.gson.JsonElement contentElem) {
         if (contentElem == null) {
@@ -311,7 +311,7 @@ public class HistoryHandler extends BaseMessageHandler {
                             sb.append(itemObj.get("text").getAsString());
                         }
                     }
-                    // 提取 input_text 类型 (Codex 用户消息)
+                    // Extract input_text type (user message)
                     else if (itemObj.has("type") && "input_text".equals(itemObj.get("type").getAsString())) {
                         if (itemObj.has("text")) {
                             if (sb.length() > 0) {
@@ -320,7 +320,7 @@ public class HistoryHandler extends BaseMessageHandler {
                             sb.append(itemObj.get("text").getAsString());
                         }
                     }
-                    // 提取 output_text 类型 (Codex AI 助手消息)
+                    // Extract output_text type (assistant message)
                     else if (itemObj.has("type") && "output_text".equals(itemObj.get("type").getAsString())) {
                         if (itemObj.has("text")) {
                             if (sb.length() > 0) {

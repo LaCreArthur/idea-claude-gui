@@ -303,21 +303,6 @@ interface Window {
    */
   onSelectedAgentChanged?: (json: string) => void;
 
-  /**
-   * Update Codex providers list
-   */
-  updateCodexProviders?: (json: string) => void;
-
-  /**
-   * Update active Codex provider
-   */
-  updateActiveCodexProvider?: (json: string) => void;
-
-  /**
-   * Update current Codex config (from ~/.codex/)
-   */
-  updateCurrentCodexConfig?: (json: string) => void;
-
 // ============================================================================
   // 🔧 流式传输回调函数
   // ============================================================================

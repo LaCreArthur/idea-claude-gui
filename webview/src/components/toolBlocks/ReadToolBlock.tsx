@@ -9,7 +9,7 @@ interface ReadToolBlockProps {
 }
 
 /**
- * Extract file/directory path from command string (for Codex commands)
+ * Extract file/directory path from command string
  */
 const extractFilePathFromCommand = (command: string | undefined, workdir?: string): string | undefined => {
   if (!command || typeof command !== 'string') return undefined;
@@ -98,7 +98,7 @@ const ReadToolBlock = ({ input }: ReadToolBlockProps) => {
     (input.target_file as string | undefined) ??
     (input.path as string | undefined);
 
-  // If not found, try extracting from Codex command
+  // If not found, try extracting from command
   if (!filePath && input.command) {
     const workdir = (input.workdir as string | undefined) ?? undefined;
     filePath = extractFilePathFromCommand(input.command as string, workdir);
@@ -158,14 +158,14 @@ const ReadToolBlock = ({ input }: ReadToolBlockProps) => {
     }
   };
 
-  // Get all input parameters for the expanded view, excluding Codex-specific fields
+  // Get all input parameters for the expanded view, excluding display fields
   const params = Object.entries(input).filter(([key]) =>
     key !== 'file_path' &&
     key !== 'target_file' &&
     key !== 'path' &&
-    key !== 'command' &&    // Omit Codex command field
-    key !== 'workdir' &&    // Omit Codex workdir field
-    key !== 'description'   // Omit Codex description field
+    key !== 'command' &&
+    key !== 'workdir' &&
+    key !== 'description'
   );
 
   return (

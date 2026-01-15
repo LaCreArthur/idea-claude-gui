@@ -29,7 +29,7 @@ describe('McpSettingsSection', () => {
     name: 'Test Server',
     description: 'A test MCP server',
     enabled: true,
-    apps: { claude: true, codex: false, gemini: false },
+    apps: { claude: true },
     server: { command: 'npx', args: ['test-server'] },
   };
 

@@ -2,7 +2,7 @@ package com.github.claudecodegui.provider.common;
 
 /**
  * SDK message callback interface.
- * Used for streaming responses from AI providers (Claude/Codex).
+ * Used for streaming responses from Claude.
  */
 public interface MessageCallback {
     /**

@@ -2,7 +2,7 @@ package com.github.claudecodegui.provider.common;
 
 /**
  * Common session information structure.
- * Used by both Claude and Codex history readers.
+ * Used by the Claude history reader.
  */
 public class SessionInfo {
     public String sessionId;
@@ -10,7 +10,7 @@ public class SessionInfo {
     public int messageCount;
     public long lastTimestamp;
     public long firstTimestamp;
-    public String cwd; // Working directory path (used by Codex)
+    public String cwd; // Working directory path
 
     public SessionInfo() {
     }

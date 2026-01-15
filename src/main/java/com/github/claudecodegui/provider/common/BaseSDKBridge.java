@@ -22,7 +22,7 @@ import java.util.concurrent.CompletableFuture;
 
 /**
  * Base SDK bridge class.
- * Contains common logic shared by ClaudeSDKBridge and CodexSDKBridge.
+ * Contains common logic for the Claude SDK bridge.
  */
 public abstract class BaseSDKBridge {
 
@@ -51,7 +51,7 @@ public abstract class BaseSDKBridge {
     // ============================================================================
 
     /**
-     * Get the provider name (e.g., "claude" or "codex").
+     * Get the provider name.
      */
     protected abstract String getProviderName();
 

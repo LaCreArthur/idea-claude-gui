@@ -347,8 +347,7 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
                     // 使用已保存的路径
                     String path = savedNodePath.trim();
                     claudeSDKBridge.setNodeExecutable(path);
-                    // Removed codex: codexSDKBridge.setNodeExecutable(path);
-                    // 验证并缓存 Node.js 版本
+                    // Verify and cache Node.js version
                     claudeSDKBridge.verifyAndCacheNodePath(path);
                     LOG.info("Using manually configured Node.js path: " + path);
                 } else {
@@ -364,11 +363,9 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
                         // 保存检测到的路径
                         props.setValue(NODE_PATH_PROPERTY_KEY, detectedPath);
 
-                        // 设置到两个 bridge
                         claudeSDKBridge.setNodeExecutable(detectedPath);
-                        // Removed codex: codexSDKBridge.setNodeExecutable(detectedPath);
 
-                        // 验证并缓存版本信息
+                        // Verify and cache version info
                         claudeSDKBridge.verifyAndCacheNodePath(detectedPath);
 
                         LOG.info("Auto-detected Node.js: " + detectedPath + " (" + detectedVersion + ")");
@@ -635,7 +632,6 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
             if (savedNodePath != null && !savedNodePath.trim().isEmpty()) {
                 String trimmed = savedNodePath.trim();
                 claudeSDKBridge.setNodeExecutable(trimmed);
-                // Removed codex: codexSDKBridge.setNodeExecutable(trimmed);
                 nodeResult = claudeSDKBridge.verifyAndCacheNodePath(trimmed);
                 if (nodeResult == null || !nodeResult.isFound()) {
                     showInvalidNodePathPanel(trimmed, nodeResult != null ? nodeResult.getErrorMessage() : null);
@@ -646,8 +642,7 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
                 if (nodeResult != null && nodeResult.isFound() && nodeResult.getNodePath() != null) {
                     props.setValue(NODE_PATH_PROPERTY_KEY, nodeResult.getNodePath());
                     claudeSDKBridge.setNodeExecutable(nodeResult.getNodePath());
-                    // Removed codex: codexSDKBridge.setNodeExecutable(nodeResult.getNodePath());
-                    // 关键修复：缓存自动检测到的 Node.js 版本
+                    // Cache auto-detected Node.js version
                     claudeSDKBridge.verifyAndCacheNodePath(nodeResult.getNodePath());
                 }
             }
@@ -1008,15 +1003,11 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
 
                 if (manualPath == null || manualPath.isEmpty()) {
                     props.unsetValue(NODE_PATH_PROPERTY_KEY);
-                    // 同时清除 Claude 和 Codex 的手动配置
                     claudeSDKBridge.setNodeExecutable(null);
-                    // Removed codex: codexSDKBridge.setNodeExecutable(null);
                     LOG.info("Cleared manual Node.js path");
                 } else {
                     props.setValue(NODE_PATH_PROPERTY_KEY, manualPath);
-                    // 同时设置 Claude 和 Codex 的 Node.js 路径，并缓存版本信息
                     claudeSDKBridge.setNodeExecutable(manualPath);
-                    // Removed codex: codexSDKBridge.setNodeExecutable(manualPath);
                     claudeSDKBridge.verifyAndCacheNodePath(manualPath);
                     LOG.info("Saved manual Node.js path: " + manualPath);
                 }
