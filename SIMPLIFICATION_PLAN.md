@@ -61,7 +61,7 @@ Each iteration:
 - [x] Remove i18next and react-i18next from `webview/package.json` and run npm install ✓
 - [x] Remove `import './i18n/config'` from `webview/src/main.tsx` ✓
 - [x] Remove i18n mock from `webview/src/test/setup.ts` ✓
-- [ ] Remove i18n declarations from `webview/src/global.d.ts`
+- [x] Remove i18n declarations from `webview/src/global.d.ts` ✓
 
 ## Section 6: Replace Translations in React Components (Batch 1 - Core)
 
