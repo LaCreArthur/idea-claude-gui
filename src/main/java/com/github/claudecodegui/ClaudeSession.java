@@ -510,10 +510,9 @@ public class ClaudeSession {
      * Can be controlled via settings or feature flag.
      */
     private boolean shouldUseNewBridge() {
-        // TODO: Read from settings once testing is complete
-        // For now, disabled by default to maintain backward compatibility
-        // Set to true to test the new protocol
-        return false;
+        // New bridge.js protocol is now the default
+        // Falls back to legacy only when attachments are present
+        return true;
     }
 
     /**

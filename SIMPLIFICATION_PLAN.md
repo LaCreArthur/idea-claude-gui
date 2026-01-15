@@ -80,6 +80,16 @@ Node.js → stdout JSON → Java shows dialog → stdin JSON → Node.js returns
 
 **After Phase 1 works, delete all the old complex code**
 
+### Prerequisites (before deleting)
+
+- [ ] **2.0** Enable and test new bridge protocol
+  - Set `shouldUseNewBridge()` to return `true` in ClaudeSession.java
+  - Run IDE with `./gradlew runIde`
+  - Test: Send message, receive response
+  - Test: Permission dialog appears in Ask mode
+  - Test: Skip permissions mode works
+  - Once confirmed working, proceed with deletion
+
 ### Tasks
 
 - [ ] **2.1** Delete `ai-bridge/permission-handler.js` (437 lines)
