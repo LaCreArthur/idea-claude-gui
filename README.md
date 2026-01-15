@@ -8,7 +8,7 @@ IntelliJ IDEA Plugin for Claude Code
 
 </div>
 
-A powerful IntelliJ IDEA plugin that provides a visual interface for **Claude Code** and **OpenAI Codex** dual AI tools, making AI-assisted programming more efficient and intuitive.
+A powerful IntelliJ IDEA plugin that provides a visual interface for **Claude Code**, making AI-assisted programming more efficient and intuitive.
 
 > Fork of [zhukunpenglinyutong/idea-claude-code-gui](https://github.com/zhukunpenglinyutong/idea-claude-code-gui)
 
@@ -16,9 +16,8 @@ A powerful IntelliJ IDEA plugin that provides a visual interface for **Claude Co
 
 ## Key Features
 
-### Dual AI Engine Support
+### Claude Code Support
 - **Claude Code** - Anthropic's official AI programming assistant, supporting Opus 4.5 and other models
-- **OpenAI Codex** - OpenAI's powerful code generation engine
 
 ### Intelligent Conversation
 - Context-aware AI coding assistant
@@ -38,7 +37,6 @@ A powerful IntelliJ IDEA plugin that provides a visual interface for **Claude Co
 - File navigation and code jumping
 - Dark/Light theme switching
 - Font scaling and IDE font synchronization
-- Internationalization support (auto-switch between Chinese/English)
 
 ### Session Management
 - History session records and search

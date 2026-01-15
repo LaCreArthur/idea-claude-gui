@@ -81,7 +81,7 @@ it('calls sendToJava when clicked', async () => {
 - English comments only
 - No excessive debug logging in production
 - Follow existing patterns in codebase
-- i18n for all user-facing strings (8 locales)
+- English strings for all user-facing text (no i18n)
 
 ## Key Files
 
@@ -99,6 +99,7 @@ See [docs/FORK_STRATEGY.md](docs/FORK_STRATEGY.md) for merge strategy and featur
 
 **Key learnings from v0.2.2 merge:**
 - Git merge is practical (~18% manual conflict rate)
-- i18n conflicts: prefer upstream's translation keys over hardcoded English
 - Watch for duplicate code artifacts after merge (methods, imports, state declarations)
 - Run full test suite after merge to catch compilation issues
+
+**Note:** This fork has removed i18n support (English-only) and non-Claude LLM support (Codex removed).

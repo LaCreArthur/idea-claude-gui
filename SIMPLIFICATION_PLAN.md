@@ -187,8 +187,8 @@ Each iteration:
 
 ## Section 20: Update Documentation
 
-- [ ] Update `CLAUDE.md` - remove i18n reference from Code Style section
-- [ ] Update `README.md` - remove any Codex/OpenAI references if present
+- [x] Update `CLAUDE.md` - remove i18n reference from Code Style section ✓
+- [x] Update `README.md` - remove Codex/OpenAI references ✓
 
 ## Section 21: Verification
 
