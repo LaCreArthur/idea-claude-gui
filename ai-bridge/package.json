@@ -1,15 +1,12 @@
 {
   "name": "ai-bridge",
-  "version": "1.0.0",
-  "description": "Unified bridge for Claude and Codex SDKs from Java",
+  "version": "2.0.0",
+  "description": "Minimal Claude SDK bridge using stdin/stdout JSON protocol",
   "type": "module",
   "dependencies": {},
   "scripts": {
     "test": "vitest run",
-    "test:watch": "vitest",
-    "test:claude": "node channel-manager.js claude send",
-    "test:codex": "node channel-manager.js codex send",
-    "test:sdk-status": "node channel-manager.js system getSdkStatus"
+    "test:watch": "vitest"
   },
   "devDependencies": {
     "vitest": "^4.0.16"

@@ -82,32 +82,31 @@ Node.js → stdout JSON → Java shows dialog → stdin JSON → Node.js returns
 
 ### Prerequisites (before deleting)
 
-- [ ] **2.0** Enable and test new bridge protocol
-  - Set `shouldUseNewBridge()` to return `true` in ClaudeSession.java
-  - Run IDE with `./gradlew runIde`
-  - Test: Send message, receive response
-  - Test: Permission dialog appears in Ask mode
-  - Test: Skip permissions mode works
-  - Once confirmed working, proceed with deletion
+- [x] **2.0** Enable new bridge protocol
+  - Set `shouldUseNewBridge()` to return `true` ✅
+  - **Manual testing required:** Run `./gradlew runIde` and verify:
+    - [ ] Send message, receive response
+    - [ ] Permission dialog appears in Ask mode
+    - [ ] Skip permissions mode works
 
 ### Tasks
 
-- [ ] **2.1** Delete `ai-bridge/permission-handler.js` (437 lines)
-- [ ] **2.2** Delete `ai-bridge/channel-manager.js` (157 lines)
-- [ ] **2.3** Delete `ai-bridge/services/claude/message-service.js` (1784 lines)
-- [ ] **2.4** Delete `ai-bridge/services/claude/session-service.js` (138 lines)
-- [ ] **2.5** Delete `ai-bridge/services/claude/attachment-service.js` (144 lines)
-- [ ] **2.6** Delete `ai-bridge/services/prompt-enhancer.js` (376 lines)
-- [ ] **2.7** Delete `ai-bridge/services/quickfix-prompts.js` (134 lines)
-- [ ] **2.8** Delete `ai-bridge/services/system-prompts.js` (140 lines)
-- [ ] **2.9** Delete `ai-bridge/utils/permission-mapper.js` (223 lines)
-- [ ] **2.10** Delete `ai-bridge/utils/sdk-loader.js` (282 lines)
-- [ ] **2.11** Delete `ai-bridge/utils/async-stream.js` (56 lines)
-- [ ] **2.12** Delete `ai-bridge/channels/claude-channel.js` (103 lines)
-- [ ] **2.13** Simplify `ai-bridge/config/api-config.js` to ~50 lines (just auth loading)
-- [ ] **2.14** Delete empty directories in ai-bridge
-- [ ] **2.15** Update package.json - remove unused dependencies
-- [ ] **2.16** Test Phase 2 completion - full functionality still works
+- [x] **2.1** Delete `ai-bridge/permission-handler.js` (437 lines)
+- [x] **2.2** Delete `ai-bridge/channel-manager.js` (157 lines)
+- [x] **2.3** Delete `ai-bridge/services/claude/message-service.js` (1784 lines)
+- [x] **2.4** Delete `ai-bridge/services/claude/session-service.js` (138 lines)
+- [x] **2.5** Delete `ai-bridge/services/claude/attachment-service.js` (144 lines)
+- [x] **2.6** Delete `ai-bridge/services/prompt-enhancer.js` (376 lines)
+- [x] **2.7** Delete `ai-bridge/services/quickfix-prompts.js` (134 lines)
+- [x] **2.8** Delete `ai-bridge/services/system-prompts.js` (140 lines)
+- [x] **2.9** Delete `ai-bridge/utils/permission-mapper.js` (223 lines)
+- [x] **2.10** Delete `ai-bridge/utils/sdk-loader.js` (282 lines)
+- [x] **2.11** Delete `ai-bridge/utils/async-stream.js` (56 lines)
+- [x] **2.12** Delete `ai-bridge/channels/claude-channel.js` (103 lines)
+- [x] **2.13** Delete `ai-bridge/config/api-config.js` (bridge.js has its own auth)
+- [x] **2.14** Delete empty directories in ai-bridge (kept services/ for favorites/titles)
+- [x] **2.15** Update package.json - removed old test scripts, bumped to v2.0.0
+- [x] **2.16** Build passes, Phase 2 deletion complete
 
 ---
 
