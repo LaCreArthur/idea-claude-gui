@@ -34,20 +34,6 @@ public class MessageDispatcher {
     }
 
     /**
-     * Check if any handler supports the specified message type.
-     */
-    public boolean hasHandlerFor(String type) {
-        for (MessageHandler handler : handlers) {
-            for (String supported : handler.getSupportedTypes()) {
-                if (supported.equals(type)) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
-    /**
      * Get the count of all registered handlers.
      */
     public int getHandlerCount() {
