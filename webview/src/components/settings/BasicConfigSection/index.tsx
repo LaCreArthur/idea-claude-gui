@@ -1,5 +1,4 @@
 import styles from './style.module.less';
-import { useTranslation } from 'react-i18next';
 
 const SunIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -72,8 +71,6 @@ const BasicConfigSection = ({
   sendShortcut = 'enter',
   onSendShortcutChange = () => {},
 }: BasicConfigSectionProps) => {
-  const { t, i18n } = useTranslation();
-
   // 解析主版本号
   const parseMajorVersion = (version: string | null | undefined): number => {
     if (!version) return 0;
@@ -89,39 +86,16 @@ const BasicConfigSection = ({
   const majorVersion = parseMajorVersion(nodeVersion);
   const isVersionTooLow = nodeVersion && majorVersion > 0 && majorVersion < minNodeVersion;
 
-  // 当前语言
-  const currentLanguage = i18n.language || 'zh';
-
-  // 语言选项
-  const languageOptions = [
-    { value: 'zh', label: 'settings.basic.language.simplifiedChinese' },
-    { value: 'zh-TW', label: 'settings.basic.language.traditionalChinese' },
-    { value: 'en', label: 'settings.basic.language.english' },
-    { value: 'hi', label: 'settings.basic.language.hindi' },
-    { value: 'es', label: 'settings.basic.language.spanish' },
-    { value: 'fr', label: 'settings.basic.language.french' },
-    { value: 'ja', label: 'settings.basic.language.japanese' },
-  ];
-
-  // 切换语言
-  const handleLanguageChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const language = event.target.value;
-    i18n.changeLanguage(language);
-    localStorage.setItem('language', language);
-    // Mark that user has manually set the language, so IDEA language won't override it
-    localStorage.setItem('languageManuallySet', 'true');
-  };
-
   return (
     <div className={styles.configSection}>
-      <h3 className={styles.sectionTitle}>{t('settings.basic.title')}</h3>
-      <p className={styles.sectionDesc}>{t('settings.basic.description')}</p>
+      <h3 className={styles.sectionTitle}>Basic Configuration</h3>
+      <p className={styles.sectionDesc}>Configure page theme and Node.js environment</p>
 
       {/* 主题切换 */}
       <div className={styles.themeSection}>
         <div className={styles.fieldHeader}>
           <span className="codicon codicon-symbol-color" />
-          <span className={styles.fieldLabel}>{t('settings.basic.theme.label')}</span>
+          <span className={styles.fieldLabel}>Theme</span>
         </div>
 
         <div className={styles.themeGrid}>
@@ -140,8 +114,8 @@ const BasicConfigSection = ({
               <SunIcon />
             </div>
 
-            <div className={styles.themeCardTitle}>{t('settings.basic.theme.light')}</div>
-            <div className={styles.themeCardDesc}>{t('settings.basic.theme.lightDesc')}</div>
+            <div className={styles.themeCardTitle}>Light Theme</div>
+            <div className={styles.themeCardDesc}>Fresh and bright, suitable for daytime use</div>
           </div>
 
           {/* 暗色主题卡片 */}
@@ -159,48 +133,29 @@ const BasicConfigSection = ({
               <MoonIcon />
             </div>
 
-            <div className={styles.themeCardTitle}>{t('settings.basic.theme.dark')}</div>
-            <div className={styles.themeCardDesc}>{t('settings.basic.theme.darkDesc')}</div>
+            <div className={styles.themeCardTitle}>Dark Theme</div>
+            <div className={styles.themeCardDesc}>Eye-friendly, suitable for nighttime use</div>
           </div>
         </div>
-      </div>
-
-      {/* 语言切换 */}
-      <div className={styles.languageSection}>
-        <div className={styles.fieldHeader}>
-          <span className="codicon codicon-globe" />
-          <span className={styles.fieldLabel}>{t('settings.basic.language.label')}</span>
-        </div>
-        <select
-          className={styles.languageSelect}
-          value={currentLanguage}
-          onChange={handleLanguageChange}
-        >
-          {languageOptions.map((option) => (
-            <option key={option.value} value={option.value}>
-              {t(option.label)}
-            </option>
-          ))}
-        </select>
       </div>
 
       {/* 字体大小选择 */}
       <div className={styles.fontSizeSection}>
         <div className={styles.fieldHeader}>
           <span className="codicon codicon-text-size" />
-          <span className={styles.fieldLabel}>{t('settings.basic.fontSize.label')}</span>
+          <span className={styles.fieldLabel}>Font Size</span>
         </div>
         <select
           className={styles.fontSizeSelect}
           value={fontSizeLevel}
           onChange={(e) => onFontSizeLevelChange(Number(e.target.value))}
         >
-          <option value={1}>{t('settings.basic.fontSize.level1')}</option>
-          <option value={2}>{t('settings.basic.fontSize.level2')}</option>
-          <option value={3}>{t('settings.basic.fontSize.level3')}</option>
-          <option value={4}>{t('settings.basic.fontSize.level4')}</option>
-          <option value={5}>{t('settings.basic.fontSize.level5')}</option>
-          <option value={6}>{t('settings.basic.fontSize.level6')}</option>
+          <option value={1}>Small (80%)</option>
+          <option value={2}>Smaller (90%)</option>
+          <option value={3}>Standard (100%)</option>
+          <option value={4}>Larger (110%)</option>
+          <option value={5}>Large (120%)</option>
+          <option value={6}>Largest (140%)</option>
         </select>
       </div>
 
@@ -208,14 +163,14 @@ const BasicConfigSection = ({
       <div className={styles.editorFontSection}>
         <div className={styles.fieldHeader}>
           <span className="codicon codicon-symbol-text" />
-          <span className={styles.fieldLabel}>{t('settings.basic.editorFont.label')}</span>
+          <span className={styles.fieldLabel}>Font (follows editor font)</span>
         </div>
         <div className={styles.fontInfoDisplay}>
           {editorFontConfig?.fontFamily || '-'}
         </div>
         <small className={styles.formHint}>
           <span className="codicon codicon-info" />
-          <span>{t('settings.basic.editorFont.hint')}</span>
+          <span>Not editable here. To modify, go to IDEA Settings → Editor → Font (restart IDEA for plugin font to take effect)</span>
         </small>
       </div>
 
@@ -223,7 +178,7 @@ const BasicConfigSection = ({
       <div className={styles.nodePathSection}>
         <div className={styles.fieldHeader}>
           <span className="codicon codicon-terminal" />
-          <span className={styles.fieldLabel}>{t('settings.basic.nodePath.label')}</span>
+          <span className={styles.fieldLabel}>Node.js Path</span>
           {nodeVersion && (
             <span className={`${styles.versionBadge} ${isVersionTooLow ? styles.versionBadgeError : styles.versionBadgeOk}`}>
               {nodeVersion}
@@ -233,14 +188,14 @@ const BasicConfigSection = ({
         {isVersionTooLow && (
           <div className={styles.versionWarning}>
             <span className="codicon codicon-warning" />
-            {t('settings.basic.nodePath.versionTooLow', { minVersion: minNodeVersion })}
+            {`Node.js version is too low. The plugin requires v${minNodeVersion} or higher to run properly`}
           </div>
         )}
         <div className={styles.nodePathInputWrapper}>
           <input
             type="text"
             className={styles.nodePathInput}
-            placeholder={t('settings.basic.nodePath.placeholder')}
+            placeholder="e.g. C:\Program Files\nodejs\node.exe or /usr/local/bin/node"
             value={nodePath}
             onChange={(e) => onNodePathChange(e.target.value)}
           />
@@ -254,13 +209,13 @@ const BasicConfigSection = ({
                 className="codicon codicon-loading codicon-modifier-spin"
               />
             )}
-            {t('common.save')}
+            Save
           </button>
         </div>
         <small className={styles.formHint}>
           <span className="codicon codicon-info" />
           <span>
-            {t('settings.basic.nodePath.hint')} <code>{t('settings.basic.nodePath.hintCommand')}</code> {t('settings.basic.nodePath.hintText')}
+            Run in terminal <code>node -p "process.execPath"</code> to get the actual Node.js executable path. Leave empty to auto-detect.
           </span>
         </small>
       </div>
@@ -269,13 +224,13 @@ const BasicConfigSection = ({
       <div className={styles.workingDirSection}>
         <div className={styles.fieldHeader}>
           <span className="codicon codicon-folder" />
-          <span className={styles.fieldLabel}>{t('settings.basic.workingDirectory.label')}</span>
+          <span className={styles.fieldLabel}>Working Directory</span>
         </div>
         <div className={styles.nodePathInputWrapper}>
           <input
             type="text"
             className={styles.nodePathInput}
-            placeholder={t('settings.basic.workingDirectory.placeholder')}
+            placeholder="e.g. project1 or leave empty to use project root"
             value={workingDirectory}
             onChange={(e) => onWorkingDirectoryChange(e.target.value)}
           />
@@ -289,13 +244,13 @@ const BasicConfigSection = ({
                 className="codicon codicon-loading codicon-modifier-spin"
               />
             )}
-            {t('common.save')}
+            Save
           </button>
         </div>
         <small className={styles.formHint}>
           <span className="codicon codicon-info" />
           <span>
-            {t('settings.basic.workingDirectory.hint')}
+            Specify the directory where Claude works. Can use relative path (relative to project root) or absolute path. Leave empty to use project root.
           </span>
         </small>
       </div>
@@ -304,7 +259,7 @@ const BasicConfigSection = ({
       <div className={styles.streamingSection}>
         <div className={styles.fieldHeader}>
           <span className="codicon codicon-sync" />
-          <span className={styles.fieldLabel}>{t('settings.basic.streaming.label')}</span>
+          <span className={styles.fieldLabel}>Streaming</span>
         </div>
         <label className={styles.toggleWrapper}>
           <input
@@ -315,14 +270,12 @@ const BasicConfigSection = ({
           />
           <span className={styles.toggleSlider} />
           <span className={styles.toggleLabel}>
-            {streamingEnabled
-              ? t('settings.basic.streaming.enabled')
-              : t('settings.basic.streaming.disabled')}
+            {streamingEnabled ? 'Enabled' : 'Disabled'}
           </span>
         </label>
         <small className={styles.formHint}>
           <span className="codicon codicon-info" />
-          <span>{t('settings.basic.streaming.hint')}</span>
+          <span>When enabled, AI responses will appear character by character in real-time, instead of waiting for the complete response. May consume more resources.</span>
         </small>
       </div>
 
@@ -330,7 +283,7 @@ const BasicConfigSection = ({
       <div className={styles.sendShortcutSection}>
         <div className={styles.fieldHeader}>
           <span className="codicon codicon-keyboard" />
-          <span className={styles.fieldLabel}>{t('settings.basic.sendShortcut.label')}</span>
+          <span className={styles.fieldLabel}>Send Shortcut</span>
         </div>
         <div className={styles.themeGrid}>
           {/* Enter 发送 */}
@@ -343,8 +296,8 @@ const BasicConfigSection = ({
                 <span className="codicon codicon-check" />
               </div>
             )}
-            <div className={styles.themeCardTitle}>{t('settings.basic.sendShortcut.enter')}</div>
-            <div className={styles.themeCardDesc}>{t('settings.basic.sendShortcut.enterDesc')}</div>
+            <div className={styles.themeCardTitle}>Enter to Send</div>
+            <div className={styles.themeCardDesc}>Press Enter to send message, Shift+Enter for new line</div>
           </div>
 
           {/* Cmd/Ctrl+Enter 发送 */}
@@ -357,8 +310,8 @@ const BasicConfigSection = ({
                 <span className="codicon codicon-check" />
               </div>
             )}
-            <div className={styles.themeCardTitle}>{t('settings.basic.sendShortcut.cmdEnter')}</div>
-            <div className={styles.themeCardDesc}>{t('settings.basic.sendShortcut.cmdEnterDesc')}</div>
+            <div className={styles.themeCardTitle}>⌘/Ctrl+Enter to Send</div>
+            <div className={styles.themeCardDesc}>Press ⌘/Ctrl+Enter to send message, Enter for new line</div>
           </div>
         </div>
       </div>
