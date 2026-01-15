@@ -1,9 +1,8 @@
 import type { CommandItem, DropdownItemData } from '../types';
 import { sendBridgeEvent } from '../../../utils/bridge';
-import i18n from '../../../i18n/config';
 
 /**
- * 本地命令列表（需要被过滤掉的命令）
+ * Local commands list (commands to be filtered out)
  */
 const HIDDEN_COMMANDS = new Set([
   '/clear',
@@ -16,7 +15,7 @@ const HIDDEN_COMMANDS = new Set([
 ]);
 
 // ============================================================================
-// 状态管理
+// State Management
 // ============================================================================
 
 type LoadingState = 'idle' | 'loading' | 'success' | 'failed';
@@ -33,7 +32,7 @@ const LOADING_TIMEOUT = 8000;
 const MAX_RETRY_COUNT = 3;
 
 // ============================================================================
-// 核心函数
+// Core Functions
 // ============================================================================
 
 export function resetSlashCommandsState() {
@@ -261,16 +260,16 @@ export async function slashCommandProvider(
   if (retryCount >= MAX_RETRY_COUNT) {
     return [{
       id: '__error__',
-      label: i18n.t('chat.loadingFailed'),
-      description: i18n.t('chat.pleaseCloseAndReopen'),
+      label: 'Loading failed',
+      description: 'Please close and reopen',
       category: 'system',
     }];
   }
 
   return [{
     id: '__loading__',
-    label: i18n.t('chat.loadingSlashCommands'),
-    description: retryCount > 0 ? i18n.t('chat.retrying', { count: retryCount, max: MAX_RETRY_COUNT }) : i18n.t('chat.pleaseWait'),
+    label: 'Loading commands...',
+    description: retryCount > 0 ? `Retrying (${retryCount}/${MAX_RETRY_COUNT})` : 'Please wait...',
     category: 'system',
   }];
 }

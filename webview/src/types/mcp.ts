@@ -37,13 +37,11 @@ export interface McpServerSpec {
 }
 
 /**
- * MCP 应用启用状态 (cc-switch v3.7.0 格式)
- * 标记服务器应用到哪些客户端
+ * MCP app enable status (cc-switch v3.7.0 format)
+ * Marks which clients the server applies to
  */
 export interface McpApps {
   claude: boolean;
-  codex: boolean;
-  gemini: boolean;
 }
 
 /**

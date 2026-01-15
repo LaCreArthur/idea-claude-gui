@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { ProviderConfig } from '../../types/provider';
 import type { AgentConfig } from '../../types/agent';
 import { type ClaudeConfig } from './ConfigInfoDisplay';
@@ -9,7 +9,7 @@ import { ToastContainer, type ToastMessage } from '../Toast';
 import ProviderDialog from '../ProviderDialog';
 import AgentDialog from '../AgentDialog';
 
-// 导入拆分后的组件
+// Import split components
 import SettingsHeader from './SettingsHeader';
 import SettingsSidebar, { type SettingsTab } from './SettingsSidebar';
 import BasicConfigSection from './BasicConfigSection';
@@ -26,7 +26,7 @@ import styles from './style.module.less';
 interface SettingsViewProps {
   onClose: () => void;
   initialTab?: SettingsTab;
-  currentProvider: 'claude' | 'codex' | string;
+  currentProvider: string;
   // Streaming configuration (passed from App.tsx for state sync)
   streamingEnabled?: boolean;
   onStreamingEnabledChange?: (enabled: boolean) => void;
@@ -43,66 +43,36 @@ const sendToJava = (message: string) => {
   }
 };
 
-// 自动折叠阈值（窗口宽度）
+// Auto-collapse threshold (window width)
 const AUTO_COLLAPSE_THRESHOLD = 900;
 
-const SettingsView = ({ onClose, initialTab, currentProvider, streamingEnabled: streamingEnabledProp, onStreamingEnabledChange: onStreamingEnabledChangeProp, sendShortcut: sendShortcutProp, onSendShortcutChange: onSendShortcutChangeProp }: SettingsViewProps) => {
-  const isCodexMode = currentProvider === 'codex';
-  // Codex mode: allow providers and usage tabs, disable other features
-  // Note: 'usage' is now enabled for Codex as it supports usage statistics
-  const disabledTabs = useMemo<SettingsTab[]>(
-    () => (isCodexMode ? ['mcp', 'permissions', 'agents', 'skills'] : []),
-    [isCodexMode]
-  );
+const SettingsView = ({ onClose, initialTab, streamingEnabled: streamingEnabledProp, onStreamingEnabledChange: onStreamingEnabledChangeProp, sendShortcut: sendShortcutProp, onSendShortcutChange: onSendShortcutChangeProp }: SettingsViewProps) => {
   const [currentTab, setCurrentTab] = useState<SettingsTab>(() => {
-    const initial = initialTab || 'basic';
-    if (isCodexMode && disabledTabs.includes(initial)) {
-      return 'basic';
-    }
-    return initial;
+    return initialTab || 'basic';
   });
   const [providers, setProviders] = useState<ProviderConfig[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Codex provider state
-  const [codexProviders, setCodexProviders] = useState<CodexProviderConfig[]>([]);
-  const [codexLoading, setCodexLoading] = useState(false);
-  // Reserved for future Codex config display (similar to Claude config info)
-  const [_codexConfig, setCodexConfig] = useState<any>(null);
-  const [_codexConfigLoading, setCodexConfigLoading] = useState(false);
-
-  // Claude CLI 当前配置（来自 ~/.claude/settings.json）
+  // Claude CLI config (from ~/.claude/settings.json)
   const [claudeConfig, setClaudeConfig] = useState<ClaudeConfig | null>(null);
   const [claudeConfigLoading, setClaudeConfigLoading] = useState(false);
 
-  // 侧边栏响应式状态
+  // Sidebar responsive state
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const [manualCollapsed, setManualCollapsed] = useState<boolean | null>(null);
 
-  // 计算是否应该折叠：优先使用手动设置，否则根据窗口宽度自动判断
+  // Calculate whether to collapse: prefer manual setting, otherwise auto based on window width
   const isCollapsed = manualCollapsed !== null
       ? manualCollapsed
       : windowWidth < AUTO_COLLAPSE_THRESHOLD;
 
-  // 供应商弹窗状态
+  // Provider dialog state
   const [providerDialog, setProviderDialog] = useState<{
     isOpen: boolean;
-    provider: ProviderConfig | null; // null 表示添加模式
+    provider: ProviderConfig | null;
   }>({ isOpen: false, provider: null });
 
-  // Codex 供应商弹窗状态
-  const [codexProviderDialog, setCodexProviderDialog] = useState<{
-    isOpen: boolean;
-    provider: CodexProviderConfig | null;
-  }>({ isOpen: false, provider: null });
-
-  // Codex 供应商删除确认状态
-  const [deleteCodexConfirm, setDeleteCodexConfirm] = useState<{
-    isOpen: boolean;
-    provider: CodexProviderConfig | null;
-  }>({ isOpen: false, provider: null });
-
-  // 页面内弹窗状态
+  // Alert dialog state
   const [alertDialog, setAlertDialog] = useState<{
     isOpen: boolean;
     type: AlertType;
@@ -110,13 +80,13 @@ const SettingsView = ({ onClose, initialTab, currentProvider, streamingEnabled: 
     message: string;
   }>({ isOpen: false, type: 'info', title: '', message: '' });
 
-  // 确认删除弹窗状态
+  // Delete confirmation state
   const [deleteConfirm, setDeleteConfirm] = useState<{
     isOpen: boolean;
     provider: ProviderConfig | null;
   }>({ isOpen: false, provider: null });
 
-  // Agent 智能体相关状态
+  // Agent state
   const [agents, setAgents] = useState<AgentConfig[]>([]);
   const [agentsLoading, setAgentsLoading] = useState(false);
   const [agentDialog, setAgentDialog] = useState<{
@@ -128,46 +98,45 @@ const SettingsView = ({ onClose, initialTab, currentProvider, streamingEnabled: 
     agent: AgentConfig | null;
   }>({ isOpen: false, agent: null });
 
-  // 主题状态
+  // Theme state
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-    // 从 localStorage 读取主题设置
     const savedTheme = localStorage.getItem('theme');
     return (savedTheme === 'light' || savedTheme === 'dark') ? savedTheme : 'dark';
   });
 
-  // 字体缩放状态 (1-6，默认为 3，即 100%)
+  // Font size level state (1-6, default 3 = 100%)
   const [fontSizeLevel, setFontSizeLevel] = useState<number>(() => {
     const savedLevel = localStorage.getItem('fontSizeLevel');
     const level = savedLevel ? parseInt(savedLevel, 10) : 3;
     return level >= 1 && level <= 6 ? level : 3;
   });
 
-  // Node.js 路径（手动指定时使用）
+  // Node.js path
   const [nodePath, setNodePath] = useState('');
   const [nodeVersion, setNodeVersion] = useState<string | null>(null);
   const [minNodeVersion, setMinNodeVersion] = useState(18);
   const [savingNodePath, setSavingNodePath] = useState(false);
 
-  // 工作目录配置
+  // Working directory config
   const [workingDirectory, setWorkingDirectory] = useState('');
   const [savingWorkingDirectory, setSavingWorkingDirectory] = useState(false);
 
-  // IDEA 编辑器字体配置（只读展示）
+  // IDEA editor font config (read-only display)
   const [editorFontConfig, setEditorFontConfig] = useState<{
     fontFamily: string;
     fontSize: number;
     lineSpacing: number;
   } | undefined>();
 
-  // 🔧 流式传输配置 - 优先使用 props，否则使用本地状态（兼容未传递 props 的场景）
+  // Streaming config - prefer props, otherwise use local state
   const [localStreamingEnabled, setLocalStreamingEnabled] = useState<boolean>(false);
   const streamingEnabled = streamingEnabledProp ?? localStreamingEnabled;
 
-  // 发送快捷键配置 - 优先使用 props，否则使用本地状态
+  // Send shortcut config - prefer props, otherwise use local state
   const [localSendShortcut, setLocalSendShortcut] = useState<'enter' | 'cmdEnter'>('enter');
   const sendShortcut = sendShortcutProp ?? localSendShortcut;
 
-  // Toast 状态管理
+  // Toast state management
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   const syncActiveProviderModelMapping = (provider?: ProviderConfig | null) => {
@@ -197,7 +166,7 @@ const SettingsView = ({ onClose, initialTab, currentProvider, streamingEnabled: 
     }
   };
 
-  // Toast 辅助函数
+  // Toast helper functions
   const addToast = (message: string, type: ToastMessage['type'] = 'info') => {
     const id = `toast-${Date.now()}-${Math.random()}`;
     setToasts((prev) => [...prev, { id, message, type }]);
@@ -208,14 +177,10 @@ const SettingsView = ({ onClose, initialTab, currentProvider, streamingEnabled: 
   };
 
   const handleTabChange = (tab: SettingsTab) => {
-    if (isCodexMode && disabledTabs.includes(tab)) {
-      addToast('This settings section is not available in Codex yet. Please switch to Claude Code.', 'warning');
-      return;
-    }
     setCurrentTab(tab);
   };
 
-  // 显示页面内弹窗的帮助函数
+  // Show alert dialog helper
   const showAlert = (type: AlertType, title: string, message: string) => {
     console.log('[SettingsView] showAlert called:', { type, title, message });
     setAlertDialog({ isOpen: true, type, title, message });
@@ -225,14 +190,14 @@ const SettingsView = ({ onClose, initialTab, currentProvider, streamingEnabled: 
     setAlertDialog({ ...alertDialog, isOpen: false });
   };
 
-  // 显示切换成功弹窗
+  // Show switch success dialog
   const showSwitchSuccess = (message: string) => {
     console.log('[SettingsView] showSwitchSuccess called:', message);
     showAlert('success', 'Switched successfully', message);
   };
 
   useEffect(() => {
-    // 设置全局回调
+    // Set global callbacks
     window.updateProviders = (jsonStr: string) => {
       try {
         const providersList: ProviderConfig[] = JSON.parse(jsonStr);
@@ -252,7 +217,6 @@ const SettingsView = ({ onClose, initialTab, currentProvider, streamingEnabled: 
       try {
         const activeProvider: ProviderConfig = JSON.parse(jsonStr);
         if (activeProvider) {
-          // 更新列表中的激活状态
           setProviders((prev) =>
               prev.map((p) => ({ ...p, isActive: p.id === activeProvider.id }))
           );
@@ -263,7 +227,7 @@ const SettingsView = ({ onClose, initialTab, currentProvider, streamingEnabled: 
       }
     };
 
-    // Claude CLI 配置回调
+    // Claude CLI config callback
     window.updateCurrentClaudeConfig = (jsonStr: string) => {
       try {
         const config: ClaudeConfig = JSON.parse(jsonStr);
@@ -298,7 +262,6 @@ const SettingsView = ({ onClose, initialTab, currentProvider, streamingEnabled: 
           setMinNodeVersion(data.minVersion);
         }
       } catch (e) {
-        // 兼容旧格式（纯字符串路径）
         console.warn('[SettingsView] Failed to parse updateNodePath JSON, fallback to legacy format:', e);
         setNodePath(jsonStr || '');
       }
@@ -333,7 +296,7 @@ const SettingsView = ({ onClose, initialTab, currentProvider, streamingEnabled: 
       }
     };
 
-    // 🔧 流式传输配置回调 - 仅在未从 App.tsx 传递 props 时使用本地状态
+    // Streaming config callback - only use local state if props not passed from App.tsx
     const previousUpdateStreamingEnabled = window.updateStreamingEnabled;
     if (!onStreamingEnabledChangeProp) {
       window.updateStreamingEnabled = (jsonStr: string) => {
@@ -346,7 +309,7 @@ const SettingsView = ({ onClose, initialTab, currentProvider, streamingEnabled: 
       };
     }
 
-    // 发送快捷键配置回调 - 仅在未从 App.tsx 传递 props 时使用本地状态
+    // Send shortcut config callback - only use local state if props not passed from App.tsx
     const previousUpdateSendShortcut = window.updateSendShortcut;
     if (!onSendShortcutChangeProp) {
       window.updateSendShortcut = (jsonStr: string) => {
@@ -359,10 +322,10 @@ const SettingsView = ({ onClose, initialTab, currentProvider, streamingEnabled: 
       };
     }
 
-    // Agent 智能体回调
+    // Agent callbacks
     const previousUpdateAgents = window.updateAgents;
     window.updateAgents = (jsonStr: string) => {
-      // 清除超时定时器（如果存在）
+      // Clear timeout timer if exists
       const timeoutId = (window as any).__agentsLoadingTimeoutId;
       if (timeoutId) {
         clearTimeout(timeoutId);
@@ -400,61 +363,23 @@ const SettingsView = ({ onClose, initialTab, currentProvider, streamingEnabled: 
       }
     };
 
-    // Codex provider callbacks
-    window.updateCodexProviders = (jsonStr: string) => {
-      try {
-        const providersList: CodexProviderConfig[] = JSON.parse(jsonStr);
-        setCodexProviders(providersList);
-        setCodexLoading(false);
-      } catch (error) {
-        console.error('[SettingsView] Failed to parse Codex providers:', error);
-        setCodexLoading(false);
-      }
-    };
-
-    window.updateActiveCodexProvider = (jsonStr: string) => {
-      try {
-        const activeProvider: CodexProviderConfig = JSON.parse(jsonStr);
-        if (activeProvider) {
-          setCodexProviders((prev) =>
-            prev.map((p) => ({ ...p, isActive: p.id === activeProvider.id }))
-          );
-        }
-      } catch (error) {
-        console.error('[SettingsView] Failed to parse active Codex provider:', error);
-      }
-    };
-
-    window.updateCurrentCodexConfig = (jsonStr: string) => {
-      try {
-        const config = JSON.parse(jsonStr);
-        setCodexConfig(config);
-        setCodexConfigLoading(false);
-      } catch (error) {
-        console.error('[SettingsView] Failed to parse Codex config:', error);
-        setCodexConfigLoading(false);
-      }
-    };
-
-    // 加载供应商列表
+    // Load provider list
     loadProviders();
-    // 加载 Codex 供应商列表
-    loadCodexProviders();
-    // 加载智能体列表
+    // Load agent list
     loadAgents();
-    // 加载 Claude CLI 当前配置
+    // Load Claude CLI config
     loadClaudeConfig();
-    // 加载 Node.js 路径
+    // Load Node.js path
     sendToJava('get_node_path:');
-    // 加载工作目录配置
+    // Load working directory config
     sendToJava('get_working_directory:');
-    // 加载 IDEA 编辑器字体配置
+    // Load IDEA editor font config
     sendToJava('get_editor_font_config:');
-    // 🔧 加载流式传输配置
+    // Load streaming config
     sendToJava('get_streaming_enabled:');
 
     return () => {
-      // 清理超时定时器
+      // Clear timeout timer
       const timeoutId = (window as any).__agentsLoadingTimeoutId;
       if (timeoutId) {
         clearTimeout(timeoutId);
@@ -480,19 +405,15 @@ const SettingsView = ({ onClose, initialTab, currentProvider, streamingEnabled: 
       }
       window.updateAgents = previousUpdateAgents;
       window.agentOperationResult = undefined;
-      // Cleanup Codex callbacks
-      window.updateCodexProviders = undefined;
-      window.updateActiveCodexProvider = undefined;
-      window.updateCurrentCodexConfig = undefined;
     };
-  }, [t, onStreamingEnabledChangeProp, onSendShortcutChangeProp]);
+  }, [onStreamingEnabledChangeProp, onSendShortcutChangeProp]);
 
-  // 监听窗口大小变化
+  // Monitor window size changes
   useEffect(() => {
     const handleResize = () => {
       setWindowWidth(window.innerWidth);
 
-      // 如果窗口大小变化导致应该自动切换状态，重置手动设置
+      // If window size change should auto-toggle state, reset manual setting
       const shouldAutoCollapse = window.innerWidth < AUTO_COLLAPSE_THRESHOLD;
       if (manualCollapsed !== null && manualCollapsed === shouldAutoCollapse) {
         setManualCollapsed(null);
@@ -506,84 +427,60 @@ const SettingsView = ({ onClose, initialTab, currentProvider, streamingEnabled: 
     };
   }, [manualCollapsed]);
 
-  // 手动切换侧边栏折叠状态
+  // Manual toggle sidebar collapse state
   const toggleManualCollapse = () => {
     if (manualCollapsed === null) {
-      // 如果当前是自动模式，切换到手动模式
       setManualCollapsed(!isCollapsed);
     } else {
-      // 如果已经是手动模式，切换状态
       setManualCollapsed(!manualCollapsed);
     }
   };
 
-  // 主题切换处理
+  // Theme change handler
   useEffect(() => {
-    // 应用主题到 document.documentElement
     document.documentElement.setAttribute('data-theme', theme);
-    // 保存到 localStorage
     localStorage.setItem('theme', theme);
   }, [theme]);
 
-  // 字体缩放处理
+  // Font size handler
   useEffect(() => {
-    // 将档位映射到缩放比例
     const fontSizeMap: Record<number, number> = {
-      1: 0.8,   // 80%
-      2: 0.9,   // 90%
-      3: 1.0,   // 100% (默认)
-      4: 1.1,   // 110%
-      5: 1.2,   // 120%
-      6: 1.4,   // 140%
+      1: 0.8,
+      2: 0.9,
+      3: 1.0,
+      4: 1.1,
+      5: 1.2,
+      6: 1.4,
     };
     const scale = fontSizeMap[fontSizeLevel] || 1.0;
-
-    // 应用到根元素
     document.documentElement.style.setProperty('--font-scale', scale.toString());
-
-    // 保存到 localStorage
     localStorage.setItem('fontSizeLevel', fontSizeLevel.toString());
   }, [fontSizeLevel]);
-
-  useEffect(() => {
-    if (isCodexMode && disabledTabs.includes(currentTab)) {
-      setCurrentTab('basic');
-    }
-  }, [isCodexMode, disabledTabs, currentTab]);
 
   const loadProviders = () => {
     setLoading(true);
     sendToJava('get_providers:');
   };
 
-  const loadCodexProviders = () => {
-    setCodexLoading(true);
-    sendToJava('get_codex_providers:');
-  };
-
   const loadAgents = (retryCount = 0) => {
     const MAX_RETRIES = 2;
-    const TIMEOUT = 3000; // 3秒超时
+    const TIMEOUT = 3000;
 
     setAgentsLoading(true);
     sendToJava('get_agents:');
 
-    // 设置超时定时器
     const timeoutId = setTimeout(() => {
       console.warn('[SettingsView] loadAgents timeout, attempt:', retryCount + 1);
 
       if (retryCount < MAX_RETRIES) {
-        // 重试
         loadAgents(retryCount + 1);
       } else {
-        // 达到最大重试次数，停止加载
         console.error('[SettingsView] loadAgents failed after', MAX_RETRIES, 'retries');
         setAgentsLoading(false);
-        setAgents([]); // 显示空列表，允许用户继续使用
+        setAgents([]);
       }
     }, TIMEOUT);
 
-    // 将超时ID存储到window对象，以便回调时清除
     (window as any).__agentsLoadingTimeoutId = timeoutId;
   };
 
@@ -604,26 +501,22 @@ const SettingsView = ({ onClose, initialTab, currentProvider, streamingEnabled: 
     sendToJava(`set_working_directory:${JSON.stringify(payload)}`);
   };
 
-  // 🔧 流式传输开关变更处理
+  // Streaming toggle handler
   const handleStreamingEnabledChange = (enabled: boolean) => {
-    // If prop callback is provided (from App.tsx), use it for centralized state management
     if (onStreamingEnabledChangeProp) {
       onStreamingEnabledChangeProp(enabled);
     } else {
-      // Fallback to local state if no prop callback provided
       setLocalStreamingEnabled(enabled);
       const payload = { streamingEnabled: enabled };
       sendToJava(`set_streaming_enabled:${JSON.stringify(payload)}`);
     }
   };
 
-  // 发送快捷键变更处理
+  // Send shortcut change handler
   const handleSendShortcutChange = (shortcut: 'enter' | 'cmdEnter') => {
-    // If prop callback is provided (from App.tsx), use it for centralized state management
     if (onSendShortcutChangeProp) {
       onSendShortcutChangeProp(shortcut);
     } else {
-      // Fallback to local state if no prop callback provided
       setLocalSendShortcut(shortcut);
       const payload = { sendShortcut: shortcut };
       sendToJava(`set_send_shortcut:${JSON.stringify(payload)}`);
@@ -654,7 +547,6 @@ const SettingsView = ({ onClose, initialTab, currentProvider, streamingEnabled: 
       return;
     }
 
-    // 解析 JSON 配置
     let parsedConfig;
     try {
       parsedConfig = JSON.parse(data.jsonConfig || '{}');
@@ -666,14 +558,13 @@ const SettingsView = ({ onClose, initialTab, currentProvider, streamingEnabled: 
     const updates = {
       name: data.providerName,
       remark: data.remark,
-      websiteUrl: null, // 清除可能存在的旧字段，避免显示混淆
+      websiteUrl: null,
       settingsConfig: parsedConfig,
     };
 
     const isAdding = !providerDialog.provider;
 
     if (isAdding) {
-      // 添加新供应商
       const newProvider = {
         id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
         ...updates
@@ -681,12 +572,9 @@ const SettingsView = ({ onClose, initialTab, currentProvider, streamingEnabled: 
       sendToJava(`add_provider:${JSON.stringify(newProvider)}`);
       addToast('Provider added', 'success');
     } else {
-      // 更新现有供应商
       if (!providerDialog.provider) return;
-      
+
       const providerId = providerDialog.provider.id;
-      // 检查当前编辑的供应商是否是激活状态
-      // 优先从 providers 列表中查找最新状态，如果找不到则使用 dialog 中的状态
       const currentProvider = providers.find(p => p.id === providerId) || providerDialog.provider;
       const isActive = currentProvider.isActive;
 
@@ -697,15 +585,12 @@ const SettingsView = ({ onClose, initialTab, currentProvider, streamingEnabled: 
       sendToJava(`update_provider:${JSON.stringify(updateData)}`);
       addToast('Provider updated', 'success');
 
-      // 如果是当前正在使用的供应商，更新后立即重新应用配置
       if (isActive) {
         console.log('[SettingsView] Re-applying active provider config:', providerId);
         syncActiveProviderModelMapping({
           ...currentProvider,
           settingsConfig: parsedConfig,
         });
-        // 使用 setTimeout 稍微延迟一下，确保 update_provider 先处理完成
-        // 虽然在单线程模型中通常不需要，但为了保险起见
         setTimeout(() => {
           sendToJava(`switch_provider:${JSON.stringify({ id: providerId })}`);
         }, 100);
@@ -728,8 +613,6 @@ const SettingsView = ({ onClose, initialTab, currentProvider, streamingEnabled: 
 
   const handleDeleteProvider = (provider: ProviderConfig) => {
     console.log('[SettingsView] handleDeleteProvider called:', provider.id, provider.name);
-
-    // 显示确认弹窗（无任何限制）
     setDeleteConfirm({ isOpen: true, provider });
   };
 
@@ -749,69 +632,7 @@ const SettingsView = ({ onClose, initialTab, currentProvider, streamingEnabled: 
     setDeleteConfirm({ isOpen: false, provider: null });
   };
 
-  // ==================== Codex Provider 处理函数 ====================
-  const handleAddCodexProvider = () => {
-    setCodexProviderDialog({ isOpen: true, provider: null });
-  };
-
-  const handleEditCodexProvider = (provider: CodexProviderConfig) => {
-    setCodexProviderDialog({ isOpen: true, provider });
-  };
-
-  const handleCloseCodexProviderDialog = () => {
-    setCodexProviderDialog({ isOpen: false, provider: null });
-  };
-
-  const handleSaveCodexProviderFromDialog = (providerData: CodexProviderConfig) => {
-    const isAdding = !codexProviderDialog.provider;
-
-    if (isAdding) {
-      sendToJava(`add_codex_provider:${JSON.stringify(providerData)}`);
-      addToast('Provider added', 'success');
-    } else {
-      const updateData = {
-        id: providerData.id,
-        updates: {
-          name: providerData.name,
-          remark: providerData.remark,
-          configToml: providerData.configToml,
-          authJson: providerData.authJson,
-        },
-      };
-      sendToJava(`update_codex_provider:${JSON.stringify(updateData)}`);
-      addToast('Provider updated', 'success');
-    }
-
-    setCodexProviderDialog({ isOpen: false, provider: null });
-    setCodexLoading(true);
-  };
-
-  const handleSwitchCodexProvider = (id: string) => {
-    const data = { id };
-    sendToJava(`switch_codex_provider:${JSON.stringify(data)}`);
-    setCodexLoading(true);
-  };
-
-  const handleDeleteCodexProvider = (provider: CodexProviderConfig) => {
-    setDeleteCodexConfirm({ isOpen: true, provider });
-  };
-
-  const confirmDeleteCodexProvider = () => {
-    const provider = deleteCodexConfirm.provider;
-    if (!provider) return;
-
-    const data = { id: provider.id };
-    sendToJava(`delete_codex_provider:${JSON.stringify(data)}`);
-    addToast('Provider deleted', 'success');
-    setCodexLoading(true);
-    setDeleteCodexConfirm({ isOpen: false, provider: null });
-  };
-
-  const cancelDeleteCodexProvider = () => {
-    setDeleteCodexConfirm({ isOpen: false, provider: null });
-  };
-
-  // ==================== Agent 智能体处理函数 ====================
+  // ==================== Agent Handlers ====================
   const handleAddAgent = () => {
     setAgentDialog({ isOpen: true, agent: null });
   };
@@ -832,7 +653,6 @@ const SettingsView = ({ onClose, initialTab, currentProvider, streamingEnabled: 
     const isAdding = !agentDialog.agent;
 
     if (isAdding) {
-      // 添加新智能体
       const newAgent = {
         id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
         name: data.name,
@@ -840,7 +660,6 @@ const SettingsView = ({ onClose, initialTab, currentProvider, streamingEnabled: 
       };
       sendToJava(`add_agent:${JSON.stringify(newAgent)}`);
     } else if (agentDialog.agent) {
-      // 更新现有智能体
       const updateData = {
         id: agentDialog.agent.id,
         updates: {
@@ -852,7 +671,6 @@ const SettingsView = ({ onClose, initialTab, currentProvider, streamingEnabled: 
     }
 
     setAgentDialog({ isOpen: false, agent: null });
-    // 智能体操作后重新加载列表（包含超时保护）
     loadAgents();
   };
 
@@ -863,7 +681,6 @@ const SettingsView = ({ onClose, initialTab, currentProvider, streamingEnabled: 
     const data = { id: agent.id };
     sendToJava(`delete_agent:${JSON.stringify(data)}`);
     setDeleteAgentConfirm({ isOpen: false, agent: null });
-    // 删除后重新加载列表（包含超时保护）
     loadAgents();
   };
 
@@ -873,24 +690,23 @@ const SettingsView = ({ onClose, initialTab, currentProvider, streamingEnabled: 
 
   return (
     <div className={styles.settingsPage}>
-      {/* 顶部标题栏 */}
+      {/* Header */}
       <SettingsHeader onClose={onClose} />
 
-      {/* 主体内容 */}
+      {/* Main content */}
       <div className={styles.settingsMain}>
-        {/* 侧边栏 */}
+        {/* Sidebar */}
         <SettingsSidebar
           currentTab={currentTab}
           onTabChange={handleTabChange}
           isCollapsed={isCollapsed}
           onToggleCollapse={toggleManualCollapse}
-          disabledTabs={disabledTabs}
-          onDisabledTabClick={() => addToast('This settings section is not available in Codex yet. Please switch to Claude Code.', 'warning')}
+          disabledTabs={[]}
         />
 
-        {/* 内容区域 */}
+        {/* Content area */}
         <div className={`${styles.settingsContent} ${currentTab === 'providers' ? styles.providerSettingsContent : ''}`}>
-          {/* 基础配置 */}
+          {/* Basic config */}
           {currentTab === 'basic' && (
             <BasicConfigSection
               theme={theme}
@@ -915,8 +731,8 @@ const SettingsView = ({ onClose, initialTab, currentProvider, streamingEnabled: 
             />
           )}
 
-          {/* 供应商管理 */}
-          {currentTab === 'providers' && !isCodexMode && (
+          {/* Provider management */}
+          {currentTab === 'providers' && (
             <ProviderManageSection
               claudeConfig={claudeConfig}
               claudeConfigLoading={claudeConfigLoading}
@@ -930,100 +746,16 @@ const SettingsView = ({ onClose, initialTab, currentProvider, streamingEnabled: 
             />
           )}
 
-          {/* Codex 供应商管理 */}
-          {currentTab === 'providers' && isCodexMode && (
-            <div className={styles.configSection}>
-              <h3 className={styles.sectionTitle}>{'Codex Provider Management'}</h3>
-              <p className={styles.sectionDesc}>{'Manage Codex provider configurations'}</p>
-
-              {codexLoading && (
-                <div className={styles.tempNotice}>
-                  <span className="codicon codicon-loading codicon-modifier-spin" />
-                  <p>{'Loading...'}</p>
-                </div>
-              )}
-
-              {!codexLoading && (
-                <div className={styles.providerListContainer}>
-                  <div className={styles.providerListHeader}>
-                    <h4>{'All Providers'}</h4>
-                    <button className="btn btn-primary" onClick={handleAddCodexProvider}>
-                      <span className="codicon codicon-add" />
-                      {'Add'}
-                    </button>
-                  </div>
-
-                  <div className={styles.providerList}>
-                    {codexProviders.length > 0 ? (
-                      codexProviders.map((provider) => (
-                        <div
-                          key={provider.id}
-                          className={`${styles.providerCard} ${provider.isActive ? styles.active : ''}`}
-                        >
-                          <div className={styles.providerInfo}>
-                            <div className={styles.providerName}>{provider.name}</div>
-                            {provider.remark && (
-                              <div className={styles.providerRemark}>{provider.remark}</div>
-                            )}
-                          </div>
-
-                          <div className={styles.providerActions}>
-                            {provider.isActive ? (
-                              <div className={styles.activeBadge}>
-                                <span className="codicon codicon-check" />
-                                {'In Use'}
-                              </div>
-                            ) : (
-                              <button
-                                className={styles.useButton}
-                                onClick={() => handleSwitchCodexProvider(provider.id)}
-                              >
-                                <span className="codicon codicon-play" />
-                                {'Enable'}
-                              </button>
-                            )}
-
-                            <div className={styles.actionButtons}>
-                              <button
-                                className={styles.iconBtn}
-                                onClick={() => handleEditCodexProvider(provider)}
-                                title={'Edit'}
-                              >
-                                <span className="codicon codicon-edit" />
-                              </button>
-                              <button
-                                className={styles.iconBtn}
-                                onClick={() => handleDeleteCodexProvider(provider)}
-                                title={'Delete'}
-                              >
-                                <span className="codicon codicon-trash" />
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className={styles.emptyState}>
-                        <span className="codicon codicon-info" />
-                        <p>{'No Codex providers configured'}</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* SDK 依赖管理 */}
+          {/* SDK dependency management */}
           {currentTab === 'dependencies' && <DependencySection addToast={addToast} />}
 
-          {/* 使用统计 */}
-          {currentTab === 'usage' && <UsageSection currentProvider={currentProvider} />}
+          {/* Usage statistics */}
+          {currentTab === 'usage' && <UsageSection currentProvider="claude" />}
 
-          {/* MCP服务器 */}
+          {/* MCP servers */}
           {currentTab === 'mcp' && <PlaceholderSection type="mcp" />}
 
-          {/* 权限配置 */}
+          {/* Permissions config */}
           {currentTab === 'permissions' && <PlaceholderSection type="permissions" />}
 
           {/* Agents */}
@@ -1040,12 +772,12 @@ const SettingsView = ({ onClose, initialTab, currentProvider, streamingEnabled: 
           {/* Skills */}
           {currentTab === 'skills' && <SkillsSettingsSection />}
 
-          {/* 官方交流群 */}
+          {/* Community */}
           {currentTab === 'community' && <CommunitySection />}
         </div>
       </div>
 
-      {/* 页面内弹窗 */}
+      {/* Alert dialog */}
       <AlertDialog
         isOpen={alertDialog.isOpen}
         type={alertDialog.type}
@@ -1054,7 +786,7 @@ const SettingsView = ({ onClose, initialTab, currentProvider, streamingEnabled: 
         onClose={closeAlert}
       />
 
-      {/* 删除确认弹窗 */}
+      {/* Delete confirmation dialog */}
       <ConfirmDialog
         isOpen={deleteConfirm.isOpen}
         title={'Confirm Delete Provider'}
@@ -1065,7 +797,7 @@ const SettingsView = ({ onClose, initialTab, currentProvider, streamingEnabled: 
         onCancel={cancelDeleteProvider}
       />
 
-      {/* 供应商添加/编辑弹窗 */}
+      {/* Provider add/edit dialog */}
       <ProviderDialog
         isOpen={providerDialog.isOpen}
         provider={providerDialog.provider}
@@ -1076,7 +808,7 @@ const SettingsView = ({ onClose, initialTab, currentProvider, streamingEnabled: 
         addToast={addToast}
       />
 
-      {/* 智能体添加/编辑弹窗 */}
+      {/* Agent add/edit dialog */}
       <AgentDialog
         isOpen={agentDialog.isOpen}
         agent={agentDialog.agent}
@@ -1084,7 +816,7 @@ const SettingsView = ({ onClose, initialTab, currentProvider, streamingEnabled: 
         onSave={handleSaveAgentFromDialog}
       />
 
-      {/* 智能体删除确认弹窗 */}
+      {/* Agent delete confirmation dialog */}
       <ConfirmDialog
         isOpen={deleteAgentConfirm.isOpen}
         title={'Confirm Delete'}
@@ -1095,27 +827,7 @@ const SettingsView = ({ onClose, initialTab, currentProvider, streamingEnabled: 
         onCancel={cancelDeleteAgent}
       />
 
-      {/* Codex 供应商添加/编辑弹窗 */}
-      <CodexProviderDialog
-        isOpen={codexProviderDialog.isOpen}
-        provider={codexProviderDialog.provider}
-        onClose={handleCloseCodexProviderDialog}
-        onSave={handleSaveCodexProviderFromDialog}
-        addToast={addToast}
-      />
-
-      {/* Codex 供应商删除确认弹窗 */}
-      <ConfirmDialog
-        isOpen={deleteCodexConfirm.isOpen}
-        title={'Confirm Delete'}
-        message={`Are you sure you want to delete provider "${deleteCodexConfirm.provider?.name || ''}"? This action cannot be undone.`}
-        confirmText={'Delete'}
-        cancelText={'Cancel'}
-        onConfirm={confirmDeleteCodexProvider}
-        onCancel={cancelDeleteCodexProvider}
-      />
-
-      {/* Toast 通知 */}
+      {/* Toast notifications */}
       <ToastContainer messages={toasts} onDismiss={dismissToast} />
     </div>
   );

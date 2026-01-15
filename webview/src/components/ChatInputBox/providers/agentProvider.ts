@@ -1,10 +1,9 @@
 import type { DropdownItemData } from '../types';
 import type { AgentConfig } from '../../../types/agent';
 import { sendBridgeEvent } from '../../../utils/bridge';
-import i18n from '../../../i18n/config';
 
 // ============================================================================
-// 类型定义
+// Type Definitions
 // ============================================================================
 
 export interface AgentItem {
@@ -14,7 +13,7 @@ export interface AgentItem {
 }
 
 // ============================================================================
-// 状态管理
+// State Management
 // ============================================================================
 
 type LoadingState = 'idle' | 'loading' | 'success' | 'failed';
@@ -27,11 +26,11 @@ let retryCount = 0;
 let pendingWaiters: Array<{ resolve: () => void; reject: (error: unknown) => void }> = [];
 
 const MIN_REFRESH_INTERVAL = 2000;
-const LOADING_TIMEOUT = 3000; // 减少到3秒，更快的超时反馈
-const MAX_RETRY_COUNT = 2; // 最多重试2次，避免无限循环
+const LOADING_TIMEOUT = 3000; // 3 seconds for faster timeout feedback
+const MAX_RETRY_COUNT = 2; // Max 2 retries to avoid infinite loops
 
 // ============================================================================
-// 核心函数
+// Core Functions
 // ============================================================================
 
 export function resetAgentsState() {
@@ -65,7 +64,7 @@ export function setupAgentsCallback() {
 
       cachedAgents = agents;
       loadingState = 'success';
-      retryCount = 0; // 成功后重置重试计数
+      retryCount = 0; // Reset retry count on success
       pendingWaiters.forEach(w => w.resolve());
       pendingWaiters = [];
       console.log('[AgentProvider] Successfully loaded ' + agents.length + ' agents');
@@ -77,13 +76,13 @@ export function setupAgentsCallback() {
     }
   };
 
-  // 保存原有的回调
+  // Save original callback
   const originalHandler = window.updateAgents;
 
   window.updateAgents = (json: string) => {
-    // 调用我们的处理器
+    // Call our handler
     handler(json);
-    // 也调用原有的处理器（如果存在）
+    // Also call original handler if exists
     originalHandler?.(json);
   };
 
@@ -189,11 +188,11 @@ export async function agentProvider(
   setupAgentsCallback();
 
   const now = Date.now();
-  
-  // 创建智能体项
+
+  // Create agent item
   const createNewAgentItem: AgentItem = {
     id: CREATE_NEW_AGENT_ID,
-    name: i18n.t('settings.agent.createAgent'),
+    name: 'Create Agent',
     prompt: '',
   };
 
@@ -212,7 +211,7 @@ export async function agentProvider(
   if (loadingState !== 'success') {
     return [{
       id: EMPTY_STATE_ID,
-      name: retryCount >= MAX_RETRY_COUNT ? i18n.t('settings.agent.loadFailed') : i18n.t('settings.agent.noAgentsDropdown'),
+      name: retryCount >= MAX_RETRY_COUNT ? 'Failed to load agents' : 'No agents configured',
       prompt: '',
     }, createNewAgentItem];
   }
@@ -222,7 +221,7 @@ export async function agentProvider(
   if (filtered.length === 0) {
     return [{
       id: EMPTY_STATE_ID,
-      name: i18n.t('settings.agent.noAgentsDropdown'),
+      name: 'No agents configured',
       prompt: '',
     }, createNewAgentItem];
   }
@@ -231,7 +230,7 @@ export async function agentProvider(
 }
 
 export function agentToDropdownItem(agent: AgentItem): DropdownItemData {
-  // 特殊处理加载中和空状态
+  // Special handling for loading and empty states
   if (agent.id === '__loading__' || agent.id === '__empty__' || agent.id === EMPTY_STATE_ID) {
     return {
       id: agent.id,
@@ -242,13 +241,13 @@ export function agentToDropdownItem(agent: AgentItem): DropdownItemData {
       data: { agent },
     };
   }
-  
-  // 特殊处理创建智能体
+
+  // Special handling for create agent
   if (agent.id === CREATE_NEW_AGENT_ID) {
     return {
       id: agent.id,
       label: agent.name,
-      description: i18n.t('settings.agent.createAgentHint'),
+      description: 'Create a new agent',
       icon: 'codicon-add',
       type: 'agent',
       data: { agent },
@@ -271,7 +270,7 @@ export function forceRefreshAgents(): void {
   console.log('[AgentProvider] Force refresh requested');
   loadingState = 'idle';
   lastRefreshTime = 0;
-  retryCount = 0; // 重置重试计数
+  retryCount = 0; // Reset retry count
   pendingWaiters.forEach(w => w.reject(new Error('Agents refresh requested')));
   pendingWaiters = [];
   requestRefresh();

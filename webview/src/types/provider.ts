@@ -1,9 +1,9 @@
 /**
- * 供应商配置相关类型定义
+ * Provider configuration type definitions
  */
 
 /**
- * 供应商配置（简化版，适配当前项目）
+ * Provider configuration (simplified for current project)
  */
 export interface ProviderConfig {
   id: string;
@@ -34,31 +34,11 @@ export interface ProviderConfig {
 }
 
 /**
- * 供应商分类
+ * Provider category
  */
 export type ProviderCategory =
-  | 'official'      // 官方
-  | 'cn_official'   // 国产官方
-  | 'aggregator'    // 聚合服务
-  | 'third_party'   // 第三方
-  | 'custom';       // 自定义
-
-/**
- * Codex 供应商配置
- */
-export interface CodexProviderConfig {
-  /** 供应商唯一 ID */
-  id: string;
-  /** 供应商名称 */
-  name: string;
-  /** 备注 */
-  remark?: string;
-  /** 创建时间戳（毫秒） */
-  createdAt?: number;
-  /** 是否为当前使用的供应商 */
-  isActive?: boolean;
-  /** config.toml 配置内容（原始字符串） */
-  configToml?: string;
-  /** auth.json 配置内容（原始字符串） */
-  authJson?: string;
-}
+  | 'official'      // Official
+  | 'cn_official'   // Chinese Official
+  | 'aggregator'    // Aggregator Service
+  | 'third_party'   // Third Party
+  | 'custom';       // Custom

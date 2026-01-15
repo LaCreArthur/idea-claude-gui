@@ -14,7 +14,7 @@ import RewindSelectDialog, { type RewindableMessage } from './components/RewindS
 import { rewindFiles } from './utils/bridge';
 import { ChatInputBox } from './components/ChatInputBox';
 import { CLAUDE_MODELS } from './components/ChatInputBox/types';
-import type { Attachment, PermissionMode, ReasoningEffort, SelectedAgent } from './components/ChatInputBox/types';
+import type { Attachment, PermissionMode, SelectedAgent } from './components/ChatInputBox/types';
 import { setupSlashCommandsCallback, resetSlashCommandsState, resetFileReferenceState } from './components/ChatInputBox/providers';
 import {
   BashToolBlock,
@@ -114,11 +114,8 @@ const App = () => {
   // ChatInputBox 相关状态
   const [currentProvider, setCurrentProvider] = useState('claude');
   const [selectedClaudeModel, setSelectedClaudeModel] = useState(CLAUDE_MODELS[0].id);
-  const [selectedCodexModel, setSelectedCodexModel] = useState(CODEX_MODELS[0].id);
   const [claudePermissionMode, setClaudePermissionMode] = useState<PermissionMode>('bypassPermissions');
   const [permissionMode, setPermissionMode] = useState<PermissionMode>('bypassPermissions');
-  // Codex reasoning effort (thinking depth)
-  const [reasoningEffort, setReasoningEffort] = useState<ReasoningEffort>('medium');
   const [usagePercentage, setUsagePercentage] = useState(0);
   const [usageUsedTokens, setUsageUsedTokens] = useState<number | undefined>(undefined);
   const [usageMaxTokens, setUsageMaxTokens] = useState<number | undefined>(undefined);
@@ -144,24 +141,17 @@ const App = () => {
   // Context state (active file and selection) - 保留用于 ContextBar 显示
   const [contextInfo, setContextInfo] = useState<{ file: string; startLine?: number; endLine?: number; raw: string } | null>(null);
 
-  // 根据当前提供商选择显示的模型
-  const selectedModel = currentProvider === 'codex' ? selectedCodexModel : selectedClaudeModel;
+  // Current selected model (Claude only)
+  const selectedModel = selectedClaudeModel;
 
   // 🔧 根据当前提供商判断对应的 SDK 是否已安装
   const currentSdkInstalled = (() => {
     // 状态未加载时，返回 false（显示加载中或未安装提示）
     if (!sdkStatusLoaded) return false;
-    // 提供商 -> SDK 映射
-    const providerToSdk: Record<string, string> = {
-      claude: 'claude-sdk',
-      anthropic: 'claude-sdk',
-      bedrock: 'claude-sdk',
-      codex: 'codex-sdk',
-      openai: 'codex-sdk',
-    };
-    const sdkId = providerToSdk[currentProvider] || 'claude-sdk';
+    // Provider -> SDK mapping (Claude only)
+    const sdkId = 'claude-sdk';
     const status = sdkStatus[sdkId];
-    // 检查 status 字段（优先）或 installed 字段
+    // Check status field (priority) or installed field
     return status?.status === 'installed' || status?.installed === true;
   })();
 
@@ -293,56 +283,36 @@ const App = () => {
   }, []);
 
   // 从 LocalStorage 加载模型选择状态，并同步到后端
+  // Load model selection state from LocalStorage and sync to backend
   useEffect(() => {
     try {
       const saved = localStorage.getItem('model-selection-state');
-      let restoredProvider = 'claude';
       let restoredClaudeModel = CLAUDE_MODELS[0].id;
-      let restoredCodexModel = CODEX_MODELS[0].id;
-      let initialPermissionMode: PermissionMode = 'bypassPermissions';
+      const initialPermissionMode: PermissionMode = 'bypassPermissions';
 
       if (saved) {
         const state = JSON.parse(saved);
 
-        // 验证并恢复提供商
-        if (['claude', 'codex'].includes(state.provider)) {
-          restoredProvider = state.provider;
-          setCurrentProvider(state.provider);
-          if (state.provider === 'codex') {
-            initialPermissionMode = 'bypassPermissions';
-          }
-        }
-
-        // 验证并恢复 Claude 模型
+        // Restore Claude model if valid
         if (CLAUDE_MODELS.find(m => m.id === state.claudeModel)) {
           restoredClaudeModel = state.claudeModel;
           setSelectedClaudeModel(state.claudeModel);
-        }
-
-        // 验证并恢复 Codex 模型
-        if (CODEX_MODELS.find(m => m.id === state.codexModel)) {
-          restoredCodexModel = state.codexModel;
-          setSelectedCodexModel(state.codexModel);
         }
       }
 
       setPermissionMode(initialPermissionMode);
 
-      // 初始化时同步模型状态到后端，确保前后端一致
+      // Sync model state to backend on init
       let syncRetryCount = 0;
-      const MAX_SYNC_RETRIES = 30; // 最多重试30次（3秒）
+      const MAX_SYNC_RETRIES = 30;
 
       const syncToBackend = () => {
         if (window.sendToJava) {
-          // 先同步 provider
-          sendBridgeMessage('set_provider', restoredProvider);
-          // 再同步对应的模型
-          const modelToSync = restoredProvider === 'codex' ? restoredCodexModel : restoredClaudeModel;
-          sendBridgeMessage('set_model', modelToSync);
+          sendBridgeMessage('set_provider', 'claude');
+          sendBridgeMessage('set_model', restoredClaudeModel);
           sendBridgeMessage('set_mode', initialPermissionMode);
-          console.log('[Frontend] Synced model state to backend:', { provider: restoredProvider, model: modelToSync });
+          console.log('[Frontend] Synced model state to backend:', { provider: 'claude', model: restoredClaudeModel });
         } else {
-          // 如果 sendToJava 还没准备好，稍后重试
           syncRetryCount++;
           if (syncRetryCount < MAX_SYNC_RETRIES) {
             setTimeout(syncToBackend, 100);
@@ -351,25 +321,23 @@ const App = () => {
           }
         }
       };
-      // 延迟同步，等待 bridge 准备好
       setTimeout(syncToBackend, 200);
     } catch (error) {
       console.error('Failed to load model selection state:', error);
     }
   }, []);
 
-  // 保存模型选择状态到 LocalStorage
+  // Save model selection state to LocalStorage
   useEffect(() => {
     try {
       localStorage.setItem('model-selection-state', JSON.stringify({
         provider: currentProvider,
         claudeModel: selectedClaudeModel,
-        codexModel: selectedCodexModel,
       }));
     } catch (error) {
       console.error('Failed to save model selection state:', error);
     }
-  }, [currentProvider, selectedClaudeModel, selectedCodexModel]);
+  }, [currentProvider, selectedClaudeModel]);
 
   // 加载选中的智能体
   useEffect(() => {
@@ -696,7 +664,7 @@ const App = () => {
     window.addErrorMessage = (message) =>
       setMessages((prev) => [...prev, { type: 'error', content: message }]);
 
-    // 添加单条历史消息（用于 Codex 会话加载）
+    // Add single history message (for session loading)
     window.addHistoryMessage = (message: ClaudeMessage) => {
       setMessages((prev) => [...prev, message]);
     };
@@ -1085,12 +1053,7 @@ const App = () => {
       }
     };
 
-    const updateMode = (mode?: PermissionMode, providerOverride?: string) => {
-      const activeProvider = providerOverride || currentProviderRef.current;
-      if (activeProvider === 'codex') {
-        setPermissionMode('bypassPermissions');
-        return;
-      }
+    const updateMode = (mode?: PermissionMode) => {
       if (mode === 'default' || mode === 'plan' || mode === 'acceptEdits' || mode === 'bypassPermissions') {
         setPermissionMode(mode);
         setClaudePermissionMode(mode);
@@ -1102,27 +1065,16 @@ const App = () => {
     // 后端主动推送权限模式（窗口初始化时调用）
     window.onModeReceived = (mode) => updateMode(mode as PermissionMode);
 
-    // 后端主动通知模型变化时调用（使用 ref 避免闭包问题）
-      window.onModelChanged = (modelId) => {
-      // 使用 ref 获取最新的 provider 值，避免闭包捕获旧值
-      const provider = currentProviderRef.current;
-      console.log('[Frontend] onModelChanged:', { modelId, provider });
-      if (provider === 'claude') {
-        setSelectedClaudeModel(modelId);
-      } else if (provider === 'codex') {
-        setSelectedCodexModel(modelId);
-      }
+    // Backend notifies model change (Claude only)
+    window.onModelChanged = (modelId) => {
+      console.log('[Frontend] onModelChanged:', { modelId });
+      setSelectedClaudeModel(modelId);
     };
 
-    // 后端确认模型设置成功后调用（关键：确保前后端状态同步）
-      window.onModelConfirmed = (modelId, provider) => {
-      console.log('[Frontend] onModelConfirmed:', { modelId, provider });
-      // 根据后端返回的 provider 更新对应的模型状态
-      if (provider === 'claude') {
-        setSelectedClaudeModel(modelId);
-      } else if (provider === 'codex') {
-        setSelectedCodexModel(modelId);
-      }
+    // Backend confirms model set successfully (Claude only)
+    window.onModelConfirmed = (modelId) => {
+      console.log('[Frontend] onModelConfirmed:', { modelId });
+      setSelectedClaudeModel(modelId);
     };
 
     window.updateActiveProvider = (jsonStr: string) => {
@@ -1682,56 +1634,35 @@ const App = () => {
   };
 
   /**
-   * 处理模式选择
+   * Handle mode selection
    */
   const handleModeSelect = (mode: PermissionMode) => {
-    if (currentProvider === 'codex') {
-      setPermissionMode('bypassPermissions');
-      sendBridgeMessage('set_mode', 'bypassPermissions');
-      return;
-    }
     setPermissionMode(mode);
     setClaudePermissionMode(mode);
     sendBridgeMessage('set_mode', mode);
   };
 
   /**
-   * 处理模型选择
+   * Handle model selection (Claude only)
    */
   const handleModelSelect = (modelId: string) => {
-    if (currentProvider === 'claude') {
-      setSelectedClaudeModel(modelId);
-    } else if (currentProvider === 'codex') {
-      setSelectedCodexModel(modelId);
-    }
+    setSelectedClaudeModel(modelId);
     sendBridgeMessage('set_model', modelId);
   };
 
   /**
-   * 处理提供商选择
+   * Handle provider selection (Claude only)
    */
   const handleProviderSelect = (providerId: string) => {
     setCurrentProvider(providerId);
     sendBridgeMessage('set_provider', providerId);
-    const modeToSet = providerId === 'codex' ? 'bypassPermissions' : claudePermissionMode;
-    setPermissionMode(modeToSet);
-    sendBridgeMessage('set_mode', modeToSet);
-
-    // 切换 provider 时,同时发送对应的模型
-    const newModel = providerId === 'codex' ? selectedCodexModel : selectedClaudeModel;
-    sendBridgeMessage('set_model', newModel);
+    setPermissionMode(claudePermissionMode);
+    sendBridgeMessage('set_mode', claudePermissionMode);
+    sendBridgeMessage('set_model', selectedClaudeModel);
   };
 
   /**
-   * 处理思考深度选择 (Codex only)
-   */
-  const handleReasoningChange = (effort: ReasoningEffort) => {
-    setReasoningEffort(effort);
-    sendBridgeMessage('set_reasoning_effort', effort);
-  };
-
-  /**
-   * 处理智能体选择
+   * Handle agent selection
    */
   const handleAgentSelect = (agent: SelectedAgent | null) => {
     setSelectedAgent(agent);
@@ -1788,7 +1719,7 @@ const App = () => {
     const payload = { streamingEnabled: enabled };
     sendBridgeMessage('set_streaming_enabled', JSON.stringify(payload));
     addToast(enabled ? 'Enabled' : 'Disabled', 'success');
-  }, [t, addToast]);
+  }, [addToast]);
 
   /**
    * 处理发送快捷键变更
@@ -2498,7 +2429,7 @@ const App = () => {
     }
     const text = getMessageText(firstUserMessage);
     return text.length > 15 ? `${text.substring(0, 15)}...` : text;
-  }, [messages, t]);
+  }, [messages]);
 
   return (
     <>
@@ -2803,7 +2734,6 @@ const App = () => {
       ) : (
         <HistoryView
           historyData={historyData}
-          currentProvider={currentProvider}
           onLoadSession={loadHistorySession}
           onDeleteSession={deleteHistorySession}
           onExportSession={exportHistorySession}
@@ -2838,8 +2768,6 @@ const App = () => {
             onModeSelect={handleModeSelect}
             onModelSelect={handleModelSelect}
             onProviderSelect={handleProviderSelect}
-            reasoningEffort={reasoningEffort}
-            onReasoningChange={handleReasoningChange}
             onToggleThinking={handleToggleThinking}
             streamingEnabled={streamingEnabledSetting}
             onStreamingEnabledChange={handleStreamingEnabledChange}
