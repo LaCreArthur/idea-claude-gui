@@ -28,10 +28,16 @@ Transform complex, over-engineered plugin into focused Claude Code GUI.
 ### Progress Summary
 
 **Lines Deleted:**
-- Phase 2 (ai-bridge): ~4,800 lines
+- Phase 2 (ai-bridge): ~4,800 lines → 449 lines remaining (91% reduction)
 - Phase 3 (UsageStatistics): ~730 lines
 - Phase 4.1 (PromptEnhancer): ~700 lines
-- **Total: ~6,200+ lines**
+- Phase 4.5 (PermissionService file IPC): ~700 lines
+- Phase 5 (Dead code cleanup): ~50 lines
+- **Total: ~7,000+ lines deleted**
+
+**Current Line Counts:**
+- Java: ~25,351 lines
+- ai-bridge: ~449 lines
 
 **Features Removed:**
 - File-based permission IPC (replaced with stdin/stdout)
@@ -170,6 +176,8 @@ Node.js → stdout JSON → Java shows dialog → stdin JSON → Node.js returns
 
 ## PHASE 6: Final Verification
 
+**NOTE: Tasks 6.1-6.13 require manual IDE testing via `./gradlew runIde`**
+
 - [ ] **6.1** Test fresh install
 - [ ] **6.2** Test `claude login` authentication
 - [ ] **6.3** Test API key authentication
@@ -183,7 +191,7 @@ Node.js → stdout JSON → Java shows dialog → stdin JSON → Node.js returns
 - [ ] **6.11** Test resume session
 - [ ] **6.12** Test model selection
 - [ ] **6.13** Test MCP servers
-- [ ] **6.14** Build release: `./gradlew clean buildPlugin`
+- [x] **6.14** Build release: `./gradlew clean buildPlugin` - BUILD SUCCESSFUL
 
 ---
 
