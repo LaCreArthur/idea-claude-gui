@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { HistoryData, HistorySessionSummary } from '../../types';
 import VirtualList from './VirtualList';
-import { Claude } from '@lobehub/icons';
+import { ClaudeIcon } from '../../assets/ClaudeIcon';
 
 interface HistoryViewProps {
   historyData: HistoryData | null;
@@ -240,7 +240,7 @@ const HistoryView = ({ historyData, onLoadSession, onDeleteSession, onExportSess
               }}
               title="Claude"
             >
-              <Claude.Color size={20} />
+              <ClaudeIcon size={20} />
             </span>
             {isEditing ? (
               <div className="history-title-edit-mode" onClick={(e) => e.stopPropagation()}>

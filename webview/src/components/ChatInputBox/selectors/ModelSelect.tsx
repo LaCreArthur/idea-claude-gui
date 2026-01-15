@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Claude } from '@lobehub/icons';
+import { ClaudeIcon } from '../../../assets/ClaudeIcon';
 import { AVAILABLE_MODELS } from '../types';
 import type { ModelInfo } from '../types';
 
@@ -97,7 +97,7 @@ export const ModelSelect = ({ value, onChange, models = AVAILABLE_MODELS }: Mode
         onClick={handleToggle}
         title={`Current model: ${getModelLabel(currentModel)}`}
       >
-        <Claude.Color size={12} />
+        <ClaudeIcon size={12} />
         <span className="selector-button-text">{getModelLabel(currentModel)}</span>
         <span className={`codicon codicon-chevron-${isOpen ? 'up' : 'down'}`} style={{ fontSize: '10px', marginLeft: '2px' }} />
       </button>
@@ -120,7 +120,7 @@ export const ModelSelect = ({ value, onChange, models = AVAILABLE_MODELS }: Mode
               className={`selector-option ${model.id === value ? 'selected' : ''}`}
               onClick={() => handleSelect(model.id)}
             >
-              <Claude.Color size={16} />
+              <ClaudeIcon size={16} />
               <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
                 <span>{getModelLabel(model)}</span>
                 {getModelDescription(model) && (

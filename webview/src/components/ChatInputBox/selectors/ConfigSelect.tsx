@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Switch } from 'antd';
-import { Claude } from '@lobehub/icons';
+import { ClaudeIcon } from '../../../assets/ClaudeIcon';
 import { AVAILABLE_PROVIDERS } from '../types';
 import { agentProvider, CREATE_NEW_AGENT_ID, EMPTY_STATE_ID, type AgentItem } from '../providers/agentProvider';
 import type { SelectedAgent } from '../types';
@@ -167,7 +167,7 @@ export const ConfigSelect = ({
           }}
         >
           <div style={{ width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Claude.Color size={14} />
+            <ClaudeIcon size={14} />
           </div>
           <span>{provider.label}</span>
           {provider.id === providerId && <span className="codicon codicon-check check-mark" />}
@@ -280,7 +280,7 @@ export const ConfigSelect = ({
             style={{ position: 'relative' }}
           >
             <div style={{ width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Claude.Color size={14} />
+              <ClaudeIcon size={14} />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
               <span>{currentProviderInfo.label}</span>

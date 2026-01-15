@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Claude } from '@lobehub/icons';
+import { ClaudeIcon } from '../../../assets/ClaudeIcon';
 import { AVAILABLE_PROVIDERS } from '../types';
 
 interface ProviderSelectProps {
@@ -80,7 +80,7 @@ export const ProviderSelect = ({ value, onChange }: ProviderSelectProps) => {
           onClick={handleToggle}
           title={`Switch provider: ${currentProvider.label}`}
         >
-          <Claude.Color size={12} />
+          <ClaudeIcon size={12} />
           <span>{currentProvider.label}</span>
           <span className={`codicon codicon-chevron-${isOpen ? 'up' : 'down'}`} style={{ fontSize: '10px', marginLeft: '2px' }} />
         </button>
@@ -107,7 +107,7 @@ export const ProviderSelect = ({ value, onChange }: ProviderSelectProps) => {
                   cursor: provider.enabled ? 'pointer' : 'not-allowed',
                 }}
               >
-                <Claude.Color size={16} />
+                <ClaudeIcon size={16} />
                 <span>{provider.label}</span>
                 {provider.id === value && (
                   <span className="codicon codicon-check check-mark" />

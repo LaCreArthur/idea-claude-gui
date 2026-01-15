@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import ReactMarkdown from 'react-markdown';
+import { useEffect, useState, useMemo } from 'react';
+import { marked } from 'marked';
 import './PlanApprovalDialog.css';
 
 export interface PlanApprovalRequest {
@@ -23,6 +23,11 @@ const PlanApprovalDialog = ({
   onReject,
 }: PlanApprovalDialogProps) => {
   const [selectedMode, setSelectedMode] = useState<ExecutionMode>('default');
+
+  const renderedPlan = useMemo(() => {
+    if (!request?.plan) return '';
+    return marked.parse(request.plan) as string;
+  }, [request?.plan]);
 
   useEffect(() => {
     if (isOpen && request) {
@@ -84,9 +89,10 @@ const PlanApprovalDialog = ({
 
         {/* Plan content */}
         <div className="plan-approval-dialog-content">
-          <div className="plan-content-wrapper">
-            <ReactMarkdown>{request.plan}</ReactMarkdown>
-          </div>
+          <div
+            className="plan-content-wrapper markdown-content"
+            dangerouslySetInnerHTML={{ __html: renderedPlan }}
+          />
         </div>
 
         {/* Mode selector */}

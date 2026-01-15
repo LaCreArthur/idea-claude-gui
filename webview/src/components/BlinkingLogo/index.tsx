@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { Claude } from '@lobehub/icons';
+import { ClaudeIcon } from '../../assets/ClaudeIcon';
 import styles from './style.module.less';
 import { AVAILABLE_PROVIDERS } from '../ChatInputBox/types';
 
@@ -98,7 +98,7 @@ export const BlinkingLogo = ({ provider, onProviderChange }: BlinkingLogoProps) 
         onClick={handleToggle}
         style={{ cursor: onProviderChange ? 'pointer' : 'default' }}
       >
-        <Claude.Color size={58} />
+        <ClaudeIcon size={58} />
       </div>
 
       {isOpen && (
@@ -127,7 +127,7 @@ export const BlinkingLogo = ({ provider, onProviderChange }: BlinkingLogoProps) 
                 cursor: p.enabled ? 'pointer' : 'not-allowed',
               }}
             >
-              <Claude.Color size={16} />
+              <ClaudeIcon size={16} />
               <span>{getProviderLabel(p.id)}</span>
               {p.id === provider && (
                 <span className="codicon codicon-check check-mark" />
