@@ -54,7 +54,7 @@ public class TabHandler extends BaseMessageHandler {
                 ToolWindow toolWindow = ToolWindowManager.getInstance(project).getToolWindow("CCG");
                 if (toolWindow == null) {
                     LOG.error("[TabHandler] Tool window not found");
-                    callJavaScript("addErrorMessage", escapeJs("无法找到 CCG 工具窗口"));
+                    callJavaScript("addErrorMessage", escapeJs("Cannot find CCG tool window"));
                     return;
                 }
 
@@ -80,7 +80,7 @@ public class TabHandler extends BaseMessageHandler {
                 LOG.info("[TabHandler] Created new tab: " + tabName);
             } catch (Exception e) {
                 LOG.error("[TabHandler] Error creating new tab: " + e.getMessage(), e);
-                callJavaScript("addErrorMessage", escapeJs("创建新标签页失败: " + e.getMessage()));
+                callJavaScript("addErrorMessage", escapeJs("Failed to create new tab: " + e.getMessage()));
             }
         });
     }

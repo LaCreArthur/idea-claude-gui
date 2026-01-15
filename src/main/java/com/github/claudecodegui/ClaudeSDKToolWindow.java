@@ -840,15 +840,15 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
         }
 
         private void showErrorPanel() {
-            String message = "无法找到 Node.js（下方保存后请重启尝试）\n\n" +
-                "请确保:\n" +
-                "• Node.js 已安装 (可以在终端运行: node --version)\n\n" +
-                "如果自动检测 Node.js 失败，可以在终端运行以下命令获取 Node.js 路径:\n" +
+            String message = "Cannot find Node.js (restart IDE after saving path below)\n\n" +
+                "Please ensure:\n" +
+                "• Node.js is installed (run in terminal: node --version)\n\n" +
+                "If auto-detection fails, run this command to get Node.js path:\n" +
                 "    node -p \"process.execPath\"\n\n" +
-                "当前检测到的 Node.js 路径: " + claudeSDKBridge.getNodeExecutable();
+                "Currently detected Node.js path: " + claudeSDKBridge.getNodeExecutable();
 
             JPanel errorPanel = ErrorPanelBuilder.build(
-                "环境检查失败",
+                "Environment Check Failed",
                 message,
                 claudeSDKBridge.getNodeExecutable(),
                 this::handleNodePathSave
@@ -858,14 +858,14 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
 
         private void showVersionErrorPanel(String currentVersion) {
             int minVersion = NodeDetector.MIN_NODE_MAJOR_VERSION;
-            String message = "Node.js 版本过低\n\n" +
-                "当前版本: " + currentVersion + "\n" +
-                "最低要求: v" + minVersion + "\n\n" +
-                "请升级 Node.js 到 v" + minVersion + " 或更高版本后重试。\n\n" +
-                "当前检测到的 Node.js 路径: " + claudeSDKBridge.getNodeExecutable();
+            String message = "Node.js version is too low\n\n" +
+                "Current version: " + currentVersion + "\n" +
+                "Minimum required: v" + minVersion + "\n\n" +
+                "Please upgrade Node.js to v" + minVersion + " or higher and try again.\n\n" +
+                "Currently detected Node.js path: " + claudeSDKBridge.getNodeExecutable();
 
             JPanel errorPanel = ErrorPanelBuilder.build(
-                "Node.js 版本不满足要求",
+                "Node.js Version Requirement Not Met",
                 message,
                 claudeSDKBridge.getNodeExecutable(),
                 this::handleNodePathSave
@@ -874,12 +874,12 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
         }
 
         private void showInvalidNodePathPanel(String path, String errMsg) {
-            String message = "保存的 Node.js 路径不可用: " + path + "\n\n" +
+            String message = "Saved Node.js path is not valid: " + path + "\n\n" +
                 (errMsg != null ? errMsg + "\n\n" : "") +
-                "请在下方重新保存正确的 Node.js 路径。";
+                "Please save the correct Node.js path below.";
 
             JPanel errorPanel = ErrorPanelBuilder.build(
-                "Node.js 路径不可用",
+                "Node.js Path Not Valid",
                 message,
                 path,
                 this::handleNodePathSave
@@ -1892,10 +1892,10 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
                             // Use Alarm for proper delayed retry instead of nested invokeLater
                             scheduleCodeSnippetRetry(project, selectionInfo, 3);
                         } else {
-                            LOG.error("无法找到 CCG 工具窗口");
+                            LOG.error("Cannot find CCG tool window");
                         }
                     } catch (Exception e) {
-                        LOG.error("打开工具窗口时出错: " + e.getMessage());
+                        LOG.error("Error opening tool window: " + e.getMessage());
                     }
                 });
                 return;

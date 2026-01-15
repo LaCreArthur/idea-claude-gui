@@ -26,7 +26,7 @@ import java.util.concurrent.CompletableFuture;
  */
 public abstract class BaseSDKBridge {
 
-    protected static final String CHANNEL_SCRIPT = "channel-manager.js";
+    protected static final String CHANNEL_SCRIPT = "bridge.js";
 
     protected final Logger LOG;
     protected final Gson gson = new Gson();
@@ -178,7 +178,7 @@ public abstract class BaseSDKBridge {
 
             File scriptFile = new File(bridgeDir, CHANNEL_SCRIPT);
             if (!scriptFile.exists()) {
-                LOG.error("channel-manager.js not found at: " + scriptFile.getAbsolutePath());
+                LOG.error("bridge.js not found at: " + scriptFile.getAbsolutePath());
                 return false;
             }
 
