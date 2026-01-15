@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { useTranslation } from 'react-i18next';
 import type { DropdownProps, DropdownItemData } from '../types';
 import { DropdownItem } from './DropdownItem';
 
@@ -12,7 +11,7 @@ interface CompletionDropdownProps extends Omit<DropdownProps, 'children'> {
 }
 
 /**
- * Dropdown - 通用下拉菜单组件
+ * Dropdown - Generic dropdown menu component
  */
 export const Dropdown = ({
   isVisible,
@@ -24,13 +23,9 @@ export const Dropdown = ({
   onClose,
   children,
 }: DropdownProps) => {
-  // selectedIndex 用于父组件传递，当前组件不直接使用
   void _selectedIndex;
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  /**
-   * 点击外部关闭
-   */
   useEffect(() => {
     if (!isVisible) return;
 
@@ -40,7 +35,6 @@ export const Dropdown = ({
       }
     };
 
-    // 延迟添加事件监听，避免立即触发
     const timer = setTimeout(() => {
       document.addEventListener('mousedown', handleClickOutside);
     }, 0);
@@ -49,27 +43,24 @@ export const Dropdown = ({
       clearTimeout(timer);
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isVisible]); // Remove onClose from dependencies - it's stable from props
+  }, [isVisible]);
 
   if (!isVisible || !position) {
     return null;
   }
 
-  // 计算 left 位置，确保不超出视口右侧
   let left = position.left + offsetX;
   const windowWidth = window.innerWidth;
-  const rightPadding = 10; // 距离右边缘的最小距离
+  const rightPadding = 10;
 
   if (left + width + rightPadding > windowWidth) {
     left = windowWidth - width - rightPadding;
   }
-  
-  // 确保不超出视口左侧
+
   if (left < rightPadding) {
     left = rightPadding;
   }
 
-  // 计算位置（优先在上方显示）
   const style: React.CSSProperties = {
     position: 'fixed',
     bottom: `calc(100vh - ${position.top}px + ${offsetY}px)`,
@@ -90,7 +81,7 @@ export const Dropdown = ({
 };
 
 /**
- * CompletionDropdown - 补全专用下拉菜单
+ * CompletionDropdown - Completion dropdown menu
  */
 export const CompletionDropdown = ({
   isVisible,
@@ -106,38 +97,25 @@ export const CompletionDropdown = ({
   onSelect,
   onMouseEnter,
 }: CompletionDropdownProps) => {
-  const { t } = useTranslation();
   const listRef = useRef<HTMLDivElement>(null);
 
-  /**
-   * 滚动高亮项到可见区域
-   */
   useEffect(() => {
     if (!listRef.current) return;
 
     const activeItem = listRef.current.querySelector('.dropdown-item.active');
     if (activeItem) {
-      // 使用 'auto' 瞬间滚动，避免平滑动画导致的延迟
       activeItem.scrollIntoView({ block: 'nearest', behavior: 'auto' });
     }
   }, [selectedIndex]);
 
-  /**
-   * 处理选择
-   */
   const handleSelect = useCallback((item: DropdownItemData, index: number) => {
-    // 允许选择所有类型（文件和目录）
     onSelect?.(item, index);
   }, [onSelect]);
 
-  /**
-   * 处理鼠标进入
-   */
   const handleMouseEnter = useCallback((index: number) => {
     onMouseEnter?.(index);
   }, [onMouseEnter]);
 
-  // 过滤可选择的项（排除分隔线和标题）
   const selectableItems = items.filter(
     item => item.type !== 'separator' && item.type !== 'section-header'
   );
@@ -154,12 +132,11 @@ export const CompletionDropdown = ({
     >
       <div ref={listRef}>
         {loading ? (
-          <div className="dropdown-loading">{t('chat.loadingDropdown')}</div>
+          <div className="dropdown-loading">Loading...</div>
         ) : items.length === 0 ? (
-          <div className="dropdown-empty">{emptyText || t('chat.loadingDropdown')}</div>
+          <div className="dropdown-empty">{emptyText || 'Loading...'}</div>
         ) : (
           items.map((item) => {
-            // 计算在可选择项中的索引
             const selectableIndex = selectableItems.findIndex(i => i.id === item.id);
             const isActive = selectableIndex === selectedIndex;
 

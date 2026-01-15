@@ -85,13 +85,13 @@ Each iteration:
 
 ## Section 8: Replace Translations in React Components (Batch 3 - ChatInputBox)
 
-- [ ] Remove i18n from `webview/src/components/ChatInputBox/ChatInputBox.tsx`
-- [ ] Remove i18n from `webview/src/components/ChatInputBox/ButtonArea.tsx`
-- [ ] Remove i18n from `webview/src/components/ChatInputBox/ContextBar.tsx`
-- [ ] Remove i18n from `webview/src/components/ChatInputBox/TokenIndicator.tsx`
-- [ ] Remove i18n from `webview/src/components/ChatInputBox/AttachmentList.tsx`
-- [ ] Remove i18n from `webview/src/components/ChatInputBox/PromptEnhancerDialog.tsx`
-- [ ] Remove i18n from `webview/src/components/ChatInputBox/Dropdown/index.tsx`
+- [x] Remove i18n from `webview/src/components/ChatInputBox/ChatInputBox.tsx` ✓
+- [x] Remove i18n from `webview/src/components/ChatInputBox/ButtonArea.tsx` ✓
+- [x] Remove i18n from `webview/src/components/ChatInputBox/ContextBar.tsx` ✓
+- [x] Remove i18n from `webview/src/components/ChatInputBox/TokenIndicator.tsx` ✓
+- [x] Remove i18n from `webview/src/components/ChatInputBox/AttachmentList.tsx` ✓
+- [x] Remove i18n from `webview/src/components/ChatInputBox/PromptEnhancerDialog.tsx` ✓
+- [x] Remove i18n from `webview/src/components/ChatInputBox/Dropdown/index.tsx` ✓
 
 ## Section 9: Replace Translations + Remove Codex (ChatInputBox selectors)
 
