@@ -2,7 +2,6 @@ package com.github.claudecodegui.handler;
 
 import com.github.claudecodegui.ClaudeSession;
 import com.github.claudecodegui.provider.claude.ClaudeSDKBridge;
-import com.github.claudecodegui.provider.codex.CodexSDKBridge;
 import com.github.claudecodegui.CodemossSettingsService;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.project.Project;
@@ -11,18 +10,17 @@ import com.intellij.ui.jcef.JBCefBrowser;
 import java.util.function.Consumer;
 
 /**
- * Handler 上下文
- * 提供 Handler 所需的所有共享资源和回调
+ * Handler context
+ * Provides all shared resources and callbacks needed by handlers
  */
 public class HandlerContext {
 
     private final Project project;
     private final ClaudeSDKBridge claudeSDKBridge;
-    private final CodexSDKBridge codexSDKBridge;
     private final CodemossSettingsService settingsService;
     private final JsCallback jsCallback;
 
-    // 可变状态通过 getter/setter 访问
+    // Mutable state accessed via getter/setter
     private ClaudeSession session;
     private JBCefBrowser browser;
     private String currentModel = "claude-sonnet-4-5";
@@ -30,7 +28,7 @@ public class HandlerContext {
     private volatile boolean disposed = false;
 
     /**
-     * JavaScript 回调接口
+     * JavaScript callback interface
      */
     public interface JsCallback {
         void callJavaScript(String functionName, String... args);
@@ -40,13 +38,11 @@ public class HandlerContext {
     public HandlerContext(
             Project project,
             ClaudeSDKBridge claudeSDKBridge,
-            CodexSDKBridge codexSDKBridge,
             CodemossSettingsService settingsService,
             JsCallback jsCallback
     ) {
         this.project = project;
         this.claudeSDKBridge = claudeSDKBridge;
-        this.codexSDKBridge = codexSDKBridge;
         this.settingsService = settingsService;
         this.jsCallback = jsCallback;
     }
@@ -58,10 +54,6 @@ public class HandlerContext {
 
     public ClaudeSDKBridge getClaudeSDKBridge() {
         return claudeSDKBridge;
-    }
-
-    public CodexSDKBridge getCodexSDKBridge() {
-        return codexSDKBridge;
     }
 
     public CodemossSettingsService getSettingsService() {
@@ -109,7 +101,7 @@ public class HandlerContext {
         this.disposed = disposed;
     }
 
-    // JavaScript 回调代理方法
+    // JavaScript callback proxy methods
     public void callJavaScript(String functionName, String... args) {
         jsCallback.callJavaScript(functionName, args);
     }
@@ -119,7 +111,7 @@ public class HandlerContext {
     }
 
     /**
-     * 在 EDT 线程上执行 JavaScript
+     * Execute JavaScript on EDT thread
      */
     public void executeJavaScriptOnEDT(String jsCode) {
         if (browser != null && !disposed) {

@@ -12,7 +12,6 @@ import com.intellij.openapi.fileChooser.FileChooser;
 import com.intellij.openapi.fileChooser.FileChooserDescriptor;
 import com.intellij.openapi.vfs.VirtualFile;
 
-import javax.swing.*;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -22,16 +21,14 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Provider（供应商）相关消息处理器
- * 处理供应商的增删改查和切换
- * Supports both Claude and Codex providers
+ * Provider message handler
+ * Handles provider CRUD operations and switching for Claude
  */
 public class ProviderHandler extends BaseMessageHandler {
 
     private static final Logger LOG = Logger.getInstance(ProviderHandler.class);
 
     private static final String[] SUPPORTED_TYPES = {
-        // Claude provider operations
         "get_providers",
         "get_current_claude_config",
         "get_thinking_enabled",
@@ -43,15 +40,7 @@ public class ProviderHandler extends BaseMessageHandler {
         "get_active_provider",
         "preview_cc_switch_import",
         "open_file_chooser_for_cc_switch",
-        "save_imported_providers",
-        // Codex provider operations
-        "get_codex_providers",
-        "get_current_codex_config",
-        "add_codex_provider",
-        "update_codex_provider",
-        "delete_codex_provider",
-        "switch_codex_provider",
-        "get_active_codex_provider"
+        "save_imported_providers"
     };
 
     public ProviderHandler(HandlerContext context) {
@@ -66,7 +55,6 @@ public class ProviderHandler extends BaseMessageHandler {
     @Override
     public boolean handle(String type, String content) {
         switch (type) {
-            // Claude provider operations
             case "get_providers":
                 handleGetProviders();
                 return true;
@@ -102,28 +90,6 @@ public class ProviderHandler extends BaseMessageHandler {
                 return true;
             case "save_imported_providers":
                 handleSaveImportedProviders(content);
-                return true;
-            // Codex provider operations
-            case "get_codex_providers":
-                handleGetCodexProviders();
-                return true;
-            case "get_current_codex_config":
-                handleGetCurrentCodexConfig();
-                return true;
-            case "add_codex_provider":
-                handleAddCodexProvider(content);
-                return true;
-            case "update_codex_provider":
-                handleUpdateCodexProvider(content);
-                return true;
-            case "delete_codex_provider":
-                handleDeleteCodexProvider(content);
-                return true;
-            case "switch_codex_provider":
-                handleSwitchCodexProvider(content);
-                return true;
-            case "get_active_codex_provider":
-                handleGetActiveCodexProvider();
                 return true;
             default:
                 return false;
@@ -188,7 +154,7 @@ public class ProviderHandler extends BaseMessageHandler {
     }
 
     /**
-     * 获取所有供应商
+     * Get all providers
      */
     private void handleGetProviders() {
         try {
@@ -205,7 +171,7 @@ public class ProviderHandler extends BaseMessageHandler {
     }
 
     /**
-     * 获取当前 Claude CLI 配置 (~/.claude/settings.json)
+     * Get current Claude CLI configuration (~/.claude/settings.json)
      */
     private void handleGetCurrentClaudeConfig() {
         try {
@@ -222,7 +188,7 @@ public class ProviderHandler extends BaseMessageHandler {
     }
 
     /**
-     * 添加供应商
+     * Add provider
      */
     private void handleAddProvider(String content) {
         try {
@@ -231,18 +197,18 @@ public class ProviderHandler extends BaseMessageHandler {
             context.getSettingsService().addClaudeProvider(provider);
 
             ApplicationManager.getApplication().invokeLater(() -> {
-                handleGetProviders(); // 刷新列表
+                handleGetProviders(); // Refresh list
             });
         } catch (Exception e) {
             LOG.error("[ProviderHandler] Failed to add provider: " + e.getMessage(), e);
             ApplicationManager.getApplication().invokeLater(() -> {
-                callJavaScript("window.showError", escapeJs("添加供应商失败: " + e.getMessage()));
+                callJavaScript("window.showError", escapeJs("Failed to add provider: " + e.getMessage()));
             });
         }
     }
 
     /**
-     * 更新供应商
+     * Update provider
      */
     private void handleUpdateProvider(String content) {
         try {
@@ -264,21 +230,21 @@ public class ProviderHandler extends BaseMessageHandler {
 
             final boolean finalSynced = syncedActiveProvider;
             ApplicationManager.getApplication().invokeLater(() -> {
-                handleGetProviders(); // 刷新列表
+                handleGetProviders(); // Refresh list
                 if (finalSynced) {
-                    handleGetActiveProvider(); // 刷新当前激活的供应商配置
+                    handleGetActiveProvider(); // Refresh active provider config
                 }
             });
         } catch (Exception e) {
             LOG.error("[ProviderHandler] Failed to update provider: " + e.getMessage(), e);
             ApplicationManager.getApplication().invokeLater(() -> {
-                callJavaScript("window.showError", escapeJs("更新供应商失败: " + e.getMessage()));
+                callJavaScript("window.showError", escapeJs("Failed to update provider: " + e.getMessage()));
             });
         }
     }
 
     /**
-     * 删除供应商
+     * Delete provider
      */
     private void handleDeleteProvider(String content) {
         LOG.debug("[ProviderHandler] ========== handleDeleteProvider START ==========");
@@ -292,7 +258,7 @@ public class ProviderHandler extends BaseMessageHandler {
             if (!data.has("id")) {
                 LOG.error("[ProviderHandler] ERROR: Missing 'id' field in request");
                 ApplicationManager.getApplication().invokeLater(() -> {
-                    callJavaScript("window.showError", escapeJs("删除失败: 请求中缺少供应商 ID"));
+                    callJavaScript("window.showError", escapeJs("Delete failed: Missing provider ID"));
                 });
                 return;
             }
@@ -306,7 +272,7 @@ public class ProviderHandler extends BaseMessageHandler {
             if (result.isSuccess()) {
                 LOG.info("[ProviderHandler] Delete successful, refreshing provider list");
                 ApplicationManager.getApplication().invokeLater(() -> {
-                    handleGetProviders(); // 刷新列表
+                    handleGetProviders(); // Refresh list
                 });
             } else {
                 String errorMsg = result.getUserFriendlyMessage();
@@ -321,7 +287,7 @@ public class ProviderHandler extends BaseMessageHandler {
         } catch (Exception e) {
             LOG.error("[ProviderHandler] Exception in handleDeleteProvider: " + e.getMessage(), e);
             ApplicationManager.getApplication().invokeLater(() -> {
-                callJavaScript("window.showError", escapeJs("删除供应商失败: " + e.getMessage()));
+                callJavaScript("window.showError", escapeJs("Failed to delete provider: " + e.getMessage()));
             });
         }
 
@@ -329,7 +295,7 @@ public class ProviderHandler extends BaseMessageHandler {
     }
 
     /**
-     * 切换供应商
+     * Switch provider
      */
     private void handleSwitchProvider(String content) {
         try {
@@ -344,7 +310,7 @@ public class ProviderHandler extends BaseMessageHandler {
                     LOG.warn("[ProviderHandler] Local settings.json does not exist at: " + settingsPath);
                     ApplicationManager.getApplication().invokeLater(() -> {
                         callJavaScript("window.showError",
-                            escapeJs(com.github.claudecodegui.ClaudeCodeGuiBundle.message("error.localProviderSettingsNotFound")));
+                            escapeJs("Local provider settings.json not found"));
                     });
                     return;
                 }
@@ -357,7 +323,7 @@ public class ProviderHandler extends BaseMessageHandler {
                     LOG.error("[ProviderHandler] Invalid JSON in settings.json: " + e.getMessage(), e);
                     ApplicationManager.getApplication().invokeLater(() -> {
                         callJavaScript("window.showError",
-                            escapeJs(com.github.claudecodegui.ClaudeCodeGuiBundle.message("error.localProviderInvalidJson", e.getMessage())));
+                            escapeJs("Invalid JSON in local settings.json: " + e.getMessage()));
                     });
                     return;
                 }
@@ -376,7 +342,7 @@ public class ProviderHandler extends BaseMessageHandler {
 
                 ApplicationManager.getApplication().invokeLater(() -> {
                     callJavaScript("window.showSwitchSuccess",
-                        escapeJs(com.github.claudecodegui.ClaudeCodeGuiBundle.message("toast.localProviderSwitchSuccess")));
+                        escapeJs("Successfully switched to local settings"));
                     handleGetProviders();
                     handleGetCurrentClaudeConfig();
                     handleGetActiveProvider();
@@ -388,7 +354,7 @@ public class ProviderHandler extends BaseMessageHandler {
             context.getSettingsService().applyActiveProviderToClaudeSettings();
 
             ApplicationManager.getApplication().invokeLater(() -> {
-                callJavaScript("window.showSwitchSuccess", escapeJs(com.github.claudecodegui.ClaudeCodeGuiBundle.message("toast.providerSwitchSuccess") + "\n\n已自动同步到 ~/.claude/settings.json，下一次提问将使用新的配置。"));
+                callJavaScript("window.showSwitchSuccess", escapeJs("Provider switched successfully\n\nAutomatically synced to ~/.claude/settings.json. Next query will use the new configuration."));
                 handleGetProviders();
                 handleGetCurrentClaudeConfig();
                 handleGetActiveProvider();
@@ -396,13 +362,13 @@ public class ProviderHandler extends BaseMessageHandler {
         } catch (Exception e) {
             LOG.error("[ProviderHandler] Failed to switch provider: " + e.getMessage(), e);
             ApplicationManager.getApplication().invokeLater(() -> {
-                callJavaScript("window.showError", escapeJs(com.github.claudecodegui.ClaudeCodeGuiBundle.message("toast.providerSwitchFailed") + ": " + e.getMessage()));
+                callJavaScript("window.showError", escapeJs("Failed to switch provider: " + e.getMessage()));
             });
         }
     }
 
     /**
-     * 获取当前激活的供应商
+     * Get currently active provider
      */
     private void handleGetActiveProvider() {
         try {
@@ -419,7 +385,7 @@ public class ProviderHandler extends BaseMessageHandler {
     }
 
     /**
-     * 预览 cc-switch 导入
+     * Preview cc-switch import
      */
     private void handlePreviewCcSwitchImport() {
         com.intellij.openapi.application.ApplicationManager.getApplication().invokeLater(() -> {
@@ -429,32 +395,32 @@ public class ProviderHandler extends BaseMessageHandler {
             File ccSwitchDir = new File(userHome, ".cc-switch");
             File dbFile = new File(ccSwitchDir, "cc-switch.db");
 
-            LOG.info("[ProviderHandler] 操作系统: " + osName);
-            LOG.info("[ProviderHandler] 用户目录: " + userHome);
-            LOG.info("[ProviderHandler] cc-switch 目录: " + ccSwitchDir.getAbsolutePath());
-            LOG.info("[ProviderHandler] 数据库文件路径: " + dbFile.getAbsolutePath());
-            LOG.info("[ProviderHandler] 数据库文件是否存在: " + dbFile.exists());
+            LOG.info("[ProviderHandler] OS: " + osName);
+            LOG.info("[ProviderHandler] User home: " + userHome);
+            LOG.info("[ProviderHandler] cc-switch directory: " + ccSwitchDir.getAbsolutePath());
+            LOG.info("[ProviderHandler] Database file path: " + dbFile.getAbsolutePath());
+            LOG.info("[ProviderHandler] Database file exists: " + dbFile.exists());
 
             if (!dbFile.exists()) {
-                String errorMsg = "未找到 cc-switch 数据库文件\n" +
-                                 "路径: " + dbFile.getAbsolutePath() + "\n" +
-                                 "您可以主动选择cc-switch.db文件进行导入，或者检查：:\n" +
-                                 "1. 已安装 cc-switch 3.8.2 及以上版本\n" +
-                                 "2. 至少配置过一个 Claude 供应商";
+                String errorMsg = "cc-switch database file not found\n" +
+                                 "Path: " + dbFile.getAbsolutePath() + "\n" +
+                                 "You can manually select a cc-switch.db file to import, or check:\n" +
+                                 "1. cc-switch 3.8.2 or higher is installed\n" +
+                                 "2. At least one Claude provider has been configured";
                 LOG.error("[ProviderHandler] " + errorMsg);
-                sendErrorToFrontend("文件未找到", errorMsg);
+                sendErrorToFrontend("File not found", errorMsg);
                 return;
             }
 
             CompletableFuture.runAsync(() -> {
                 try {
-                    LOG.info("[ProviderHandler] 开始读取数据库文件...");
+                    LOG.info("[ProviderHandler] Starting to read database file...");
                     Gson gson = new Gson();
                     List<JsonObject> providers = context.getSettingsService().parseProvidersFromCcSwitchDb(dbFile.getPath());
 
                     if (providers.isEmpty()) {
-                        LOG.info("[ProviderHandler] 数据库中没有找到 Claude 供应商配置");
-                        sendInfoToFrontend("无数据", "未在数据库中找到有效的 Claude 供应商配置。");
+                        LOG.info("[ProviderHandler] No Claude provider configurations found in database");
+                        sendInfoToFrontend("No data", "No valid Claude provider configurations found in database.");
                         return;
                     }
 
@@ -467,42 +433,40 @@ public class ProviderHandler extends BaseMessageHandler {
                     response.add("providers", providersArray);
 
                     String jsonStr = gson.toJson(response);
-                    LOG.info("[ProviderHandler] 成功读取 " + providers.size() + " 个供应商配置，准备发送到前端");
+                    LOG.info("[ProviderHandler] Successfully read " + providers.size() + " provider configurations, sending to frontend");
                     callJavaScript("import_preview_result", escapeJs(jsonStr));
 
                 } catch (Exception e) {
-                    String errorDetails = "读取数据库失败: " + e.getMessage();
+                    String errorDetails = "Failed to read database: " + e.getMessage();
                     LOG.error("[ProviderHandler] " + errorDetails, e);
-                    sendErrorToFrontend("读取数据库失败", errorDetails);
+                    sendErrorToFrontend("Failed to read database", errorDetails);
                 }
             });
         });
     }
 
     /**
-     * 打开文件选择器选择 cc-switch 数据库文件
+     * Open file chooser to select cc-switch database file
      */
     private void handleOpenFileChooserForCcSwitch() {
         ApplicationManager.getApplication().invokeLater(() -> {
             try {
-                // 创建文件选择器描述符
                 FileChooserDescriptor descriptor = new FileChooserDescriptor(
-                    true,   // chooseFiles - 允许选择文件
-                    false,  // chooseFolders - 不允许选择文件夹
-                    false,  // chooseJars - 不允许选择 JAR
-                    false,  // chooseJarsAsFiles - 不将 JAR 当作文件
-                    false,  // chooseJarContents - 不允许选择 JAR 内容
-                    false   // chooseMultiple - 不允许多选
+                    true,   // chooseFiles
+                    false,  // chooseFolders
+                    false,  // chooseJars
+                    false,  // chooseJarsAsFiles
+                    false,  // chooseJarContents
+                    false   // chooseMultiple
                 );
 
-                descriptor.setTitle("选择 cc-switch 数据库文件");
-                descriptor.setDescription("请选择 cc-switch.db 或其副本文件");
+                descriptor.setTitle("Select cc-switch database file");
+                descriptor.setDescription("Please select cc-switch.db or a copy of it");
                 descriptor.withFileFilter(file -> {
                     String name = file.getName().toLowerCase();
                     return name.endsWith(".db");
                 });
 
-                // 设置默认路径为用户主目录下的 .cc-switch
                 String userHome = System.getProperty("user.home");
                 File defaultDir = new File(userHome, ".cc-switch");
                 VirtualFile defaultVirtualFile = null;
@@ -511,10 +475,9 @@ public class ProviderHandler extends BaseMessageHandler {
                         .findFileByPath(defaultDir.getAbsolutePath());
                 }
 
-                LOG.info("[ProviderHandler] 打开文件选择器，默认目录: " +
-                    (defaultVirtualFile != null ? defaultVirtualFile.getPath() : "用户主目录"));
+                LOG.info("[ProviderHandler] Opening file chooser, default directory: " +
+                    (defaultVirtualFile != null ? defaultVirtualFile.getPath() : "user home"));
 
-                // 打开文件选择器
                 VirtualFile[] selectedFiles = FileChooser.chooseFiles(
                     descriptor,
                     context.getProject(),
@@ -522,8 +485,8 @@ public class ProviderHandler extends BaseMessageHandler {
                 );
 
                 if (selectedFiles.length == 0) {
-                    LOG.info("[ProviderHandler] 用户取消了文件选择");
-                    sendInfoToFrontend("已取消", "未选择文件");
+                    LOG.info("[ProviderHandler] User cancelled file selection");
+                    sendInfoToFrontend("Cancelled", "No file selected");
                     return;
                 }
 
@@ -531,36 +494,35 @@ public class ProviderHandler extends BaseMessageHandler {
                 String dbPath = selectedFile.getPath();
                 File dbFile = new File(dbPath);
 
-                LOG.info("[ProviderHandler] 用户选择的数据库文件路径: " + dbFile.getAbsolutePath());
-                LOG.info("[ProviderHandler] 数据库文件是否存在: " + dbFile.exists());
+                LOG.info("[ProviderHandler] User selected database file path: " + dbFile.getAbsolutePath());
+                LOG.info("[ProviderHandler] Database file exists: " + dbFile.exists());
 
                 if (!dbFile.exists()) {
-                    String errorMsg = "未找到数据库文件\n" +
-                                     "路径: " + dbFile.getAbsolutePath();
+                    String errorMsg = "Database file not found\n" +
+                                     "Path: " + dbFile.getAbsolutePath();
                     LOG.error("[ProviderHandler] " + errorMsg);
-                    sendErrorToFrontend("文件未找到", errorMsg);
+                    sendErrorToFrontend("File not found", errorMsg);
                     return;
                 }
 
                 if (!dbFile.canRead()) {
-                    String errorMsg = com.github.claudecodegui.ClaudeCodeGuiBundle.message("error.cannotReadFile") + "\n" +
-                                     "路径: " + dbFile.getAbsolutePath() + "\n" +
-                                     com.github.claudecodegui.ClaudeCodeGuiBundle.message("error.checkFilePermissions");
+                    String errorMsg = "Cannot read file\n" +
+                                     "Path: " + dbFile.getAbsolutePath() + "\n" +
+                                     "Please check file permissions";
                     LOG.error("[ProviderHandler] " + errorMsg);
-                    sendErrorToFrontend("权限错误", errorMsg);
+                    sendErrorToFrontend("Permission error", errorMsg);
                     return;
                 }
 
-                // 异步读取数据库
                 CompletableFuture.runAsync(() -> {
                     try {
-                        LOG.info("[ProviderHandler] 开始读取用户选择的数据库文件...");
+                        LOG.info("[ProviderHandler] Starting to read user-selected database file...");
                         Gson gson = new Gson();
                         List<JsonObject> providers = context.getSettingsService().parseProvidersFromCcSwitchDb(dbFile.getPath());
 
                         if (providers.isEmpty()) {
-                            LOG.info("[ProviderHandler] 数据库中没有找到 Claude 供应商配置");
-                            sendInfoToFrontend("无数据", "未在数据库中找到有效的 Claude 供应商配置。");
+                            LOG.info("[ProviderHandler] No Claude provider configurations found in database");
+                            sendInfoToFrontend("No data", "No valid Claude provider configurations found in database.");
                             return;
                         }
 
@@ -573,26 +535,26 @@ public class ProviderHandler extends BaseMessageHandler {
                         response.add("providers", providersArray);
 
                         String jsonStr = gson.toJson(response);
-                        LOG.info("[ProviderHandler] 成功读取 " + providers.size() + " 个供应商配置，准备发送到前端");
+                        LOG.info("[ProviderHandler] Successfully read " + providers.size() + " provider configurations, sending to frontend");
                         callJavaScript("import_preview_result", escapeJs(jsonStr));
 
                     } catch (Exception e) {
-                        String errorDetails = "读取数据库失败: " + e.getMessage();
+                        String errorDetails = "Failed to read database: " + e.getMessage();
                         LOG.error("[ProviderHandler] " + errorDetails, e);
-                        sendErrorToFrontend("读取数据库失败", errorDetails);
+                        sendErrorToFrontend("Failed to read database", errorDetails);
                     }
                 });
 
             } catch (Exception e) {
-                String errorDetails = "打开文件选择器失败: " + e.getMessage();
+                String errorDetails = "Failed to open file chooser: " + e.getMessage();
                 LOG.error("[ProviderHandler] " + errorDetails, e);
-                sendErrorToFrontend("文件选择失败", errorDetails);
+                sendErrorToFrontend("File selection failed", errorDetails);
             }
         });
     }
 
     /**
-     * 保存导入的供应商
+     * Save imported providers
      */
     private void handleSaveImportedProviders(String content) {
         CompletableFuture.runAsync(() -> {
@@ -615,213 +577,28 @@ public class ProviderHandler extends BaseMessageHandler {
                 int count = context.getSettingsService().saveProviders(providers);
 
                 ApplicationManager.getApplication().invokeLater(() -> {
-                    handleGetProviders(); // 刷新界面
-                    sendInfoToFrontend("导入成功", "成功导入 " + count + " 个配置。");
+                    handleGetProviders(); // Refresh UI
+                    sendInfoToFrontend("Import successful", "Successfully imported " + count + " configurations.");
                 });
 
             } catch (Exception e) {
                 LOG.error("Failed to save imported providers", e);
-                sendErrorToFrontend("保存失败", e.getMessage());
+                sendErrorToFrontend("Save failed", e.getMessage());
             }
         });
     }
 
     /**
-     * 发送信息通知到前端
+     * Send info notification to frontend
      */
     private void sendInfoToFrontend(String title, String message) {
-        // 使用多参数传递，避免 JSON 嵌套解析问题
         callJavaScript("backend_notification", "info", escapeJs(title), escapeJs(message));
     }
 
     /**
-     * 发送错误通知到前端
+     * Send error notification to frontend
      */
     private void sendErrorToFrontend(String title, String message) {
-        // 使用多参数传递，避免 JSON 嵌套解析问题
         callJavaScript("backend_notification", "error", escapeJs(title), escapeJs(message));
-    }
-
-    // ==================== Codex Provider Handlers ====================
-
-    /**
-     * Get all Codex providers
-     */
-    private void handleGetCodexProviders() {
-        try {
-            List<JsonObject> providers = context.getSettingsService().getCodexProviders();
-            Gson gson = new Gson();
-            String providersJson = gson.toJson(providers);
-
-            ApplicationManager.getApplication().invokeLater(() -> {
-                callJavaScript("window.updateCodexProviders", escapeJs(providersJson));
-            });
-        } catch (Exception e) {
-            LOG.error("[ProviderHandler] Failed to get Codex providers: " + e.getMessage(), e);
-        }
-    }
-
-    /**
-     * Get current Codex CLI configuration (~/.codex/)
-     */
-    private void handleGetCurrentCodexConfig() {
-        try {
-            JsonObject config = context.getSettingsService().getCurrentCodexConfig();
-            Gson gson = new Gson();
-            String configJson = gson.toJson(config);
-
-            ApplicationManager.getApplication().invokeLater(() -> {
-                callJavaScript("window.updateCurrentCodexConfig", escapeJs(configJson));
-            });
-        } catch (Exception e) {
-            LOG.error("[ProviderHandler] Failed to get current Codex config: " + e.getMessage(), e);
-        }
-    }
-
-    /**
-     * Add Codex provider
-     */
-    private void handleAddCodexProvider(String content) {
-        try {
-            Gson gson = new Gson();
-            JsonObject provider = gson.fromJson(content, JsonObject.class);
-            context.getSettingsService().addCodexProvider(provider);
-
-            ApplicationManager.getApplication().invokeLater(() -> {
-                handleGetCodexProviders(); // Refresh list
-            });
-        } catch (Exception e) {
-            LOG.error("[ProviderHandler] Failed to add Codex provider: " + e.getMessage(), e);
-            ApplicationManager.getApplication().invokeLater(() -> {
-                callJavaScript("window.showError", escapeJs("添加 Codex 供应商失败: " + e.getMessage()));
-            });
-        }
-    }
-
-    /**
-     * Update Codex provider
-     */
-    private void handleUpdateCodexProvider(String content) {
-        try {
-            Gson gson = new Gson();
-            JsonObject data = gson.fromJson(content, JsonObject.class);
-            String id = data.get("id").getAsString();
-            JsonObject updates = data.getAsJsonObject("updates");
-
-            context.getSettingsService().updateCodexProvider(id, updates);
-
-            boolean syncedActiveProvider = false;
-            JsonObject activeProvider = context.getSettingsService().getActiveCodexProvider();
-            if (activeProvider != null &&
-                activeProvider.has("id") &&
-                id.equals(activeProvider.get("id").getAsString())) {
-                context.getSettingsService().applyActiveProviderToCodexSettings();
-                syncedActiveProvider = true;
-            }
-
-            final boolean finalSynced = syncedActiveProvider;
-            ApplicationManager.getApplication().invokeLater(() -> {
-                handleGetCodexProviders(); // Refresh list
-                if (finalSynced) {
-                    handleGetActiveCodexProvider(); // Refresh active provider config
-                }
-            });
-        } catch (Exception e) {
-            LOG.error("[ProviderHandler] Failed to update Codex provider: " + e.getMessage(), e);
-            ApplicationManager.getApplication().invokeLater(() -> {
-                callJavaScript("window.showError", escapeJs("更新 Codex 供应商失败: " + e.getMessage()));
-            });
-        }
-    }
-
-    /**
-     * Delete Codex provider
-     */
-    private void handleDeleteCodexProvider(String content) {
-        LOG.debug("[ProviderHandler] ========== handleDeleteCodexProvider START ==========");
-        LOG.debug("[ProviderHandler] Received content: " + content);
-
-        try {
-            Gson gson = new Gson();
-            JsonObject data = gson.fromJson(content, JsonObject.class);
-            LOG.debug("[ProviderHandler] Parsed JSON data: " + data);
-
-            if (!data.has("id")) {
-                LOG.error("[ProviderHandler] ERROR: Missing 'id' field in request");
-                ApplicationManager.getApplication().invokeLater(() -> {
-                    callJavaScript("window.showError", escapeJs("删除失败: 请求中缺少供应商 ID"));
-                });
-                return;
-            }
-
-            String id = data.get("id").getAsString();
-            LOG.info("[ProviderHandler] Deleting Codex provider with ID: " + id);
-
-            DeleteResult result = context.getSettingsService().deleteCodexProvider(id);
-            LOG.debug("[ProviderHandler] Delete result - success: " + result.isSuccess());
-
-            if (result.isSuccess()) {
-                LOG.info("[ProviderHandler] Delete successful, refreshing provider list");
-                ApplicationManager.getApplication().invokeLater(() -> {
-                    handleGetCodexProviders(); // Refresh list
-                });
-            } else {
-                String errorMsg = result.getUserFriendlyMessage();
-                LOG.warn("[ProviderHandler] Delete Codex provider failed: " + errorMsg);
-                ApplicationManager.getApplication().invokeLater(() -> {
-                    callJavaScript("window.showError", escapeJs(errorMsg));
-                });
-            }
-        } catch (Exception e) {
-            LOG.error("[ProviderHandler] Exception in handleDeleteCodexProvider: " + e.getMessage(), e);
-            ApplicationManager.getApplication().invokeLater(() -> {
-                callJavaScript("window.showError", escapeJs("删除 Codex 供应商失败: " + e.getMessage()));
-            });
-        }
-
-        LOG.debug("[ProviderHandler] ========== handleDeleteCodexProvider END ==========");
-    }
-
-    /**
-     * Switch Codex provider
-     */
-    private void handleSwitchCodexProvider(String content) {
-        try {
-            Gson gson = new Gson();
-            JsonObject data = gson.fromJson(content, JsonObject.class);
-            String id = data.get("id").getAsString();
-
-            context.getSettingsService().switchCodexProvider(id);
-            context.getSettingsService().applyActiveProviderToCodexSettings();
-
-            ApplicationManager.getApplication().invokeLater(() -> {
-                callJavaScript("window.showSwitchSuccess", escapeJs(com.github.claudecodegui.ClaudeCodeGuiBundle.message("toast.providerSwitchSuccess") + "\n\n已自动同步到 ~/.codex/，下一次提问将使用新的配置。"));
-                handleGetCodexProviders(); // Refresh provider list
-                handleGetCurrentCodexConfig(); // Refresh Codex CLI config display
-                handleGetActiveCodexProvider(); // Refresh active provider config
-            });
-        } catch (Exception e) {
-            LOG.error("[ProviderHandler] Failed to switch Codex provider: " + e.getMessage(), e);
-            ApplicationManager.getApplication().invokeLater(() -> {
-                callJavaScript("window.showError", escapeJs(com.github.claudecodegui.ClaudeCodeGuiBundle.message("toast.providerSwitchFailed") + ": " + e.getMessage()));
-            });
-        }
-    }
-
-    /**
-     * Get currently active Codex provider
-     */
-    private void handleGetActiveCodexProvider() {
-        try {
-            JsonObject provider = context.getSettingsService().getActiveCodexProvider();
-            Gson gson = new Gson();
-            String providerJson = gson.toJson(provider);
-
-            ApplicationManager.getApplication().invokeLater(() -> {
-                callJavaScript("window.updateActiveCodexProvider", escapeJs(providerJson));
-            });
-        } catch (Exception e) {
-            LOG.error("[ProviderHandler] Failed to get active Codex provider: " + e.getMessage(), e);
-        }
     }
 }

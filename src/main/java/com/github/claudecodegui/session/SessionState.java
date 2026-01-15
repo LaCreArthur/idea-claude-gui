@@ -31,8 +31,6 @@ public class SessionState {
     private String permissionMode = "default";
     private String model = "claude-sonnet-4-5";
     private String provider = "claude";
-    // Codex reasoning effort (思考深度)
-    private String reasoningEffort = "medium";
 
     // 斜杠命令
     private List<String> slashCommands = new ArrayList<>();
@@ -93,10 +91,6 @@ public class SessionState {
         return provider;
     }
 
-    public String getReasoningEffort() {
-        return reasoningEffort;
-    }
-
     public List<String> getSlashCommands() {
         return new ArrayList<>(slashCommands);
     }
@@ -150,10 +144,6 @@ public class SessionState {
 
     public void setProvider(String provider) {
         this.provider = provider;
-    }
-
-    public void setReasoningEffort(String reasoningEffort) {
-        this.reasoningEffort = reasoningEffort;
     }
 
     public void setSlashCommands(List<String> slashCommands) {

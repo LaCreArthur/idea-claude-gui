@@ -3,7 +3,6 @@ package com.github.claudecodegui;
 import com.github.claudecodegui.bridge.NodeDetector;
 import com.github.claudecodegui.cache.SlashCommandCache;
 import com.github.claudecodegui.provider.claude.ClaudeSDKBridge;
-import com.github.claudecodegui.provider.codex.CodexSDKBridge;
 import com.github.claudecodegui.provider.common.MessageCallback;
 import com.github.claudecodegui.provider.common.SDKResult;
 import com.github.claudecodegui.handler.*;
@@ -197,9 +196,6 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
                             if (window != null && window.claudeSDKBridge != null) {
                                 window.claudeSDKBridge.cleanupAllProcesses();
                             }
-                            if (window != null && window.codexSDKBridge != null) {
-                                window.codexSDKBridge.cleanupAllProcesses();
-                            }
                         } catch (Exception e) {
                             // Shutdown hook 中不要抛出异常
                             LOG.error("[ShutdownHook] 清理进程时出错: " + e.getMessage());
@@ -235,7 +231,6 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
 
         private final JPanel mainPanel;
         private final ClaudeSDKBridge claudeSDKBridge;
-        private final CodexSDKBridge codexSDKBridge;
         private final Project project;
         private final CodemossSettingsService settingsService;
         private final HtmlLoader htmlLoader;
@@ -285,7 +280,6 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
         public ClaudeChatWindow(Project project, boolean skipRegister) {
             this.project = project;
             this.claudeSDKBridge = new ClaudeSDKBridge();
-            this.codexSDKBridge = new CodexSDKBridge();
             this.settingsService = new CodemossSettingsService();
             this.htmlLoader = new HtmlLoader(getClass());
             this.mainPanel = new JPanel(new BorderLayout());
@@ -341,7 +335,7 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
         }
 
         private void initializeSession() {
-            this.session = new ClaudeSession(project, claudeSDKBridge, codexSDKBridge);
+            this.session = new ClaudeSession(project, claudeSDKBridge);
             loadPermissionModeFromSettings();
         }
 
@@ -354,7 +348,7 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
                     // 使用已保存的路径
                     String path = savedNodePath.trim();
                     claudeSDKBridge.setNodeExecutable(path);
-                    codexSDKBridge.setNodeExecutable(path);
+                    // Removed codex: codexSDKBridge.setNodeExecutable(path);
                     // 验证并缓存 Node.js 版本
                     claudeSDKBridge.verifyAndCacheNodePath(path);
                     LOG.info("Using manually configured Node.js path: " + path);
@@ -373,7 +367,7 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
 
                         // 设置到两个 bridge
                         claudeSDKBridge.setNodeExecutable(detectedPath);
-                        codexSDKBridge.setNodeExecutable(detectedPath);
+                        // Removed codex: codexSDKBridge.setNodeExecutable(detectedPath);
 
                         // 验证并缓存版本信息
                         claudeSDKBridge.verifyAndCacheNodePath(detectedPath);
@@ -481,7 +475,7 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
                 }
             };
 
-            this.handlerContext = new HandlerContext(project, claudeSDKBridge, codexSDKBridge, settingsService, jsCallback);
+            this.handlerContext = new HandlerContext(project, claudeSDKBridge, settingsService, jsCallback);
             handlerContext.setSession(session);
 
             this.messageDispatcher = new MessageDispatcher();
@@ -636,7 +630,7 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
             if (savedNodePath != null && !savedNodePath.trim().isEmpty()) {
                 String trimmed = savedNodePath.trim();
                 claudeSDKBridge.setNodeExecutable(trimmed);
-                codexSDKBridge.setNodeExecutable(trimmed);
+                // Removed codex: codexSDKBridge.setNodeExecutable(trimmed);
                 nodeResult = claudeSDKBridge.verifyAndCacheNodePath(trimmed);
                 if (nodeResult == null || !nodeResult.isFound()) {
                     showInvalidNodePathPanel(trimmed, nodeResult != null ? nodeResult.getErrorMessage() : null);
@@ -647,7 +641,7 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
                 if (nodeResult != null && nodeResult.isFound() && nodeResult.getNodePath() != null) {
                     props.setValue(NODE_PATH_PROPERTY_KEY, nodeResult.getNodePath());
                     claudeSDKBridge.setNodeExecutable(nodeResult.getNodePath());
-                    codexSDKBridge.setNodeExecutable(nodeResult.getNodePath());
+                    // Removed codex: codexSDKBridge.setNodeExecutable(nodeResult.getNodePath());
                     // 关键修复：缓存自动检测到的 Node.js 版本
                     claudeSDKBridge.verifyAndCacheNodePath(nodeResult.getNodePath());
                 }
@@ -1022,13 +1016,13 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
                     props.unsetValue(NODE_PATH_PROPERTY_KEY);
                     // 同时清除 Claude 和 Codex 的手动配置
                     claudeSDKBridge.setNodeExecutable(null);
-                    codexSDKBridge.setNodeExecutable(null);
+                    // Removed codex: codexSDKBridge.setNodeExecutable(null);
                     LOG.info("Cleared manual Node.js path");
                 } else {
                     props.setValue(NODE_PATH_PROPERTY_KEY, manualPath);
                     // 同时设置 Claude 和 Codex 的 Node.js 路径，并缓存版本信息
                     claudeSDKBridge.setNodeExecutable(manualPath);
-                    codexSDKBridge.setNodeExecutable(manualPath);
+                    // Removed codex: codexSDKBridge.setNodeExecutable(manualPath);
                     claudeSDKBridge.verifyAndCacheNodePath(manualPath);
                     LOG.info("Saved manual Node.js path: " + manualPath);
                 }
@@ -1210,7 +1204,7 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
 
             callJavaScript("clearMessages");
 
-            session = new ClaudeSession(project, claudeSDKBridge, codexSDKBridge);
+            session = new ClaudeSession(project, claudeSDKBridge);
 
             // 恢复之前保存的 permission mode、provider、model
             session.setPermissionMode(previousPermissionMode);
@@ -1754,7 +1748,7 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
                 LOG.info("Old session interrupted, creating new session");
 
                 // 创建全新的 Session 对象
-                session = new ClaudeSession(project, claudeSDKBridge, codexSDKBridge);
+                session = new ClaudeSession(project, claudeSDKBridge);
 
                 // 恢复之前保存的 permission mode、provider、model
                 session.setPermissionMode(previousPermissionMode);
@@ -2107,18 +2101,6 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
                 }
             } catch (Exception e) {
                 LOG.warn("清理 Claude 进程失败: " + e.getMessage());
-            }
-
-            try {
-                if (codexSDKBridge != null) {
-                    int activeCount = codexSDKBridge.getActiveProcessCount();
-                    if (activeCount > 0) {
-                        LOG.info("正在清理 " + activeCount + " 个活跃的 Codex 进程...");
-                    }
-                    codexSDKBridge.cleanupAllProcesses();
-                }
-            } catch (Exception e) {
-                LOG.warn("清理 Codex 进程失败: " + e.getMessage());
             }
 
             try {

@@ -16,16 +16,7 @@ public enum SdkDefinition {
         "@anthropic-ai/claude-agent-sdk",
         "^0.2.3",
         Arrays.asList("@anthropic-ai/sdk", "@anthropic-ai/bedrock-sdk"),
-        "Claude AI 提供商所需，包含 Agent SDK 和 Bedrock 支持。"
-    ),
-
-    CODEX_SDK(
-        "codex-sdk",
-        "Codex SDK",
-        "@openai/codex-sdk",
-        "^0.80.0",
-        Collections.emptyList(),
-        "Codex AI 提供商所需。"
+        "Claude AI SDK with Agent SDK and Bedrock support."
     );
 
     private final String id;
@@ -108,8 +99,6 @@ public enum SdkDefinition {
     public static SdkDefinition fromProvider(String provider) {
         if ("claude".equalsIgnoreCase(provider)) {
             return CLAUDE_SDK;
-        } else if ("codex".equalsIgnoreCase(provider)) {
-            return CODEX_SDK;
         }
         return null;
     }

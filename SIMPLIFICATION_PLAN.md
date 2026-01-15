@@ -137,23 +137,30 @@ Each iteration:
 
 ## Section 13: Remove Codex from Types
 
-- [ ] Remove CODEX_MODELS from `webview/src/components/ChatInputBox/types.ts`
-- [ ] Remove 'codex' from ProviderType in `webview/src/types/provider.ts` if exists
-- [ ] Remove 'codex-sdk' from SdkId in `webview/src/types/dependency.ts`
+- [x] Remove CODEX_MODELS from `webview/src/components/ChatInputBox/types.ts` ✓
+- [x] Remove 'codex' from ProviderType in `webview/src/types/provider.ts` if exists ✓
+- [x] Remove 'codex-sdk' from SdkId in `webview/src/types/dependency.ts` ✓
+- [x] Remove CodexProviderConfig from provider.ts ✓
+- [x] Remove ReasoningEffort/REASONING_LEVELS from types.ts ✓
+- [x] Remove i18n from agentProvider.ts and slashCommandProvider.ts ✓
+- [x] Simplify McpApps in mcp.ts ✓
+- [x] Delete i18n directory ✓
 
 ## Section 14: Simplify Backend - ProviderHandler
 
-- [ ] Remove all Codex message types and handlers from `src/main/java/com/github/claudecodegui/handler/ProviderHandler.java`
+- [x] Remove all Codex message types and handlers from `src/main/java/com/github/claudecodegui/handler/ProviderHandler.java` ✓
 
 ## Section 15: Simplify Backend - CodemossSettingsService
 
-- [ ] Remove all Codex methods from `src/main/java/com/github/claudecodegui/CodemossSettingsService.java`
+- [x] Remove all Codex methods from `src/main/java/com/github/claudecodegui/CodemossSettingsService.java` ✓
 
 ## Section 16: Simplify Backend - Other Java Files
 
-- [ ] Remove Codex references from `src/main/java/com/github/claudecodegui/handler/HistoryHandler.java`
-- [ ] Remove Codex references from `src/main/java/com/github/claudecodegui/ClaudeSDKToolWindow.java`
-- [ ] Remove Codex references from `src/main/java/com/github/claudecodegui/dependency/SdkDefinition.java` if exists
+- [x] Remove Codex references from `src/main/java/com/github/claudecodegui/handler/HistoryHandler.java` ✓
+- [x] Remove Codex references from `src/main/java/com/github/claudecodegui/ClaudeSDKToolWindow.java` ✓
+- [x] Remove Codex references from `src/main/java/com/github/claudecodegui/dependency/SdkDefinition.java` ✓
+- [x] Remove Codex env config from `src/main/java/com/github/claudecodegui/bridge/EnvironmentConfigurator.java` ✓
+- [x] Remove reasoningEffort from `src/main/java/com/github/claudecodegui/session/SessionState.java` ✓
 
 ## Section 17: Replace Java Bundle Messages
 

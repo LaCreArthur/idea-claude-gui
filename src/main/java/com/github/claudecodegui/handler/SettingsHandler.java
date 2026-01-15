@@ -1,7 +1,6 @@
 package com.github.claudecodegui.handler;
 
 import com.github.claudecodegui.provider.claude.ClaudeHistoryReader;
-import com.github.claudecodegui.provider.codex.CodexHistoryReader;
 import com.github.claudecodegui.ClaudeSession;
 import com.github.claudecodegui.bridge.NodeDetector;
 import com.github.claudecodegui.model.NodeDetectionResult;
@@ -33,7 +32,6 @@ public class SettingsHandler extends BaseMessageHandler {
         "set_mode",
         "set_model",
         "set_provider",
-        "set_reasoning_effort",
         "get_node_path",
         "set_node_path",
         "get_usage_statistics",
@@ -76,9 +74,6 @@ public class SettingsHandler extends BaseMessageHandler {
                 return true;
             case "set_provider":
                 handleSetProvider(content);
-                return true;
-            case "set_reasoning_effort":
-                handleSetReasoningEffort(content);
                 return true;
             case "get_node_path":
                 handleGetNodePath();
@@ -377,35 +372,7 @@ public class SettingsHandler extends BaseMessageHandler {
     }
 
     /**
-     * 处理设置思考深度请求 (仅 Codex)
-     */
-    private void handleSetReasoningEffort(String content) {
-        try {
-            String effort = content;
-            if (content != null && !content.isEmpty()) {
-                try {
-                    Gson gson = new Gson();
-                    JsonObject json = gson.fromJson(content, JsonObject.class);
-                    if (json.has("reasoningEffort")) {
-                        effort = json.get("reasoningEffort").getAsString();
-                    }
-                } catch (Exception e) {
-                    // content 本身就是 effort
-                }
-            }
-
-            LOG.info("[SettingsHandler] Setting reasoning effort to: " + effort);
-
-            if (context.getSession() != null) {
-                context.getSession().setReasoningEffort(effort);
-            }
-        } catch (Exception e) {
-            LOG.error("[SettingsHandler] Failed to set reasoning effort: " + e.getMessage(), e);
-        }
-    }
-
-    /**
-     * 获取 Node.js 路径和版本信息.
+     * Get Node.js path and version info.
      */
     private void handleGetNodePath() {
         try {
@@ -428,8 +395,7 @@ public class SettingsHandler extends BaseMessageHandler {
                     props.setValue(NODE_PATH_PROPERTY_KEY, pathToSend);
                     // 使用 verifyAndCacheNodePath 而不是 setNodeExecutable，确保版本信息被缓存
                     context.getClaudeSDKBridge().verifyAndCacheNodePath(pathToSend);
-                    context.getCodexSDKBridge().setNodeExecutable(pathToSend);
-                }
+                                    }
             }
 
             final String finalPath = pathToSend;
@@ -474,8 +440,7 @@ public class SettingsHandler extends BaseMessageHandler {
             if (path == null || path.isEmpty()) {
                 props.unsetValue(NODE_PATH_PROPERTY_KEY);
                 context.getClaudeSDKBridge().setNodeExecutable(null);
-                context.getCodexSDKBridge().setNodeExecutable(null);
-                LOG.info("[SettingsHandler] Cleared manual Node.js path from settings");
+                                LOG.info("[SettingsHandler] Cleared manual Node.js path from settings");
 
                 NodeDetectionResult detected = context.getClaudeSDKBridge().detectNodeWithDetails();
                 if (detected != null && detected.isFound() && detected.getNodePath() != null) {
@@ -484,14 +449,12 @@ public class SettingsHandler extends BaseMessageHandler {
                     props.setValue(NODE_PATH_PROPERTY_KEY, finalPath);
                     // 使用 verifyAndCacheNodePath 确保版本信息被缓存
                     context.getClaudeSDKBridge().verifyAndCacheNodePath(finalPath);
-                    context.getCodexSDKBridge().setNodeExecutable(finalPath);
-                    verifySuccess = true;
+                                        verifySuccess = true;
                 }
             } else {
                 props.setValue(NODE_PATH_PROPERTY_KEY, path);
                 NodeDetectionResult result = context.getClaudeSDKBridge().verifyAndCacheNodePath(path);
-                context.getCodexSDKBridge().setNodeExecutable(path);
-                LOG.info("[SettingsHandler] Updated manual Node.js path from settings: " + path);
+                                LOG.info("[SettingsHandler] Updated manual Node.js path from settings: " + path);
                 finalPath = path;
                 if (result != null && result.isFound()) {
                     versionToSend = result.getNodeVersion();
@@ -530,14 +493,12 @@ public class SettingsHandler extends BaseMessageHandler {
     }
 
     /**
-     * Get usage statistics.
-     * Supports both Claude and Codex providers.
+     * Get usage statistics for Claude.
      */
     private void handleGetUsageStatistics(String content) {
         CompletableFuture.runAsync(() -> {
             try {
                 String projectPath = "all";
-                String provider = "claude"; // Default to Claude
 
                 if (content != null && !content.isEmpty() && !content.equals("{}")) {
                     try {
@@ -553,11 +514,6 @@ public class SettingsHandler extends BaseMessageHandler {
                                 projectPath = "all";
                             }
                         }
-
-                        // Parse provider (claude or codex)
-                        if (json.has("provider")) {
-                            provider = json.get("provider").getAsString();
-                        }
                     } catch (Exception e) {
                         if ("current".equals(content)) {
                             projectPath = context.getProject().getBasePath();
@@ -567,28 +523,10 @@ public class SettingsHandler extends BaseMessageHandler {
                     }
                 }
 
-                // Use corresponding reader based on provider
-                String json;
-                if ("codex".equals(provider)) {
-                    CodexHistoryReader reader = new CodexHistoryReader();
-                    CodexHistoryReader.ProjectStatistics stats = reader.getProjectStatistics(projectPath);
-
-                    // Debug logging for Codex statistics
-                    LOG.info("[SettingsHandler] Codex statistics - sessions: " + stats.totalSessions +
-                             ", cost: " + stats.estimatedCost +
-                             ", input tokens: " + stats.totalUsage.inputTokens +
-                             ", output tokens: " + stats.totalUsage.outputTokens +
-                             ", cache read tokens: " + stats.totalUsage.cacheReadTokens +
-                             ", total tokens: " + stats.totalUsage.totalTokens);
-
-                    Gson gson = new Gson();
-                    json = gson.toJson(stats);
-                } else {
-                    ClaudeHistoryReader reader = new ClaudeHistoryReader();
-                    ClaudeHistoryReader.ProjectStatistics stats = reader.getProjectStatistics(projectPath);
-                    Gson gson = new Gson();
-                    json = gson.toJson(stats);
-                }
+                ClaudeHistoryReader reader = new ClaudeHistoryReader();
+                ClaudeHistoryReader.ProjectStatistics stats = reader.getProjectStatistics(projectPath);
+                Gson gson = new Gson();
+                String json = gson.toJson(stats);
 
                 final String statsJsonFinal = json;
 
