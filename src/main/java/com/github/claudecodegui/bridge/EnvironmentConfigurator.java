@@ -105,7 +105,100 @@ public class EnvironmentConfigurator {
             }
         }
 
+        // 5. Set NODE_PATH to find SDK packages
+        // Look in: ~/.codemoss/dependencies/node_modules, global npm node_modules
+        configureNodePath(env, nodeExecutable);
+
         configurePermissionEnv(env);
+    }
+
+    /**
+     * Configure NODE_PATH to find SDK packages in global npm and custom locations.
+     */
+    private void configureNodePath(Map<String, String> env, String nodeExecutable) {
+        StringBuilder nodePath = new StringBuilder();
+        String separator = File.pathSeparator;
+        String home = System.getProperty("user.home");
+
+        // 1. Add ~/.codemoss/dependencies/node_modules (plugin's SDK install location)
+        if (home != null) {
+            String codemossDeps = home + File.separator + ".codemoss" + File.separator + "dependencies" + File.separator + "node_modules";
+            nodePath.append(codemossDeps);
+        }
+
+        // 2. Add global npm node_modules locations
+        if (PlatformUtils.isWindows()) {
+            String appData = System.getenv("APPDATA");
+            if (appData != null) {
+                nodePath.append(separator).append(appData).append("\\npm\\node_modules");
+            }
+        } else {
+            // macOS/Linux: Check common global npm locations
+            String[] globalPaths = {
+                "/usr/local/lib/node_modules",           // npm default global
+                "/opt/homebrew/lib/node_modules",        // Homebrew on Apple Silicon
+                "/usr/lib/node_modules",                 // Linux system npm
+                home + "/.npm-global/lib/node_modules",  // Custom npm prefix
+                home + "/.nvm/versions/node"             // NVM - we'll try to find current version
+            };
+
+            for (String gp : globalPaths) {
+                if (gp != null && new File(gp).exists()) {
+                    nodePath.append(separator).append(gp);
+                }
+            }
+
+            // Try to get npm global prefix dynamically if node is available
+            if (nodeExecutable != null) {
+                try {
+                    String npmGlobalPath = getNpmGlobalPath(nodeExecutable);
+                    if (npmGlobalPath != null && !nodePath.toString().contains(npmGlobalPath)) {
+                        nodePath.append(separator).append(npmGlobalPath);
+                    }
+                } catch (Exception e) {
+                    LOG.debug("Could not determine npm global path: " + e.getMessage());
+                }
+            }
+        }
+
+        String nodePathStr = nodePath.toString();
+        if (!nodePathStr.isEmpty()) {
+            // Append to existing NODE_PATH if present
+            String existing = env.get("NODE_PATH");
+            if (existing != null && !existing.isEmpty()) {
+                nodePathStr = existing + separator + nodePathStr;
+            }
+            env.put("NODE_PATH", nodePathStr);
+            LOG.info("[EnvironmentConfigurator] Set NODE_PATH=" + nodePathStr);
+        }
+    }
+
+    /**
+     * Get npm global node_modules path by running npm root -g.
+     */
+    private String getNpmGlobalPath(String nodeExecutable) {
+        try {
+            File nodeFile = new File(nodeExecutable);
+            String nodeDir = nodeFile.getParent();
+            String npmCmd = PlatformUtils.isWindows() ? "npm.cmd" : "npm";
+            String npmPath = nodeDir != null ? nodeDir + File.separator + npmCmd : npmCmd;
+
+            ProcessBuilder pb = new ProcessBuilder(npmPath, "root", "-g");
+            pb.redirectErrorStream(true);
+            Process process = pb.start();
+
+            try (java.io.BufferedReader reader = new java.io.BufferedReader(
+                    new java.io.InputStreamReader(process.getInputStream()))) {
+                String line = reader.readLine();
+                int exitCode = process.waitFor();
+                if (exitCode == 0 && line != null && !line.isEmpty()) {
+                    return line.trim();
+                }
+            }
+        } catch (Exception e) {
+            LOG.debug("Failed to get npm global path: " + e.getMessage());
+        }
+        return null;
     }
 
     /**
