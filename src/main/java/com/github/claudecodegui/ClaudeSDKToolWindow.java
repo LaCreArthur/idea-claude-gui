@@ -483,8 +483,7 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
 
             this.messageDispatcher = new MessageDispatcher();
 
-            // 注册所有 Handler
-            messageDispatcher.registerHandler(new ProviderHandler(handlerContext));
+            // Register all handlers
             messageDispatcher.registerHandler(new McpServerHandler(handlerContext));
             messageDispatcher.registerHandler(new SkillHandler(handlerContext, mainPanel));
             messageDispatcher.registerHandler(new FileHandler(handlerContext));

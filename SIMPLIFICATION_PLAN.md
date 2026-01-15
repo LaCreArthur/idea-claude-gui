@@ -147,7 +147,7 @@ Node.js → stdout JSON → Java shows dialog → stdin JSON → Node.js returns
 ### Handlers to DELETE or MERGE
 
 - [x] **4.1** Delete `PromptEnhancerHandler.java` (441 lines) + all related frontend code
-- [ ] **4.2** Merge `ProviderHandler.java` into `SettingsHandler.java`
+- [x] **4.2** Merge `ProviderHandler.java` into `SettingsHandler.java` (~427 lines merged)
 - [ ] **4.3** Simplify `FileHandler.java` - remove unused features
 - [ ] **4.4** Simplify `HistoryHandler.java` - remove unused features
 - [ ] **4.5** Remove file-based IPC code from `PermissionService.java`
