@@ -1,4 +1,3 @@
-import { useTranslation } from 'react-i18next';
 import UsageStatisticsSection from '../../UsageStatisticsSection';
 import styles from './style.module.less';
 
@@ -7,12 +6,10 @@ interface UsageSectionProps {
 }
 
 const UsageSection = ({ currentProvider }: UsageSectionProps) => {
-  const { t } = useTranslation();
-
   return (
     <div className={styles.configSection}>
-      <h3 className={styles.sectionTitle}>{t('settings.usage')}</h3>
-      <p className={styles.sectionDesc}>{t('settings.usageDesc')}</p>
+      <h3 className={styles.sectionTitle}>Usage Statistics</h3>
+      <p className={styles.sectionDesc}>View your Token consumption, cost statistics and usage trend analysis</p>
       <UsageStatisticsSection currentProvider={currentProvider} />
     </div>
   );
