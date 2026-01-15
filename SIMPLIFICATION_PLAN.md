@@ -173,8 +173,8 @@ Each iteration:
 
 ## Section 18: Simplify ai-bridge
 
-- [ ] Remove Codex from `ai-bridge/channel-manager.js`
-- [ ] Remove Codex SDK functions from `ai-bridge/utils/sdk-loader.js`
+- [x] Remove Codex from `ai-bridge/channel-manager.js` ✓
+- [x] Remove Codex SDK functions from `ai-bridge/utils/sdk-loader.js` ✓
 
 ## Section 19: Remove i18n Config Files
 

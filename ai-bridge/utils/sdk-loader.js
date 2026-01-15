@@ -90,32 +90,17 @@ function resolveExternalPackageUrl(pkgName, sdkRootDir) {
 }
 
 /**
- * 获取 Claude SDK 的安装路径
+ * Get Claude SDK installation path
  */
 export function getClaudeSdkPath() {
     return join(DEPS_BASE, 'claude-sdk', 'node_modules', '@anthropic-ai', 'claude-agent-sdk');
 }
 
 /**
- * 获取 Codex SDK 的安装路径
- */
-export function getCodexSdkPath() {
-    return join(DEPS_BASE, 'codex-sdk', 'node_modules', '@openai', 'codex-sdk');
-}
-
-/**
- * 检查 Claude Code SDK 是否可用
+ * Check if Claude Code SDK is available
  */
 export function isClaudeSdkAvailable() {
     const sdkPath = getClaudeSdkPath();
-    return existsSync(sdkPath);
-}
-
-/**
- * 检查 Codex SDK 是否可用
- */
-export function isCodexSdkAvailable() {
-    const sdkPath = getCodexSdkPath();
     return existsSync(sdkPath);
 }
 
@@ -181,49 +166,7 @@ export async function loadClaudeSdk() {
 }
 
 /**
- * 动态加载 Codex SDK
- * @returns {Promise<{Codex: Class, ...}>}
- * @throws {Error} 如果 SDK 未安装
- */
-export async function loadCodexSdk() {
-    // 🔧 优先返回已缓存的 SDK
-    if (sdkCache.has('codex')) {
-        return sdkCache.get('codex');
-    }
-
-    // 🔧 如果正在加载中，返回同一个 Promise，防止并发重复加载
-    if (loadingPromises.has('codex')) {
-        return loadingPromises.get('codex');
-    }
-
-    const sdkPath = getCodexSdkPath();
-
-    if (!existsSync(sdkPath)) {
-        throw new Error('SDK_NOT_INSTALLED:codex');
-    }
-
-    // 🔧 创建加载 Promise 并缓存
-    const loadPromise = (async () => {
-        try {
-            const sdkRootDir = getSdkRootDir('codex-sdk');
-            const resolvedUrl = resolveExternalPackageUrl('@openai/codex-sdk', sdkRootDir);
-            const sdk = await import(resolvedUrl);
-
-            sdkCache.set('codex', sdk);
-            return sdk;
-        } catch (error) {
-            throw new Error(`Failed to load Codex SDK: ${error.message}`);
-        } finally {
-            loadingPromises.delete('codex');
-        }
-    })();
-
-    loadingPromises.set('codex', loadPromise);
-    return loadPromise;
-}
-
-/**
- * 加载 Anthropic 基础 SDK（用于 API 回退）
+ * Load Anthropic base SDK (for API fallback)
  * @returns {Promise<{Anthropic: Class}>}
  */
 export async function loadAnthropicSdk() {
@@ -305,17 +248,13 @@ export async function loadBedrockSdk() {
 }
 
 /**
- * 获取所有 SDK 的状态
+ * Get SDK status
  */
 export function getSdkStatus() {
     return {
         claude: {
             installed: isClaudeSdkAvailable(),
             path: getClaudeSdkPath()
-        },
-        codex: {
-            installed: isCodexSdkAvailable(),
-            path: getCodexSdkPath()
         }
     };
 }
@@ -329,22 +268,15 @@ export function clearSdkCache() {
 }
 
 /**
- * 检查 SDK 是否安装并抛出友好错误
- * @param {string} provider - 'claude' 或 'codex'
- * @throws {Error} 如果 SDK 未安装
+ * Check if SDK is installed and throw friendly error
+ * @param {string} provider - 'claude'
+ * @throws {Error} if SDK not installed
  */
 export function requireSdk(provider) {
     if (provider === 'claude' && !isClaudeSdkAvailable()) {
         const error = new Error('Claude Code SDK not installed. Please install via Settings > Dependencies.');
         error.code = 'SDK_NOT_INSTALLED';
         error.provider = 'claude';
-        throw error;
-    }
-
-    if (provider === 'codex' && !isCodexSdkAvailable()) {
-        const error = new Error('Codex SDK not installed. Please install via Settings > Dependencies.');
-        error.code = 'SDK_NOT_INSTALLED';
-        error.provider = 'codex';
         throw error;
     }
 }

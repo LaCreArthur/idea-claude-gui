@@ -2,31 +2,30 @@
 
 /**
  * AI Bridge Channel Manager
- * 统一的 Claude 和 Codex SDK 桥接入口
+ * Claude SDK bridge entry point
  *
- * 命令格式:
+ * Usage:
  *   node channel-manager.js <provider> <command> [args...]
  *
  * Provider:
  *   claude - Claude Agent SDK (@anthropic-ai/claude-agent-sdk)
- *   codex  - Codex SDK (@openai/codex-sdk)
+ *   system - System commands (SDK status checks)
  *
  * Commands:
- *   send                - 发送消息（参数通过 stdin JSON 传递）
- *   sendWithAttachments - 发送带附件的消息（仅 claude）
- *   getSession          - 获取会话历史消息（仅 claude）
+ *   send                - Send message (params via stdin JSON)
+ *   sendWithAttachments - Send message with attachments
+ *   getSession          - Get session history
  *
- * 设计说明：
- * - 统一入口，根据 provider 参数分发到不同的服务
- * - sessionId/threadId 由调用方（Java）维护
- * - 消息和其他参数通过 stdin 以 JSON 格式传递
+ * Design:
+ * - Unified entry point for Claude SDK
+ * - sessionId managed by caller (Java)
+ * - Messages and params passed via stdin as JSON
  */
 
-// 共用工具
+// Utils
 import { readStdinData } from './utils/stdin-utils.js';
 import { handleClaudeCommand } from './channels/claude-channel.js';
-import { handleCodexCommand } from './channels/codex-channel.js';
-import { getSdkStatus, isClaudeSdkAvailable, isCodexSdkAvailable } from './utils/sdk-loader.js';
+import { getSdkStatus, isClaudeSdkAvailable } from './utils/sdk-loader.js';
 
 // 🔧 诊断日志：启动信息
 console.log('[DIAG-ENTRY] ========== CHANNEL-MANAGER STARTUP ==========');
@@ -65,12 +64,11 @@ process.on('unhandledRejection', (reason) => {
 });
 
 /**
- * 处理系统级命令（如 SDK 状态检查）
+ * Handle system-level commands (SDK status checks)
  */
 async function handleSystemCommand(command, args, stdinData) {
   switch (command) {
     case 'getSdkStatus':
-      // 返回所有 SDK 的安装状态
       const status = getSdkStatus();
       console.log(JSON.stringify({
         success: true,
@@ -79,18 +77,9 @@ async function handleSystemCommand(command, args, stdinData) {
       break;
 
     case 'checkClaudeSdk':
-      // 检查 Claude SDK 是否可用
       console.log(JSON.stringify({
         success: true,
         available: isClaudeSdkAvailable()
-      }));
-      break;
-
-    case 'checkCodexSdk':
-      // 检查 Codex SDK 是否可用
-      console.log(JSON.stringify({
-        success: true,
-        available: isCodexSdkAvailable()
       }));
       break;
 
@@ -105,7 +94,6 @@ async function handleSystemCommand(command, args, stdinData) {
 
 const providerHandlers = {
   claude: handleClaudeCommand,
-  codex: handleCodexCommand,
   system: handleSystemCommand
 };
 
@@ -116,7 +104,7 @@ const providerHandlers = {
     // 验证 provider
     console.log('[DIAG-EXEC] Validating provider...');
     if (!provider || !providerHandlers[provider]) {
-      console.error('Invalid provider. Use "claude", "codex", or "system"');
+      console.error('Invalid provider. Use "claude" or "system"');
       console.log(JSON.stringify({
         success: false,
         error: 'Invalid provider: ' + provider
