@@ -36,12 +36,12 @@ Each iteration:
 
 ## Section 2: Delete Codex Provider Files (Java)
 
-- [ ] Delete `src/main/java/com/github/claudecodegui/provider/codex/CodexSDKBridge.java`
-- [ ] Delete `src/main/java/com/github/claudecodegui/provider/codex/CodexHistoryReader.java`
-- [ ] Delete `src/main/java/com/github/claudecodegui/session/CodexMessageHandler.java`
-- [ ] Delete `src/main/java/com/github/claudecodegui/settings/CodexProviderManager.java`
-- [ ] Delete `src/main/java/com/github/claudecodegui/settings/CodexSettingsManager.java`
-- [ ] Delete entire directory `src/main/java/com/github/claudecodegui/provider/codex/` if still exists
+- [x] Delete `src/main/java/com/github/claudecodegui/provider/codex/CodexSDKBridge.java` ✓
+- [x] Delete `src/main/java/com/github/claudecodegui/provider/codex/CodexHistoryReader.java` ✓
+- [x] Delete `src/main/java/com/github/claudecodegui/session/CodexMessageHandler.java` ✓
+- [x] Delete `src/main/java/com/github/claudecodegui/settings/CodexProviderManager.java` ✓
+- [x] Delete `src/main/java/com/github/claudecodegui/settings/CodexSettingsManager.java` ✓
+- [x] Delete entire directory `src/main/java/com/github/claudecodegui/provider/codex/` if still exists ✓
 
 ## Section 3: Delete Codex Provider Files (ai-bridge)
 
