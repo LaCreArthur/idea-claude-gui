@@ -1,205 +1,289 @@
-# Codebase Simplification Execution Plan
+# Claude Code GUI - Radical Simplification Plan
 
-## Instructions for Claude (Ralph Loop)
+## Instructions for Agent (Ralph Loop)
 
-Each iteration:
-1. Read this file and find the FIRST unchecked task (- [ ])
+**Execution Model:**
+1. Read this file, find FIRST unchecked task `- [ ]`
 2. Execute that task completely
-3. Mark the task complete: - [x] Task description ✓
-4. Commit: `git add -A && git commit -m "chore: [brief task description]"`
-5. If ALL tasks checked → Write to SIMPLIFICATION_STATE.md: "PHASE: 3 - REVIEW"
+3. Mark complete: `- [x] Task description`
+4. Run tests: `./gradlew clean buildPlugin`
+5. If build passes, commit: `git add -A && git commit -m "refactor: [brief description]"`
+6. Continue to next unchecked task
+7. When phase complete, verify all functionality before moving to next phase
 
-## Rules
-- ONE task per iteration
-- ALWAYS commit after each task
-- If task fails, mark with ⚠️ and note, move to next
-- Preserve English strings when removing i18n
-- Keep Claude Code fully functional
+**Philosophy:** SpaceX Raptor iteration - delete everything non-essential, simplify what remains.
 
 ---
 
-## Section 1: Delete Non-English Locale Files
+## Goal
 
-- [x] Delete `webview/src/i18n/locales/zh.json` ✓
-- [x] Delete `webview/src/i18n/locales/zh-TW.json` ✓
-- [x] Delete `webview/src/i18n/locales/ja.json` ✓
-- [x] Delete `webview/src/i18n/locales/es.json` ✓
-- [x] Delete `webview/src/i18n/locales/fr.json` ✓
-- [x] Delete `webview/src/i18n/locales/hi.json` ✓
-- [x] Delete `src/main/resources/messages/ClaudeCodeGuiBundle_zh.properties` ✓
-- [x] Delete `src/main/resources/messages/ClaudeCodeGuiBundle_zh_TW.properties` ✓
-- [x] Delete `src/main/resources/messages/ClaudeCodeGuiBundle_ja.properties` ✓
-- [x] Delete `src/main/resources/messages/ClaudeCodeGuiBundle_es.properties` ✓
-- [x] Delete `src/main/resources/messages/ClaudeCodeGuiBundle_fr.properties` ✓
-- [x] Delete `src/main/resources/messages/ClaudeCodeGuiBundle_hi.properties` ✓
-- [x] Delete `src/main/resources/messages/ClaudeCodeGuiBundle_en.properties` ✓
+Transform complex, over-engineered plugin into focused Claude Code GUI.
 
-## Section 2: Delete Codex Provider Files (Java)
-
-- [x] Delete `src/main/java/com/github/claudecodegui/provider/codex/CodexSDKBridge.java` ✓
-- [x] Delete `src/main/java/com/github/claudecodegui/provider/codex/CodexHistoryReader.java` ✓
-- [x] Delete `src/main/java/com/github/claudecodegui/session/CodexMessageHandler.java` ✓
-- [x] Delete `src/main/java/com/github/claudecodegui/settings/CodexProviderManager.java` ✓
-- [x] Delete `src/main/java/com/github/claudecodegui/settings/CodexSettingsManager.java` ✓
-- [x] Delete entire directory `src/main/java/com/github/claudecodegui/provider/codex/` if still exists ✓
-
-## Section 3: Delete Codex Provider Files (ai-bridge)
-
-- [x] Delete `ai-bridge/channels/codex-channel.js` ✓
-- [x] Delete `ai-bridge/services/codex/` directory (entire directory) ✓
-
-## Section 4: Delete Codex UI and Documentation
-
-- [x] Delete `webview/src/components/CodexProviderDialog.tsx` ✓
-- [x] Delete `docs/codex/` directory (entire directory) ✓
-- [x] Delete `docs/sdk/codex-cli-sdk.md` if exists ✓
-- [x] Delete `docs/sdk/codex-sdk-npm-demo.md` if exists ✓
-- [x] Delete `docs/sdk/codex-sdk.md` if exists ✓
-
-## Section 5: Remove i18n Dependencies
-
-- [x] Remove i18next and react-i18next from `webview/package.json` and run npm install ✓
-- [x] Remove `import './i18n/config'` from `webview/src/main.tsx` ✓
-- [x] Remove i18n mock from `webview/src/test/setup.ts` ✓
-- [x] Remove i18n declarations from `webview/src/global.d.ts` ✓
-
-## Section 6: Replace Translations in React Components (Batch 1 - Core)
-
-- [x] Remove i18n from `webview/src/App.tsx` - replace t() calls with English strings ✓
-- [x] Remove i18n from `webview/src/components/settings/index.tsx` ✓
-- [x] Remove i18n from `webview/src/components/settings/BasicConfigSection/index.tsx` - also remove language selector UI ✓
-- [x] Remove i18n from `webview/src/components/settings/SettingsSidebar/index.tsx` ✓
-- [x] Remove i18n from `webview/src/components/settings/SettingsHeader/index.tsx` ✓
-
-## Section 7: Replace Translations in React Components (Batch 2 - Settings)
-
-- [x] Remove i18n from `webview/src/components/settings/ProviderList/index.tsx` ✓
-- [x] Remove i18n from `webview/src/components/settings/ProviderList/ImportConfirmDialog.tsx` ✓
-- [x] Remove i18n from `webview/src/components/settings/ProviderManageSection/index.tsx` ✓
-- [x] Remove i18n from `webview/src/components/settings/DependencySection/index.tsx` - also remove codex-sdk ✓
-- [x] Remove i18n from `webview/src/components/settings/UsageSection/index.tsx` ✓
-- [x] Remove i18n from `webview/src/components/settings/AgentSection/index.tsx` ✓
-- [x] Remove i18n from `webview/src/components/settings/CommunitySection/index.tsx` ✓
-- [x] Remove i18n from `webview/src/components/settings/ConfigInfoDisplay/index.tsx` ✓
-- [x] Remove i18n from `webview/src/components/settings/PlaceholderSection/index.tsx` ✓
-
-## Section 8: Replace Translations in React Components (Batch 3 - ChatInputBox)
-
-- [x] Remove i18n from `webview/src/components/ChatInputBox/ChatInputBox.tsx` ✓
-- [x] Remove i18n from `webview/src/components/ChatInputBox/ButtonArea.tsx` ✓
-- [x] Remove i18n from `webview/src/components/ChatInputBox/ContextBar.tsx` ✓
-- [x] Remove i18n from `webview/src/components/ChatInputBox/TokenIndicator.tsx` ✓
-- [x] Remove i18n from `webview/src/components/ChatInputBox/AttachmentList.tsx` ✓
-- [x] Remove i18n from `webview/src/components/ChatInputBox/PromptEnhancerDialog.tsx` ✓
-- [x] Remove i18n from `webview/src/components/ChatInputBox/Dropdown/index.tsx` ✓
-
-## Section 9: Replace Translations + Remove Codex (ChatInputBox selectors)
-
-- [x] Remove i18n and Codex models from `webview/src/components/ChatInputBox/selectors/ModelSelect.tsx` ✓
-- [x] Remove i18n from `webview/src/components/ChatInputBox/selectors/ModeSelect.tsx` ✓
-- [x] Remove i18n from `webview/src/components/ChatInputBox/selectors/ConfigSelect.tsx` ✓
-- [x] Remove i18n and Codex provider from `webview/src/components/ChatInputBox/selectors/ProviderSelect.tsx` ✓
-- [x] Delete `webview/src/components/ChatInputBox/selectors/ReasoningSelect.tsx` (Codex-only) ✓
-
-## Section 10: Replace Translations in React Components (Batch 4 - Dialogs & Tools)
-
-- [x] Remove i18n from `webview/src/components/history/HistoryView.tsx` ✓
-- [x] Remove i18n from `webview/src/components/mcp/McpSettingsSection.tsx` ✓
-- [x] Remove i18n from `webview/src/components/mcp/McpHelpDialog.tsx` ✓
-- [x] Remove i18n from `webview/src/components/mcp/McpPresetDialog.tsx` ✓
-- [x] Remove i18n from `webview/src/components/mcp/McpServerDialog.tsx` ✓
-- [x] Remove i18n from `webview/src/components/skills/SkillsSettingsSection.tsx` ✓
-- [x] Remove i18n from `webview/src/components/skills/SkillHelpDialog.tsx` ✓
-
-## Section 11: Replace Translations in React Components (Batch 5 - Tool Blocks)
-
-- [x] Remove i18n from `webview/src/components/toolBlocks/BashToolBlock.tsx` ✓
-- [x] Remove i18n from `webview/src/components/toolBlocks/EditToolBlock.tsx` ✓
-- [x] Remove i18n from `webview/src/components/toolBlocks/ReadToolBlock.tsx` ✓
-- [x] Remove i18n from `webview/src/components/toolBlocks/GenericToolBlock.tsx` ✓
-- [x] Remove i18n from `webview/src/components/toolBlocks/TodoListBlock.tsx` ✓
-
-## Section 12: Replace Translations in React Components (Batch 6 - Remaining)
-
-- [x] Remove i18n from `webview/src/components/MarkdownBlock.tsx` ✓
-- [x] Remove i18n from `webview/src/components/PermissionDialog.tsx` ✓
-- [x] Remove i18n from `webview/src/components/ConfirmDialog.tsx` ✓ (already clean - uses props)
-- [x] Remove i18n from `webview/src/components/ProviderDialog.tsx` ✓
-- [x] Remove i18n from `webview/src/components/AgentDialog.tsx` ✓
-- [x] Remove i18n from `webview/src/components/AskUserQuestionDialog.tsx` ✓
-- [x] Remove i18n from `webview/src/components/PlanApprovalDialog.tsx` ✓
-- [x] Remove i18n from `webview/src/components/RewindDialog.tsx` ✓
-- [x] Remove i18n from `webview/src/components/RewindSelectDialog.tsx` ✓
-- [x] Remove i18n from `webview/src/components/ScrollControl.tsx` ✓
-- [x] Remove i18n from `webview/src/components/WaitingIndicator.tsx` ✓
-- [x] Remove i18n from `webview/src/components/BlinkingLogo/index.tsx` ✓ (also simplified to Claude-only)
-- [x] Remove i18n from `webview/src/components/UsageStatisticsSection.tsx` ✓
-
-## Section 13: Remove Codex from Types
-
-- [x] Remove CODEX_MODELS from `webview/src/components/ChatInputBox/types.ts` ✓
-- [x] Remove 'codex' from ProviderType in `webview/src/types/provider.ts` if exists ✓
-- [x] Remove 'codex-sdk' from SdkId in `webview/src/types/dependency.ts` ✓
-- [x] Remove CodexProviderConfig from provider.ts ✓
-- [x] Remove ReasoningEffort/REASONING_LEVELS from types.ts ✓
-- [x] Remove i18n from agentProvider.ts and slashCommandProvider.ts ✓
-- [x] Simplify McpApps in mcp.ts ✓
-- [x] Delete i18n directory ✓
-
-## Section 14: Simplify Backend - ProviderHandler
-
-- [x] Remove all Codex message types and handlers from `src/main/java/com/github/claudecodegui/handler/ProviderHandler.java` ✓
-
-## Section 15: Simplify Backend - CodemossSettingsService
-
-- [x] Remove all Codex methods from `src/main/java/com/github/claudecodegui/CodemossSettingsService.java` ✓
-
-## Section 16: Simplify Backend - Other Java Files
-
-- [x] Remove Codex references from `src/main/java/com/github/claudecodegui/handler/HistoryHandler.java` ✓
-- [x] Remove Codex references from `src/main/java/com/github/claudecodegui/ClaudeSDKToolWindow.java` ✓
-- [x] Remove Codex references from `src/main/java/com/github/claudecodegui/dependency/SdkDefinition.java` ✓
-- [x] Remove Codex env config from `src/main/java/com/github/claudecodegui/bridge/EnvironmentConfigurator.java` ✓
-- [x] Remove reasoningEffort from `src/main/java/com/github/claudecodegui/session/SessionState.java` ✓
-
-## Section 17: Replace Java Bundle Messages
-
-- [x] Replace ClaudeCodeGuiBundle.message() calls in `src/main/java/com/github/claudecodegui/handler/McpServerHandler.java` ✓
-- [x] Replace ClaudeCodeGuiBundle.message() calls in `src/main/java/com/github/claudecodegui/handler/FileExportHandler.java` ✓
-- [x] Replace ClaudeCodeGuiBundle.message() calls in `src/main/java/com/github/claudecodegui/settings/ProviderManager.java` ✓
-- [x] Replace ClaudeCodeGuiBundle.message() calls in `src/main/java/com/github/claudecodegui/SendSelectionToTerminalAction.java` ✓
-- [x] Replace ClaudeCodeGuiBundle.message() calls in `src/main/java/com/github/claudecodegui/QuickFixWithClaudeAction.java` ✓
-- [x] Replace ClaudeCodeGuiBundle.message() calls in `src/main/java/com/github/claudecodegui/ClaudeSDKToolWindow.java` ✓
-
-## Section 18: Simplify ai-bridge
-
-- [x] Remove Codex from `ai-bridge/channel-manager.js` ✓
-- [x] Remove Codex SDK functions from `ai-bridge/utils/sdk-loader.js` ✓
-
-## Section 19: Remove i18n Config Files
-
-- [x] Remove resource-bundle from `src/main/resources/META-INF/plugin.xml` ✓
-- [x] Delete `webview/src/i18n/` directory entirely ✓ (already deleted)
-- [x] Delete `src/main/resources/messages/ClaudeCodeGuiBundle.properties` ✓
-- [x] Delete `src/main/java/com/github/claudecodegui/ClaudeCodeGuiBundle.java` ✓
-- [x] Delete `src/main/java/com/github/claudecodegui/util/LanguageConfigService.java` ✓
-- [x] Remove language config injection from ClaudeSDKToolWindow.java ✓
-
-## Section 20: Update Documentation
-
-- [x] Update `CLAUDE.md` - remove i18n reference from Code Style section ✓
-- [x] Update `README.md` - remove Codex/OpenAI references ✓
-
-## Section 21: Verification
-
-- [x] Run `cd webview && npm run build` - verify webview builds ✓
-- [x] Run `cd webview && npm test` - verify webview tests pass ✓
-- [x] Run `cd ai-bridge && npm test` - verify ai-bridge tests pass ✓
-- [x] Run `./gradlew clean compileJava` - verify Java compiles ✓
+| Component | Before | After | Reduction |
+|-----------|--------|-------|-----------|
+| ai-bridge (Node.js) | ~4,800 lines | ~150 lines | 97% |
+| Java | ~15,000 lines | ~8,000 lines | 47% |
+| Settings options | ~30 | ~5 | 83% |
 
 ---
 
-## Progress Tracking
+## PHASE 1: Replace File-Based IPC with stdin/stdout
 
-Total tasks: ~95
-Completed: 0
+**Current Problem:** Node.js and Java communicate via file polling (slow, complex, race conditions)
+
+**Solution:** Use stdin/stdout JSON lines (fast, simple, reliable)
+
+### Current Flow (Complex - 7 steps)
+```
+Node.js → writes file → Java polls (500ms) → shows dialog →
+JS responds → Java writes file → Node.js polls (100ms) → returns
+```
+
+### New Flow (Simple - 3 steps)
+```
+Node.js → stdout JSON → Java shows dialog → stdin JSON → Node.js returns
+```
+
+### Tasks
+
+- [x] **1.1** Create `ai-bridge/bridge.js` - new minimal bridge (~150 lines)
+  - Single file that imports Claude SDK
+  - Reads command from stdin
+  - Streams events to stdout as JSON lines
+  - Handles permission callbacks via stdout request + stdin response
+  - Handles AskUserQuestion via stdout request + stdin response
+  - Format: `{"type": "...", "data": {...}}`
+
+- [ ] **1.2** Add stdin writer to `ClaudeSDKBridge.java`
+  - Add `sendToProcess(String json)` method that writes to process stdin
+  - Modify output reader to parse JSON lines
+  - Dispatch events based on `type` field
+
+- [ ] **1.3** Modify `PermissionService.java` to use stdin/stdout
+  - Remove file polling thread entirely
+  - Remove file writing code
+  - When permission request received from stdout, show dialog
+  - When user responds, send response via stdin
+  - Same for AskUserQuestion
+
+- [ ] **1.4** Update permission flow in `PermissionHandler.java`
+  - Remove file-based request handling
+  - Receive permission requests from process stdout
+  - Send responses via process stdin
+
+- [ ] **1.5** Test Phase 1 completion
+  - Build plugin: `./gradlew clean buildPlugin`
+  - Test: Send message, receive response
+  - Test: Permission dialog appears in Ask mode
+  - Test: AskUserQuestion dialog works
+  - Test: Plan mode works
+  - Test: Skip permissions mode works
+
+---
+
+## PHASE 2: Delete Old ai-bridge Code
+
+**After Phase 1 works, delete all the old complex code**
+
+### Tasks
+
+- [ ] **2.1** Delete `ai-bridge/permission-handler.js` (437 lines)
+- [ ] **2.2** Delete `ai-bridge/channel-manager.js` (157 lines)
+- [ ] **2.3** Delete `ai-bridge/services/claude/message-service.js` (1784 lines)
+- [ ] **2.4** Delete `ai-bridge/services/claude/session-service.js` (138 lines)
+- [ ] **2.5** Delete `ai-bridge/services/claude/attachment-service.js` (144 lines)
+- [ ] **2.6** Delete `ai-bridge/services/prompt-enhancer.js` (376 lines)
+- [ ] **2.7** Delete `ai-bridge/services/quickfix-prompts.js` (134 lines)
+- [ ] **2.8** Delete `ai-bridge/services/system-prompts.js` (140 lines)
+- [ ] **2.9** Delete `ai-bridge/utils/permission-mapper.js` (223 lines)
+- [ ] **2.10** Delete `ai-bridge/utils/sdk-loader.js` (282 lines)
+- [ ] **2.11** Delete `ai-bridge/utils/async-stream.js` (56 lines)
+- [ ] **2.12** Delete `ai-bridge/channels/claude-channel.js` (103 lines)
+- [ ] **2.13** Simplify `ai-bridge/config/api-config.js` to ~50 lines (just auth loading)
+- [ ] **2.14** Delete empty directories in ai-bridge
+- [ ] **2.15** Update package.json - remove unused dependencies
+- [ ] **2.16** Test Phase 2 completion - full functionality still works
+
+---
+
+## PHASE 3: Simplify Settings UI
+
+**Delete features nobody uses, simplify what remains**
+
+### Settings to DELETE
+
+- [ ] **3.1** Delete `webview/src/components/UsageStatisticsSection.tsx` (648 lines)
+- [ ] **3.2** Remove UsageStatisticsSection from settings/index.tsx
+- [ ] **3.3** Remove any usage tracking code in Java handlers
+
+### Settings to SIMPLIFY
+
+- [ ] **3.4** Simplify `ProviderDialog.tsx` - just show auth status, not complex config
+  - Show: "Authenticated via CLI" or "Using API Key" or "Not configured"
+  - Remove: Complex environment variable configuration
+  - Remove: Multiple provider types
+
+- [ ] **3.5** Simplify `settings/index.tsx`
+  - Keep: Authentication status (read-only display)
+  - Keep: Model selection (simple dropdown)
+  - Keep: Permission mode (3 radio buttons: Plan/Ask/Skip)
+  - Keep: MCP Servers section
+  - Keep: Skills/Agents section
+  - Remove: Unused tabs/sections
+
+- [ ] **3.6** Simplify `SettingsHandler.java`
+  - Remove handlers for deleted settings
+  - Simplify remaining handlers
+
+- [ ] **3.7** Test Phase 3 - settings still work, UI is cleaner
+
+---
+
+## PHASE 4: Simplify Java Handlers
+
+### Handlers to DELETE or MERGE
+
+- [ ] **4.1** Delete `PromptEnhancerHandler.java` (441 lines) - feature creep
+- [ ] **4.2** Merge `ProviderHandler.java` into `SettingsHandler.java`
+- [ ] **4.3** Simplify `FileHandler.java` - remove unused features
+- [ ] **4.4** Simplify `HistoryHandler.java` - remove unused features
+- [ ] **4.5** Remove file-based IPC code from `PermissionService.java`
+- [ ] **4.6** Test Phase 4 - all core features work
+
+---
+
+## PHASE 5: Dead Code Cleanup
+
+- [ ] **5.1** Remove unused imports across all Java files
+- [ ] **5.2** Remove unused methods (use IDE's "find usages")
+- [ ] **5.3** Remove excessive debug logging
+- [ ] **5.4** Remove commented-out code
+- [ ] **5.5** Remove any remaining i18n code
+- [ ] **5.6** Remove any remaining Codex references
+- [ ] **5.7** Update build.gradle - remove unused dependencies
+- [ ] **5.8** Final test - everything works
+
+---
+
+## PHASE 6: Final Verification
+
+- [ ] **6.1** Test fresh install
+- [ ] **6.2** Test `claude login` authentication
+- [ ] **6.3** Test API key authentication
+- [ ] **6.4** Test sending messages
+- [ ] **6.5** Test streaming responses
+- [ ] **6.6** Test permission dialogs (Plan mode)
+- [ ] **6.7** Test permission dialogs (Ask mode)
+- [ ] **6.8** Test Skip permissions mode
+- [ ] **6.9** Test AskUserQuestion dialog
+- [ ] **6.10** Test session history
+- [ ] **6.11** Test resume session
+- [ ] **6.12** Test model selection
+- [ ] **6.13** Test MCP servers
+- [ ] **6.14** Build release: `./gradlew clean buildPlugin`
+
+---
+
+## Reference: New bridge.js Template
+
+```javascript
+#!/usr/bin/env node
+import { Claude } from '@anthropic-ai/claude-code';
+import { createInterface } from 'readline';
+
+// Simple JSON line protocol
+const send = (msg) => console.log(JSON.stringify(msg));
+
+const rl = createInterface({ input: process.stdin });
+const pendingResponses = new Map();
+let responseId = 0;
+
+rl.on('line', (line) => {
+  try {
+    const msg = JSON.parse(line);
+    if (msg.type === 'response' && pendingResponses.has(msg.id)) {
+      pendingResponses.get(msg.id)(msg);
+      pendingResponses.delete(msg.id);
+    }
+  } catch (e) {
+    send({ type: 'error', message: 'Invalid JSON: ' + e.message });
+  }
+});
+
+async function waitForResponse(id) {
+  return new Promise((resolve) => pendingResponses.set(id, resolve));
+}
+
+async function main() {
+  // Read initial command from stdin
+  const input = await new Promise((resolve) => {
+    rl.once('line', (line) => resolve(JSON.parse(line)));
+  });
+
+  const claude = new Claude();
+
+  try {
+    for await (const event of claude.sendMessage(input.message, {
+      cwd: input.cwd,
+      sessionId: input.sessionId,
+      permissionMode: input.permissionMode,
+      model: input.model,
+
+      canUseTool: async (toolName, toolInput) => {
+        const id = ++responseId;
+        send({ type: 'permission_request', id, toolName, toolInput });
+        const response = await waitForResponse(id);
+
+        if (response.allow) {
+          return { behavior: 'allow', updatedInput: response.updatedInput };
+        }
+        return { behavior: 'deny', message: response.message };
+      }
+    })) {
+      send({ type: 'event', event });
+    }
+    send({ type: 'done' });
+  } catch (error) {
+    send({ type: 'error', message: error.message });
+  }
+}
+
+main();
+```
+
+---
+
+## Key Preservation Requirements
+
+**MUST KEEP - Our Competitive Edge:**
+1. CLI auth discovery (`claude login` just works)
+2. API key support
+3. Claude Pro/Max subscription auth
+4. All three permission modes (Plan/Ask/Skip)
+
+**MUST KEEP - Core Features:**
+1. Chat interface
+2. Streaming responses
+3. Tool execution display
+4. Permission dialogs
+5. Session history
+6. MCP servers
+7. Skills/Agents
+
+---
+
+## Commands Reference
+
+```bash
+# Build
+./gradlew clean buildPlugin
+
+# Run tests
+./scripts/test-all.sh
+
+# Run IDE sandbox
+./gradlew runIde
+
+# Check for unused code
+./gradlew checkstyleMain
+```
