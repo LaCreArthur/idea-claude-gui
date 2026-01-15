@@ -3,18 +3,15 @@ package com.github.claudecodegui.permission;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.Project;
 
-import javax.swing.*;
-import java.io.*;
-import java.nio.file.*;
 import java.util.*;
 import java.util.concurrent.*;
 
 /**
- * 权限服务 - 处理Node.js的权限请求
+ * Permission service - handles permission requests via direct API (stdin/stdout protocol).
+ * File-based IPC has been removed in favor of the new stdin/stdout bridge protocol.
  */
 public class PermissionService {
 
@@ -22,15 +19,11 @@ public class PermissionService {
 
     private static PermissionService instance;
     private final Project project;
-    private final Path permissionDir;
     private final Gson gson = new Gson();
-    private WatchService watchService;
-    private Thread watchThread;
-    private boolean running = false;
 
-    // 记忆用户选择（工具+参数级别）
+    // Permission memory (tool+params level)
     private final Map<String, Integer> permissionMemory = new ConcurrentHashMap<>();
-    // 工具级别权限记忆（仅工具名 -> 是否总是允许）
+    // Tool-level permission memory (tool name -> always allow)
     private final Map<String, Boolean> toolOnlyPermissionMemory = new ConcurrentHashMap<>();
     private volatile PermissionDecisionListener decisionListener;
 
@@ -43,13 +36,8 @@ public class PermissionService {
     // PlanApproval dialog showers per project
     private final Map<Project, PlanApprovalDialogShower> planApprovalDialogShowers = new ConcurrentHashMap<>();
 
-    // 调试日志辅助方法
     private void debugLog(String tag, String message) {
         LOG.debug(String.format("[%s] %s", tag, message));
-    }
-
-    private void debugLog(String tag, String message, Object data) {
-        LOG.debug(String.format("[%s] %s | Data: %s", tag, message, this.gson.toJson(data)));
     }
 
     public enum PermissionResponse {
@@ -160,17 +148,6 @@ public class PermissionService {
 
     private PermissionService(Project project) {
         this.project = project;
-        // 使用临时目录进行通信
-        this.permissionDir = Paths.get(System.getProperty("java.io.tmpdir"), "claude-permission");
-        debugLog("INIT", "Permission dir: " + permissionDir);
-        debugLog("INIT", "java.io.tmpdir: " + System.getProperty("java.io.tmpdir"));
-        try {
-            Files.createDirectories(permissionDir);
-            debugLog("INIT", "Permission directory created/verified: " + permissionDir);
-        } catch (IOException e) {
-            debugLog("INIT_ERROR", "Failed to create permission dir: " + e.getMessage());
-            LOG.error("Error occurred", e);
-        }
     }
 
     public static synchronized PermissionService getInstance(Project project) {
@@ -186,11 +163,9 @@ public class PermissionService {
     }
 
     /**
-     * 注册权限对话框显示器（用于显示前端弹窗）
-     * 支持多项目：每个项目注册自己的显示器
-     *
-     * @param project 项目
-     * @param shower 权限对话框显示器
+     * Register permission dialog shower for a project
+     * @param project Project
+     * @param shower Permission dialog shower
      */
     public void registerDialogShower(Project project, PermissionDialogShower shower) {
         if (project != null && shower != null) {
@@ -201,10 +176,8 @@ public class PermissionService {
     }
 
     /**
-     * 注销权限对话框显示器
-     * 在项目关闭时调用，防止内存泄漏
-     *
-     * @param project 项目
+     * Unregister permission dialog shower for a project
+     * @param project Project
      */
     public void unregisterDialogShower(Project project) {
         if (project != null) {
@@ -294,11 +267,9 @@ public class PermissionService {
     }
 
     /**
-     * 根据文件路径匹配项目
-     * 从 inputs 中提取文件路径，然后找到对应的项目
-     *
-     * @param inputs 权限请求的输入参数
-     * @return 匹配的项目对应的 DialogShower，如果匹配不到则返回第一个注册的
+     * Find dialog shower by matching project based on file paths in inputs
+     * @param inputs Permission request input parameters
+     * @return Matched dialog shower, or first registered if no match
      */
     private PermissionDialogShower findDialogShowerByInputs(JsonObject inputs) {
         if (dialogShowers.isEmpty()) {
@@ -306,26 +277,26 @@ public class PermissionService {
             return null;
         }
 
-        // 只有一个项目时，直接返回
+        // Single project: return directly
         if (dialogShowers.size() == 1) {
             Map.Entry<Project, PermissionDialogShower> entry = dialogShowers.entrySet().iterator().next();
             debugLog("MATCH_PROJECT", "Single project registered: " + entry.getKey().getName());
             return entry.getValue();
         }
 
-        // 从 inputs 中提取文件路径
+        // Extract file path from inputs
         String filePath = extractFilePathFromInputs(inputs);
         if (filePath == null || filePath.isEmpty()) {
             debugLog("MATCH_PROJECT", "No file path found in inputs, using first registered project");
             return dialogShowers.values().iterator().next();
         }
 
-        // 规范化文件路径（统一使用 Unix 风格的 / 分隔符）
+        // Normalize file path (use Unix-style / separator)
         String normalizedFilePath = normalizePath(filePath);
         debugLog("MATCH_PROJECT", "Extracted file path: " + filePath +
             (filePath.equals(normalizedFilePath) ? "" : " (normalized: " + normalizedFilePath + ")"));
 
-        // 遍历所有项目，找到路径匹配的项目（选择最长匹配）
+        // Find best matching project (longest path match)
         Project bestMatch = null;
         int longestMatchLength = 0;
 
@@ -334,10 +305,8 @@ public class PermissionService {
             String projectPath = project.getBasePath();
 
             if (projectPath != null) {
-                // 规范化项目路径
                 String normalizedProjectPath = normalizePath(projectPath);
 
-                // 使用新的路径匹配方法（检查路径分隔符）
                 if (isFileInProject(normalizedFilePath, normalizedProjectPath)) {
                     if (normalizedProjectPath.length() > longestMatchLength) {
                         longestMatchLength = normalizedProjectPath.length();
@@ -354,44 +323,42 @@ public class PermissionService {
             return dialogShowers.get(bestMatch);
         }
 
-        // 匹配失败，使用第一个注册的项目
+        // No match found, use first registered
         Map.Entry<Project, PermissionDialogShower> firstEntry = dialogShowers.entrySet().iterator().next();
         debugLog("MATCH_PROJECT", "No matching project found, using first: " + firstEntry.getKey().getName());
         return firstEntry.getValue();
     }
 
     /**
-     * 从 inputs 中提取文件路径
-     * 支持多种字段：file_path、path、command 中的路径等
+     * Extract file path from inputs.
+     * Supports multiple fields: file_path, path, command paths, etc.
      */
     private String extractFilePathFromInputs(JsonObject inputs) {
         if (inputs == null) {
             return null;
         }
 
-        // 优先检查 file_path 字段（最常见）
+        // Check file_path field (most common)
         if (inputs.has("file_path") && !inputs.get("file_path").isJsonNull()) {
             return inputs.get("file_path").getAsString();
         }
 
-        // 检查 path 字段
+        // Check path field
         if (inputs.has("path") && !inputs.get("path").isJsonNull()) {
             return inputs.get("path").getAsString();
         }
 
-        // 检查 notebook_path 字段（Jupyter notebooks）
+        // Check notebook_path field (Jupyter notebooks)
         if (inputs.has("notebook_path") && !inputs.get("notebook_path").isJsonNull()) {
             return inputs.get("notebook_path").getAsString();
         }
 
-        // 从 command 字段中提取路径（尝试找到绝对路径）
+        // Extract path from command field
         if (inputs.has("command") && !inputs.get("command").isJsonNull()) {
             String command = inputs.get("command").getAsString();
-            // 简单的路径提取：查找以 / 开头的路径（Unix）或包含 :\ 的路径（Windows）
             String[] parts = command.split("\\s+");
             for (String part : parts) {
                 if (part.startsWith("/") || (part.length() > 2 && part.charAt(1) == ':')) {
-                    // 去除可能的引号
                     part = part.replace("\"", "").replace("'", "");
                     if (part.length() > 1) {
                         return part;
@@ -404,664 +371,33 @@ public class PermissionService {
     }
 
     /**
-     * 规范化文件路径
-     * 统一路径分隔符为 Unix 风格 (/)，确保跨平台兼容性
-     *
-     * @param path 原始路径
-     * @return 规范化后的路径，如果输入为 null 则返回 null
+     * Normalize file path to Unix-style (/) for cross-platform compatibility
      */
     private String normalizePath(String path) {
         if (path == null) {
             return null;
         }
-        // 将 Windows 风格的反斜杠替换为正斜杠
         return path.replace('\\', '/');
     }
 
     /**
-     * 检查文件路径是否属于项目路径
-     * 确保匹配的是完整的路径前缀，而不是字符串前缀
-     *
-     * 例如：
-     * - /home/user/my-app/file.txt 属于 /home/user/my-app ✓
-     * - /home/user/my-app-v2/file.txt 不属于 /home/user/my-app ✓
-     *
-     * @param filePath 文件路径（已规范化）
-     * @param projectPath 项目路径（已规范化）
-     * @return true 如果文件属于该项目
+     * Check if file path belongs to project path.
+     * Ensures complete path prefix match, not just string prefix.
      */
     private boolean isFileInProject(String filePath, String projectPath) {
         if (filePath == null || projectPath == null) {
             return false;
         }
 
-        // 完全相等的情况
         if (filePath.equals(projectPath)) {
             return true;
         }
 
-        // 确保 projectPath 以分隔符结尾，避免前缀匹配错误
-        // 例如：/home/user/my-app/ 而不是 /home/user/my-app
         String normalizedProjectPath = projectPath.endsWith("/")
             ? projectPath
             : projectPath + "/";
 
-        // 检查文件路径是否以 "项目路径/" 开头
         return filePath.startsWith(normalizedProjectPath);
-    }
-
-    /**
-     * 启动权限服务
-     */
-    public void start() {
-        if (running) {
-            debugLog("START", "Already running, skipping start");
-            return;
-        }
-
-        running = true;
-
-        watchThread = new Thread(this::watchLoop, "PermissionWatcher");
-        watchThread.setDaemon(true);
-        watchThread.start();
-
-        debugLog("START", "Started polling on: " + permissionDir);
-    }
-
-    /**
-     * 监控文件变化
-     * 改为轮询模式，以提高在 macOS /tmp 目录下的可靠性
-     */
-    private void watchLoop() {
-        debugLog("WATCH_LOOP", "Starting polling loop on: " + permissionDir);
-        int pollCount = 0;
-        while (running) {
-            try {
-                pollCount++;
-                File dir = permissionDir.toFile();
-                if (!dir.exists()) {
-                    dir.mkdirs();
-                }
-
-                // Scan for permission request files
-                File[] permissionFiles = dir.listFiles((d, name) -> name.startsWith("request-") && name.endsWith(".json"));
-
-                // Scan for ask-user-question request files
-                File[] askUserQuestionFiles = dir.listFiles((d, name) ->
-                    name.startsWith("ask-user-question-") && name.endsWith(".json") && !name.contains("-response"));
-
-                // Scan for plan-approval request files
-                File[] planApprovalFiles = dir.listFiles((d, name) ->
-                    name.startsWith("plan-approval-") && name.endsWith(".json") && !name.contains("-response"));
-
-                // Log status periodically (every ~10 seconds for better visibility)
-                if (pollCount % 20 == 0) {
-                    int permFileCount = permissionFiles != null ? permissionFiles.length : 0;
-                    int askFileCount = askUserQuestionFiles != null ? askUserQuestionFiles.length : 0;
-                    int planFileCount = planApprovalFiles != null ? planApprovalFiles.length : 0;
-                    LOG.info(String.format("[PermissionService] Poll #%d on %s: found %d permission + %d ask-user-question + %d plan-approval files",
-                        pollCount, permissionDir, permFileCount, askFileCount, planFileCount));
-                }
-
-                // Handle permission requests
-                if (permissionFiles != null && permissionFiles.length > 0) {
-                    for (File file : permissionFiles) {
-                        if (file.exists()) {
-                            debugLog("REQUEST_FOUND", "Found request file: " + file.getName());
-                            handlePermissionRequest(file.toPath());
-                        }
-                    }
-                }
-
-                // Handle ask-user-question requests
-                if (askUserQuestionFiles != null && askUserQuestionFiles.length > 0) {
-                    for (File file : askUserQuestionFiles) {
-                        if (file.exists()) {
-                            LOG.info("[PermissionService] FOUND ask-user-question file: " + file.getName());
-                            handleAskUserQuestionRequest(file.toPath());
-                        }
-                    }
-                }
-
-                // Handle plan-approval requests
-                if (planApprovalFiles != null && planApprovalFiles.length > 0) {
-                    for (File file : planApprovalFiles) {
-                        if (file.exists()) {
-                            debugLog("PLAN_APPROVAL_FOUND", "Found plan-approval file: " + file.getName());
-                            handlePlanApprovalRequest(file.toPath());
-                        }
-                    }
-                }
-
-                // 轮询间隔 500ms
-                Thread.sleep(500);
-            } catch (Exception e) {
-                debugLog("POLL_ERROR", "Error in poll loop: " + e.getMessage());
-                LOG.error("Error occurred", e);
-                try {
-                    Thread.sleep(1000); // 出错后稍作等待
-                } catch (InterruptedException ex) {
-                    break;
-                }
-            }
-        }
-        debugLog("WATCH_LOOP", "Polling loop ended");
-    }
-
-    // 记录正在处理的请求文件，避免重复处理
-    private final Set<String> processingRequests = ConcurrentHashMap.newKeySet();
-
-    /**
-     * 处理权限请求
-     */
-    private void handlePermissionRequest(Path requestFile) {
-        String fileName = requestFile.getFileName().toString();
-        long startTime = System.currentTimeMillis();
-        debugLog("HANDLE_REQUEST", "Processing request file: " + fileName);
-
-        // 检查是否正在处理该请求
-        if (!processingRequests.add(fileName)) {
-            debugLog("SKIP_DUPLICATE", "Request already being processed, skipping: " + fileName);
-            return;
-        }
-
-        try {
-            Thread.sleep(100); // 等待文件写入完成
-
-            if (!Files.exists(requestFile)) {
-                debugLog("FILE_MISSING", "Request file missing before read, likely already handled: " + fileName);
-                return;
-            }
-
-            String content;
-            try {
-                content = Files.readString(requestFile);
-            } catch (NoSuchFileException e) {
-                debugLog("FILE_MISSING", "Request file missing while reading, likely already handled: " + fileName);
-                return;
-            }
-            debugLog("FILE_READ", "Read request content: " + content.substring(0, Math.min(200, content.length())) + "...");
-
-            JsonObject request = gson.fromJson(content, JsonObject.class);
-
-            String requestId = request.get("requestId").getAsString();
-            String toolName = request.get("toolName").getAsString();
-            JsonObject inputs = request.get("inputs").getAsJsonObject();
-
-            debugLog("REQUEST_PARSED", String.format("requestId=%s, toolName=%s", requestId, toolName));
-
-            // 首先检查工具级别的权限记忆（总是允许）
-            if (toolOnlyPermissionMemory.containsKey(toolName)) {
-                boolean allow = toolOnlyPermissionMemory.get(toolName);
-                debugLog("MEMORY_HIT", "Using tool-level memory for " + toolName + " -> " + (allow ? "ALLOW" : "DENY"));
-                writeResponse(requestId, allow);
-                notifyDecision(toolName, inputs, allow ? PermissionResponse.ALLOW_ALWAYS : PermissionResponse.DENY);
-                Files.deleteIfExists(requestFile);
-                processingRequests.remove(fileName);
-                return;
-            }
-
-            // 生成内存键（工具+参数）
-            String memoryKey = toolName + ":" + inputs.toString().hashCode();
-            debugLog("MEMORY_KEY", "Generated memory key: " + memoryKey);
-
-            // 检查是否有记忆的选择（工具+参数级别）
-            if (permissionMemory.containsKey(memoryKey)) {
-                int memorized = permissionMemory.get(memoryKey);
-                PermissionResponse rememberedResponse = PermissionResponse.fromValue(memorized);
-                boolean allow = rememberedResponse != PermissionResponse.DENY;
-                debugLog("PARAM_MEMORY_HIT", "Using param-level memory: " + memoryKey + " -> " + (allow ? "ALLOW" : "DENY"));
-                writeResponse(requestId, allow);
-                notifyDecision(toolName, inputs, rememberedResponse);
-                Files.deleteIfExists(requestFile);
-                processingRequests.remove(fileName);
-                return;
-            }
-
-            // 根据文件路径匹配项目，找到对应的前端弹窗显示器
-            PermissionDialogShower matchedDialogShower = findDialogShowerByInputs(inputs);
-
-            // 如果有前端弹窗显示器，使用异步方式
-            if (matchedDialogShower != null) {
-                debugLog("DIALOG_SHOWER", "Using frontend dialog for: " + toolName);
-
-                // 立即删除请求文件，避免重复处理
-                try {
-                    Files.deleteIfExists(requestFile);
-                    debugLog("FILE_DELETE", "Deleted request file: " + fileName);
-                } catch (Exception e) {
-                    debugLog("FILE_DELETE_ERROR", "Failed to delete request file: " + e.getMessage());
-                }
-
-                final String memKey = memoryKey;
-                final String tool = toolName;
-                final long dialogStartTime = System.currentTimeMillis();
-
-                // 异步调用前端弹窗
-                debugLog("DIALOG_SHOW", "Calling dialogShower.showPermissionDialog for: " + toolName);
-                CompletableFuture<Integer> future = matchedDialogShower.showPermissionDialog(toolName, inputs);
-
-                // 异步处理结果
-                future.thenAccept(response -> {
-                    long dialogElapsed = System.currentTimeMillis() - dialogStartTime;
-                    debugLog("DIALOG_RESPONSE", String.format("Got response %d after %dms for %s", response, dialogElapsed, tool));
-                    try {
-                        PermissionResponse decision = PermissionResponse.fromValue(response);
-                        if (decision == null) {
-                            debugLog("RESPONSE_NULL", "Response value " + response + " mapped to null, defaulting to DENY");
-                            decision = PermissionResponse.DENY;
-                        }
-
-                        boolean allow;
-                        switch (decision) {
-                            case ALLOW:
-                                allow = true;
-                                debugLog("DECISION", "ALLOW (single) for " + tool);
-                                break;
-                            case ALLOW_ALWAYS:
-                                allow = true;
-                                // 保存到工具级别权限记忆（按工具类型，不是按参数）
-                                toolOnlyPermissionMemory.put(tool, true);
-                                debugLog("DECISION", "ALLOW_ALWAYS for " + tool + ", saved to memory");
-                                break;
-                            case DENY:
-                            default:
-                                allow = false;
-                                debugLog("DECISION", "DENY for " + tool);
-                                break;
-                        }
-
-                        notifyDecision(toolName, inputs, decision);
-                        debugLog("WRITE_RESPONSE", String.format("Writing response for %s: allow=%s", requestId, allow));
-                        writeResponse(requestId, allow);
-
-                        debugLog("DIALOG_COMPLETE", "Frontend dialog processing complete: allow=" + allow);
-                    } catch (Exception e) {
-                        debugLog("DIALOG_ERROR", "Error processing dialog result: " + e.getMessage());
-                        LOG.error("Error occurred", e);
-                    } finally {
-                        processingRequests.remove(fileName);
-                    }
-                }).exceptionally(ex -> {
-                    debugLog("DIALOG_EXCEPTION", "Frontend dialog exception: " + ex.getMessage());
-                    try {
-                        writeResponse(requestId, false);
-                    } catch (Exception e) {
-                        LOG.error("Error occurred", e);
-                    }
-                    notifyDecision(toolName, inputs, PermissionResponse.DENY);
-                    processingRequests.remove(fileName);
-                    return null;
-                });
-
-                // 异步处理，直接返回，不阻塞
-                return;
-            }
-
-            // 降级方案：使用系统弹窗（同步阻塞）
-            debugLog("FALLBACK_DIALOG", "Using system dialog (JOptionPane) for: " + toolName);
-            CompletableFuture<Integer> future = new CompletableFuture<>();
-            ApplicationManager.getApplication().invokeLater(() -> {
-                int response = showSystemPermissionDialog(toolName, inputs);
-                future.complete(response);
-            });
-
-            debugLog("DIALOG_WAIT", "Waiting for system dialog response (no timeout)");
-            int response = future.get(); // No timeout - user can take as long as needed
-            debugLog("DIALOG_RESPONSE", "Got system dialog response: " + response);
-
-            PermissionResponse decision = PermissionResponse.fromValue(response);
-            if (decision == null) {
-                debugLog("RESPONSE_NULL", "Response mapped to null, defaulting to DENY");
-                decision = PermissionResponse.DENY;
-            }
-
-            boolean allow;
-            switch (decision) {
-                case ALLOW:
-                    allow = true;
-                    break;
-                case ALLOW_ALWAYS:
-                    allow = true;
-                    permissionMemory.put(memoryKey, PermissionResponse.ALLOW_ALWAYS.value);
-                    debugLog("MEMORY_SAVE", "Saved param-level memory: " + memoryKey);
-                    break;
-                case DENY:
-                default:
-                    allow = false;
-                    break;
-            }
-
-            notifyDecision(toolName, inputs, decision);
-
-            // 写入响应
-            debugLog("WRITE_RESPONSE", String.format("Writing response for %s: allow=%s", requestId, allow));
-            writeResponse(requestId, allow);
-
-            // 删除请求文件
-            Files.delete(requestFile);
-            debugLog("FILE_DELETE", "Deleted request file after processing: " + fileName);
-
-            long elapsed = System.currentTimeMillis() - startTime;
-            debugLog("REQUEST_COMPLETE", String.format("Request %s completed in %dms", requestId, elapsed));
-
-        } catch (Exception e) {
-            debugLog("HANDLE_ERROR", "Error handling request: " + e.getMessage());
-            LOG.error("Error occurred", e);
-        } finally {
-            processingRequests.remove(fileName);
-        }
-    }
-
-    /**
-     * 显示系统权限对话框（JOptionPane）- 降级方案
-     */
-    private int showSystemPermissionDialog(String toolName, JsonObject inputs) {
-        // 构建消息内容
-        StringBuilder message = new StringBuilder();
-        message.append("Claude requests to perform the following action:\n\n");
-        message.append("Tool: ").append(toolName).append("\n");
-
-        // Show important parameters
-        if (inputs.has("file_path")) {
-            message.append("File: ").append(inputs.get("file_path").getAsString()).append("\n");
-        }
-        if (inputs.has("command")) {
-            message.append("Command: ").append(inputs.get("command").getAsString()).append("\n");
-        }
-
-        message.append("\nAllow execution?");
-
-        // Create options
-        Object[] options = {
-            "Allow",
-            "Deny"
-        };
-
-        // Show dialog
-        int result = JOptionPane.showOptionDialog(
-            null,
-            message.toString(),
-            "Permission Request - " + toolName,
-            JOptionPane.DEFAULT_OPTION,
-            JOptionPane.QUESTION_MESSAGE,
-            null,
-            options,
-            options[0]
-        );
-
-        if (result == 0) {
-            return PermissionResponse.ALLOW.getValue();
-        }
-        return PermissionResponse.DENY.getValue();
-    }
-
-    // Set to track ask-user-question requests being processed
-    private final Set<String> processingAskUserQuestionRequests = ConcurrentHashMap.newKeySet();
-
-    /**
-     * Handle ask-user-question request
-     */
-    private void handleAskUserQuestionRequest(Path requestFile) {
-        String fileName = requestFile.getFileName().toString();
-        debugLog("HANDLE_ASK_USER_QUESTION", "Processing request file: " + fileName);
-
-        // Prevent duplicate processing
-        if (!processingAskUserQuestionRequests.add(fileName)) {
-            debugLog("SKIP_DUPLICATE", "Ask-user-question request already being processed: " + fileName);
-            return;
-        }
-
-        try {
-            Thread.sleep(100); // Wait for file write to complete
-
-            String content = Files.readString(requestFile);
-            debugLog("FILE_READ", "Read ask-user-question content: " + content.substring(0, Math.min(200, content.length())) + "...");
-
-            JsonObject request = gson.fromJson(content, JsonObject.class);
-            String requestId = request.get("requestId").getAsString();
-            JsonObject questions = request.getAsJsonArray("questions") != null
-                ? request : new JsonObject();
-
-            // Get dialog shower
-            AskUserQuestionDialogShower dialogShower = getAskUserQuestionDialogShower();
-            if (dialogShower == null) {
-                debugLog("NO_DIALOG_SHOWER", "No AskUserQuestion dialog shower registered, cancelling");
-                writeAskUserQuestionResponse(requestId, null, true);
-                Files.deleteIfExists(requestFile);
-                processingAskUserQuestionRequests.remove(fileName);
-                return;
-            }
-
-            // Delete request file immediately to prevent duplicate processing
-            try {
-                Files.deleteIfExists(requestFile);
-                debugLog("FILE_DELETE", "Deleted ask-user-question request file: " + fileName);
-            } catch (Exception e) {
-                debugLog("FILE_DELETE_ERROR", "Failed to delete request file: " + e.getMessage());
-            }
-
-            // Show dialog asynchronously
-            LOG.info("[PermissionService] Calling showAskUserQuestionDialog for requestId: " + requestId);
-            CompletableFuture<JsonObject> future = dialogShower.showAskUserQuestionDialog(requestId, request);
-
-            future.thenAccept(answers -> {
-                try {
-                    if (answers != null) {
-                        LOG.info("[PermissionService] Got answers for requestId: " + requestId + ", writing response file");
-                        writeAskUserQuestionResponse(requestId, answers, false);
-                    } else {
-                        LOG.info("[PermissionService] User cancelled for requestId: " + requestId + ", writing cancelled response");
-                        writeAskUserQuestionResponse(requestId, null, true);
-                    }
-                } catch (Exception e) {
-                    LOG.error("[PermissionService] Error writing response: " + e.getMessage(), e);
-                } finally {
-                    processingAskUserQuestionRequests.remove(fileName);
-                }
-            }).exceptionally(ex -> {
-                LOG.error("[PermissionService] Dialog exception: " + ex.getMessage());
-                try {
-                    writeAskUserQuestionResponse(requestId, null, true);
-                } catch (Exception e) {
-                    LOG.error("Error occurred", e);
-                }
-                processingAskUserQuestionRequests.remove(fileName);
-                return null;
-            });
-
-        } catch (Exception e) {
-            debugLog("HANDLE_ERROR", "Error handling ask-user-question request: " + e.getMessage());
-            LOG.error("Error occurred", e);
-            processingAskUserQuestionRequests.remove(fileName);
-        }
-    }
-
-    /**
-     * Write ask-user-question response file
-     */
-    private void writeAskUserQuestionResponse(String requestId, JsonObject answers, boolean cancelled) {
-        LOG.info("[PermissionService] writeAskUserQuestionResponse: requestId=" + requestId + ", cancelled=" + cancelled);
-        try {
-            JsonObject response = new JsonObject();
-            response.addProperty("cancelled", cancelled);
-            if (answers != null && !cancelled) {
-                response.add("answers", answers);
-            }
-
-            Path responseFile = permissionDir.resolve("ask-user-question-response-" + requestId + ".json");
-            String responseContent = gson.toJson(response);
-            LOG.info("[PermissionService] Writing response to: " + responseFile);
-            LOG.info("[PermissionService] Response content: " + responseContent);
-
-            Files.writeString(responseFile, responseContent);
-
-            if (Files.exists(responseFile)) {
-                LOG.info("[PermissionService] Response file written successfully: " + responseFile);
-            } else {
-                LOG.error("[PermissionService] Response file NOT created after write!");
-            }
-        } catch (IOException e) {
-            LOG.error("[PermissionService] Failed to write response file: " + e.getMessage(), e);
-        }
-    }
-
-    // Set to track plan-approval requests being processed
-    private final Set<String> processingPlanApprovalRequests = ConcurrentHashMap.newKeySet();
-
-    /**
-     * Handle plan-approval request
-     */
-    private void handlePlanApprovalRequest(Path requestFile) {
-        String fileName = requestFile.getFileName().toString();
-        debugLog("HANDLE_PLAN_APPROVAL", "Processing request file: " + fileName);
-
-        // Prevent duplicate processing
-        if (!processingPlanApprovalRequests.add(fileName)) {
-            debugLog("SKIP_DUPLICATE", "Plan-approval request already being processed: " + fileName);
-            return;
-        }
-
-        try {
-            Thread.sleep(100); // Wait for file write to complete
-
-            String content = Files.readString(requestFile);
-            debugLog("FILE_READ", "Read plan-approval content: " + content.substring(0, Math.min(200, content.length())) + "...");
-
-            JsonObject request = gson.fromJson(content, JsonObject.class);
-            String requestId = request.get("requestId").getAsString();
-
-            // Get dialog shower
-            PlanApprovalDialogShower dialogShower = getPlanApprovalDialogShower();
-            if (dialogShower == null) {
-                debugLog("NO_DIALOG_SHOWER", "No PlanApproval dialog shower registered, rejecting plan");
-                writePlanApprovalResponse(requestId, false, "default");
-                Files.deleteIfExists(requestFile);
-                processingPlanApprovalRequests.remove(fileName);
-                return;
-            }
-
-            // Delete request file immediately to prevent duplicate processing
-            try {
-                Files.deleteIfExists(requestFile);
-                debugLog("FILE_DELETE", "Deleted plan-approval request file: " + fileName);
-            } catch (Exception e) {
-                debugLog("FILE_DELETE_ERROR", "Failed to delete request file: " + e.getMessage());
-            }
-
-            // Show dialog asynchronously
-            debugLog("DIALOG_SHOW", "Calling showPlanApprovalDialog for requestId: " + requestId);
-            CompletableFuture<JsonObject> future = dialogShower.showPlanApprovalDialog(requestId, request);
-
-            future.thenAccept(result -> {
-                try {
-                    if (result != null && result.has("approved") && result.get("approved").getAsBoolean()) {
-                        String newMode = result.has("newMode") ? result.get("newMode").getAsString() : "default";
-                        debugLog("DIALOG_RESPONSE", "Plan approved for requestId: " + requestId + ", newMode: " + newMode);
-                        writePlanApprovalResponse(requestId, true, newMode);
-                    } else {
-                        debugLog("DIALOG_REJECTED", "Plan rejected for requestId: " + requestId);
-                        writePlanApprovalResponse(requestId, false, "default");
-                    }
-                } catch (Exception e) {
-                    debugLog("DIALOG_ERROR", "Error writing response: " + e.getMessage());
-                    LOG.error("Error occurred", e);
-                } finally {
-                    processingPlanApprovalRequests.remove(fileName);
-                }
-            }).exceptionally(ex -> {
-                debugLog("DIALOG_EXCEPTION", "Dialog exception: " + ex.getMessage());
-                try {
-                    writePlanApprovalResponse(requestId, false, "default");
-                } catch (Exception e) {
-                    LOG.error("Error occurred", e);
-                }
-                processingPlanApprovalRequests.remove(fileName);
-                return null;
-            });
-
-        } catch (Exception e) {
-            debugLog("HANDLE_ERROR", "Error handling plan-approval request: " + e.getMessage());
-            LOG.error("Error occurred", e);
-            processingPlanApprovalRequests.remove(fileName);
-        }
-    }
-
-    /**
-     * Write plan-approval response file
-     */
-    private void writePlanApprovalResponse(String requestId, boolean approved, String newMode) {
-        debugLog("WRITE_PLAN_APPROVAL_RESPONSE", String.format(
-            "Writing response for requestId=%s, approved=%s, newMode=%s", requestId, approved, newMode));
-        try {
-            JsonObject response = new JsonObject();
-            response.addProperty("approved", approved);
-            response.addProperty("newMode", newMode);
-            response.addProperty("cancelled", !approved);
-
-            Path responseFile = permissionDir.resolve("plan-approval-response-" + requestId + ".json");
-            String responseContent = gson.toJson(response);
-            debugLog("RESPONSE_CONTENT", "Response JSON: " + responseContent);
-
-            Files.writeString(responseFile, responseContent);
-
-            if (Files.exists(responseFile)) {
-                debugLog("WRITE_SUCCESS", "Plan-approval response file written successfully");
-            }
-        } catch (IOException e) {
-            debugLog("WRITE_ERROR", "Failed to write plan-approval response file: " + e.getMessage());
-            LOG.error("Error occurred", e);
-        }
-    }
-
-    /**
-     * Write permission response file
-     */
-    private void writeResponse(String requestId, boolean allow) {
-        debugLog("WRITE_RESPONSE_START", String.format("Writing response for requestId=%s, allow=%s", requestId, allow));
-        try {
-            JsonObject response = new JsonObject();
-            response.addProperty("allow", allow);
-
-            Path responseFile = permissionDir.resolve("response-" + requestId + ".json");
-            String responseContent = gson.toJson(response);
-            debugLog("RESPONSE_CONTENT", "Response JSON: " + responseContent);
-            debugLog("RESPONSE_FILE", "Target file: " + responseFile);
-
-            Files.writeString(responseFile, responseContent);
-
-            // 验证文件是否写入成功
-            if (Files.exists(responseFile)) {
-                long fileSize = Files.size(responseFile);
-                debugLog("WRITE_SUCCESS", String.format("Response file written successfully, size=%d bytes", fileSize));
-            } else {
-                debugLog("WRITE_VERIFY_FAIL", "Response file does NOT exist after write!");
-            }
-        } catch (IOException e) {
-            debugLog("WRITE_ERROR", "Failed to write response file: " + e.getMessage());
-            LOG.error("Error occurred", e);
-        }
-    }
-
-    /**
-     * Stop permission service
-     */
-    public void stop() {
-        running = false;
-        if (watchThread != null) {
-            try {
-                watchThread.join(1000);
-            } catch (InterruptedException e) {
-                LOG.error("Error occurred", e);
-            }
-        }
-        if (watchService != null) {
-            try {
-                watchService.close();
-            } catch (IOException e) {
-                LOG.error("Error occurred", e);
-            }
-        }
     }
 
     // ============================================================================
@@ -1183,6 +519,49 @@ public class PermissionService {
                 JsonObject response = new JsonObject();
                 response.addProperty("allow", false);
                 response.addProperty("message", "Dialog error: " + ex.getMessage());
+                return response;
+            });
+    }
+
+    /**
+     * Request PlanApproval directly (no file-based IPC).
+     * Used by the new bridge.js stdin/stdout protocol.
+     *
+     * @param planData Plan data containing the plan text
+     * @return CompletableFuture resolving to JsonObject with { approved: boolean, newMode?: string }
+     */
+    public CompletableFuture<JsonObject> requestPlanApprovalDirect(JsonObject planData) {
+        debugLog("DIRECT_PLAN_APPROVAL", "PlanApproval request");
+
+        PlanApprovalDialogShower dialogShower = getPlanApprovalDialogShower();
+        if (dialogShower == null) {
+            debugLog("DIRECT_NO_PLAN_SHOWER", "No PlanApproval dialog shower registered");
+            JsonObject response = new JsonObject();
+            response.addProperty("approved", false);
+            response.addProperty("newMode", "default");
+            return CompletableFuture.completedFuture(response);
+        }
+
+        String requestId = String.valueOf(System.currentTimeMillis());
+
+        return dialogShower.showPlanApprovalDialog(requestId, planData)
+            .thenApply(result -> {
+                JsonObject response = new JsonObject();
+                if (result != null && result.has("approved") && result.get("approved").getAsBoolean()) {
+                    response.addProperty("approved", true);
+                    String newMode = result.has("newMode") ? result.get("newMode").getAsString() : "default";
+                    response.addProperty("newMode", newMode);
+                } else {
+                    response.addProperty("approved", false);
+                    response.addProperty("newMode", "default");
+                }
+                return response;
+            })
+            .exceptionally(ex -> {
+                debugLog("DIRECT_PLAN_ERROR", "Dialog error: " + ex.getMessage());
+                JsonObject response = new JsonObject();
+                response.addProperty("approved", false);
+                response.addProperty("newMode", "default");
                 return response;
             });
     }

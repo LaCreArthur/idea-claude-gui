@@ -150,7 +150,7 @@ Node.js → stdout JSON → Java shows dialog → stdin JSON → Node.js returns
 - [x] **4.2** Merge `ProviderHandler.java` into `SettingsHandler.java` (~427 lines merged)
 - [x] **4.3** Simplify `FileHandler.java` - converted Chinese comments to English, removed unused code
 - [x] **4.4** Simplify `HistoryHandler.java` - removed unused methods, converted comments to English, refactored Node.js calls
-- [ ] **4.5** Remove file-based IPC code from `PermissionService.java`
+- [x] **4.5** Remove file-based IPC code from `PermissionService.java` (~700 lines removed)
 - [ ] **4.6** Test Phase 4 - all core features work
 
 ---

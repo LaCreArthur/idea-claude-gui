@@ -456,14 +456,12 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
 
         private void setupPermissionService() {
             PermissionService permissionService = PermissionService.getInstance(project);
-            permissionService.start();
-            // 使用项目注册机制，支持多窗口场景
+            // Register dialog showers for multi-project support
             permissionService.registerDialogShower(project, (toolName, inputs) ->
                 permissionHandler.showFrontendPermissionDialog(toolName, inputs));
-            // 注册 AskUserQuestion 对话框显示器
             permissionService.registerAskUserQuestionDialogShower(project, (requestId, questionsData) ->
                 permissionHandler.showAskUserQuestionDialog(requestId, questionsData));
-            LOG.info("Started permission service with frontend dialog and AskUserQuestion dialog for project: " + project.getName());
+            LOG.info("Registered permission dialog showers for project: " + project.getName());
         }
 
         private void initializeHandlers() {
