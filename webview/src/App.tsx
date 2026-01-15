@@ -1392,28 +1392,6 @@ const App = () => {
     };
   }, [currentView, currentProvider]); // 添加 currentProvider 依赖，provider 切换时自动刷新历史记录
 
-  // 定期获取使用统计
-  useEffect(() => {
-    const requestUsageStats = () => {
-      if (window.sendToJava) {
-        console.log('[Frontend] Requesting get_usage_statistics (scope=current)');
-        sendBridgeMessage('get_usage_statistics', JSON.stringify({ scope: 'current' }));
-      }
-    };
-
-    // 初始请求
-    const initTimer = setTimeout(requestUsageStats, 500);
-
-    // 每 60 秒更新一次
-    const intervalId = setInterval(requestUsageStats, 60000);
-
-    return () => {
-      clearTimeout(initTimer);
-      clearInterval(intervalId);
-      window.updateActiveProvider = undefined;
-    };
-  }, []);
-
   // 监听滚动事件，检测用户是否在底部
   // 原理：如果用户向上滚动查看历史，就标记为"不在底部"，不再自动滚动
   // 依赖 currentView 是因为视图切换时容器会重新挂载，需要重新绑定监听器

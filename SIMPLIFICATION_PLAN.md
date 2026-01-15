@@ -116,9 +116,9 @@ Node.js → stdout JSON → Java shows dialog → stdin JSON → Node.js returns
 
 ### Settings to DELETE
 
-- [ ] **3.1** Delete `webview/src/components/UsageStatisticsSection.tsx` (648 lines)
-- [ ] **3.2** Remove UsageStatisticsSection from settings/index.tsx
-- [ ] **3.3** Remove any usage tracking code in Java handlers
+- [x] **3.1** Delete `webview/src/components/UsageStatisticsSection.tsx` (648 lines)
+- [x] **3.2** Remove UsageStatisticsSection from settings/index.tsx and sidebar
+- [x] **3.3** Remove usage statistics polling from App.tsx
 
 ### Settings to SIMPLIFY
 

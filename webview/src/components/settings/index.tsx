@@ -15,7 +15,6 @@ import SettingsSidebar, { type SettingsTab } from './SettingsSidebar';
 import BasicConfigSection from './BasicConfigSection';
 import ProviderManageSection from './ProviderManageSection';
 import DependencySection from './DependencySection';
-import UsageSection from './UsageSection';
 import PlaceholderSection from './PlaceholderSection';
 import CommunitySection from './CommunitySection';
 import AgentSection from './AgentSection';
@@ -748,9 +747,6 @@ const SettingsView = ({ onClose, initialTab, streamingEnabled: streamingEnabledP
 
           {/* SDK dependency management */}
           {currentTab === 'dependencies' && <DependencySection addToast={addToast} />}
-
-          {/* Usage statistics */}
-          {currentTab === 'usage' && <UsageSection currentProvider="claude" />}
 
           {/* MCP servers */}
           {currentTab === 'mcp' && <PlaceholderSection type="mcp" />}

@@ -1,6 +1,6 @@
 import styles from './style.module.less';
 
-export type SettingsTab = 'basic' | 'providers' | 'dependencies' | 'usage' | 'permissions' | 'mcp' | 'agents' | 'skills' | 'community';
+export type SettingsTab = 'basic' | 'providers' | 'dependencies' | 'permissions' | 'mcp' | 'agents' | 'skills' | 'community';
 
 interface SidebarItem {
   key: SettingsTab;
@@ -12,7 +12,6 @@ const sidebarItems: SidebarItem[] = [
   { key: 'basic', icon: 'codicon-settings-gear', label: 'Basic Configuration' },
   { key: 'providers', icon: 'codicon-vm-connect', label: 'Provider Management' },
   { key: 'dependencies', icon: 'codicon-extensions', label: 'SDK Dependencies' },
-  { key: 'usage', icon: 'codicon-graph', label: 'Usage Statistics' },
   { key: 'mcp', icon: 'codicon-server', label: 'MCP Servers' },
   { key: 'permissions', icon: 'codicon-shield', label: 'Permissions' },
   { key: 'agents', icon: 'codicon-robot', label: 'Agents' },
