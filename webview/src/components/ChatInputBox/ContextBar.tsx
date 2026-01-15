@@ -1,5 +1,4 @@
 import React, { useRef, useCallback } from 'react';
-import { useTranslation } from 'react-i18next';
 import { getFileIcon } from '../../utils/fileIcons';
 import { TokenIndicator } from './TokenIndicator';
 import type { SelectedAgent } from './types';
@@ -15,11 +14,8 @@ interface ContextBarProps {
   onAddAttachment?: (files: FileList) => void;
   selectedAgent?: SelectedAgent | null;
   onClearAgent?: () => void;
-  /** Current provider (for conditional rendering) */
   currentProvider?: string;
-  /** Whether there are messages (for rewind button visibility) */
   hasMessages?: boolean;
-  /** Rewind callback */
   onRewind?: () => void;
 }
 
@@ -38,7 +34,6 @@ export const ContextBar: React.FC<ContextBarProps> = ({
   hasMessages = false,
   onRewind,
 }) => {
-  const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleAttachClick = useCallback((e: React.MouseEvent) => {
@@ -54,7 +49,6 @@ export const ContextBar: React.FC<ContextBarProps> = ({
     e.target.value = '';
   }, [onAddAttachment]);
 
-  // Extract filename from path
   const getFileName = (path: string) => {
     return path.split(/[/\\]/).pop() || path;
   };
@@ -75,7 +69,6 @@ export const ContextBar: React.FC<ContextBarProps> = ({
 
   return (
     <div className="context-bar">
-      {/* Tool Icons Group */}
       <div className="context-tools">
         <div
           className="context-tool-btn"
@@ -85,7 +78,6 @@ export const ContextBar: React.FC<ContextBarProps> = ({
           <span className="codicon codicon-attach" />
         </div>
 
-        {/* Token Indicator */}
         {showUsage && (
           <div className="context-token-indicator">
             <TokenIndicator
@@ -96,8 +88,7 @@ export const ContextBar: React.FC<ContextBarProps> = ({
             />
           </div>
         )}
-        
-        {/* Hidden file input */}
+
         <input
           ref={fileInputRef}
           type="file"
@@ -106,37 +97,35 @@ export const ContextBar: React.FC<ContextBarProps> = ({
           onChange={handleFileChange}
           style={{ display: 'none' }}
         />
-        
+
         <div className="context-tool-divider" />
       </div>
 
-      {/* Selected Agent Chip */}
       {selectedAgent && (
-        <div 
-          className="context-item has-tooltip" 
+        <div
+          className="context-item has-tooltip"
           data-tooltip={selectedAgent.name}
           style={{ cursor: 'default' }}
         >
-          <span 
-            className="codicon codicon-robot" 
+          <span
+            className="codicon codicon-robot"
             style={{ marginRight: 4 }}
           />
           <span className="context-text">
             <span dir="ltr">
-              {selectedAgent.name.length > 3 
-                ? `${selectedAgent.name.slice(0, 3)}...` 
+              {selectedAgent.name.length > 3
+                ? `${selectedAgent.name.slice(0, 3)}...`
                 : selectedAgent.name}
             </span>
           </span>
-          <span 
-            className="codicon codicon-close context-close" 
+          <span
+            className="codicon codicon-close context-close"
             onClick={onClearAgent}
             title="Remove agent"
           />
         </div>
       )}
 
-      {/* Active Context Chip */}
       {displayText && (
         <div
           className="context-item has-tooltip"
@@ -167,14 +156,13 @@ export const ContextBar: React.FC<ContextBarProps> = ({
         </div>
       )}
 
-      {/* Right side tools - Rewind button */}
       {currentProvider === 'claude' && onRewind && (
         <div className="context-tools-right">
           <button
             className="context-tool-btn has-tooltip"
             onClick={onRewind}
             disabled={!hasMessages}
-            data-tooltip={`${t('rewind.tooltip')} (${t('rewind.shortcut')})`}
+            data-tooltip="Rewind conversation (⌘R)"
           >
             <span className="codicon codicon-discard" />
           </button>

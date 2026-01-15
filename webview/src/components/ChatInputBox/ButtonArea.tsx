@@ -1,12 +1,10 @@
 import { useCallback } from 'react';
-import { useTranslation } from 'react-i18next';
 import type { ButtonAreaProps, ModelInfo, PermissionMode, ReasoningEffort } from './types';
 import { ConfigSelect, ModelSelect, ModeSelect, ReasoningSelect } from './selectors';
 import { CLAUDE_MODELS, CODEX_MODELS } from './types';
 
 /**
- * ButtonArea - 底部工具栏组件
- * 包含模式选择、模型选择、附件按钮、增强提示词按钮、发送/停止按钮
+ * ButtonArea - Bottom toolbar component
  */
 export const ButtonArea = ({
   disabled = false,
@@ -32,13 +30,6 @@ export const ButtonArea = ({
   onAgentSelect,
   onOpenAgentSettings,
 }: ButtonAreaProps) => {
-  const { t } = useTranslation();
-  // const fileInputRef = useRef<HTMLInputElement>(null);
-
-  /**
-   * 应用模型名称映射
-   * 将基础模型 ID 映射为实际的模型名称（如带容量后缀的版本）
-   */
   const applyModelMapping = (model: ModelInfo, mapping: { haiku?: string; sonnet?: string; opus?: string }): ModelInfo => {
     const modelKeyMap: Record<string, keyof typeof mapping> = {
       'claude-sonnet-4-5': 'sonnet',
@@ -50,15 +41,12 @@ export const ButtonArea = ({
     if (key && mapping[key]) {
       const actualModel = String(mapping[key]).trim();
       if (actualModel.length > 0) {
-        // 保持原始 id 作为唯一标识，只修改 label 为自定义名称
-        // 这样即使多个模型有相同的 displayName，id 仍然是唯一的
         return { ...model, label: actualModel };
       }
     }
     return model;
   };
 
-  // 根据当前提供商选择模型列表
   const availableModels = (() => {
     if (currentProvider === 'codex') {
       return CODEX_MODELS;
@@ -83,53 +71,32 @@ export const ButtonArea = ({
     }
   })();
 
-  /**
-   * 处理提交按钮点击
-   */
   const handleSubmitClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     onSubmit?.();
   }, [onSubmit]);
 
-  /**
-   * 处理停止按钮点击
-   */
   const handleStopClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     onStop?.();
   }, [onStop]);
 
-  /**
-   * 处理模式选择
-   */
   const handleModeSelect = useCallback((mode: PermissionMode) => {
     onModeSelect?.(mode);
   }, [onModeSelect]);
 
-  /**
-   * 处理模型选择
-   */
   const handleModelSelect = useCallback((modelId: string) => {
     onModelSelect?.(modelId);
   }, [onModelSelect]);
 
-  /**
-   * 处理提供商选择
-   */
   const handleProviderSelect = useCallback((providerId: string) => {
     onProviderSelect?.(providerId);
   }, [onProviderSelect]);
 
-  /**
-   * 处理思考深度选择 (Codex only)
-   */
   const handleReasoningChange = useCallback((effort: ReasoningEffort) => {
     onReasoningChange?.(effort);
   }, [onReasoningChange]);
 
-  /**
-   * 处理增强提示词按钮点击
-   */
   const handleEnhanceClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     onEnhancePrompt?.();
@@ -137,7 +104,6 @@ export const ButtonArea = ({
 
   return (
     <div className="button-area" data-provider={currentProvider}>
-      {/* 左侧：选择器 */}
       <div className="button-area-left">
         <ConfigSelect
           currentProvider={currentProvider}
@@ -157,26 +123,23 @@ export const ButtonArea = ({
         )}
       </div>
 
-      {/* 右侧:工具按钮 */}
       <div className="button-area-right">
         <div className="button-divider" />
 
-        {/* 增强提示词按钮 */}
         <button
           className="enhance-prompt-button has-tooltip"
           onClick={handleEnhanceClick}
           disabled={disabled || !hasInputContent || isLoading || isEnhancing}
-          data-tooltip={`${t('promptEnhancer.tooltip')} (${t('promptEnhancer.shortcut')})`}
+          data-tooltip="Enhance prompt (⌘P)"
         >
           <span className={`codicon ${isEnhancing ? 'codicon-loading codicon-modifier-spin' : 'codicon-sparkle'}`} />
         </button>
 
-        {/* 发送/停止按钮 */}
         {isLoading ? (
           <button
             className="submit-button stop-button"
             onClick={handleStopClick}
-            title={t('chat.stopGeneration')}
+            title="Stop generation"
           >
             <span className="codicon codicon-debug-stop" />
           </button>
@@ -185,7 +148,7 @@ export const ButtonArea = ({
             className="submit-button"
             onClick={handleSubmitClick}
             disabled={disabled || !hasInputContent}
-            title={t('chat.sendMessageEnter')}
+            title="Send message (Enter)"
           >
             <span className="codicon codicon-send" />
           </button>

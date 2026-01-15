@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import type { Attachment, ChatInputBoxProps, CommandItem, FileItem, PermissionMode } from './types';
 import { ButtonArea } from './ButtonArea';
 import { AttachmentList } from './AttachmentList';
@@ -77,8 +76,7 @@ export const ChatInputBox = ({
   onInstallSdk,
   addToast,
 }: ChatInputBoxProps) => {
-  const { t } = useTranslation();
-  const placeholder = placeholderProp ?? t('chat.inputPlaceholder');
+  const placeholder = placeholderProp ?? '@reference files, shift + enter for new line';
 
   // Internal attachments state (if not provided externally)
   const [internalAttachments, setInternalAttachments] = useState<Attachment[]>([]);
@@ -738,13 +736,13 @@ export const ChatInputBox = ({
 
     if (sdkStatusLoading) {
       // SDK 状态加载中，不允许发送
-      addToast?.(t('chat.sdkStatusLoading'), 'info');
+      addToast?.('Checking SDK status...', 'info');
       return;
     }
 
     if (!sdkInstalled) {
       // 提示用户去下载依赖包
-      addToast?.(t('chat.sdkNotInstalled', { provider: currentProvider === 'codex' ? 'Codex' : 'Claude Code' }) + ' ' + t('chat.goInstallSdk'), 'warning');
+      addToast?.(`Claude Code SDK is not installed. Please install the SDK to start chatting. Go to Install`, 'warning');
       onInstallSdk?.();
       return;
     }
@@ -1811,15 +1809,15 @@ export const ChatInputBox = ({
           <span className={`codicon ${sdkStatusLoading ? 'codicon-loading codicon-modifier-spin' : 'codicon-warning'}`} />
           <span className="sdk-warning-text">
             {sdkStatusLoading
-              ? t('chat.sdkStatusLoading')
-              : t('chat.sdkNotInstalled', { provider: currentProvider === 'codex' ? 'Codex' : 'Claude Code' })}
+              ? 'Checking SDK status...'
+              : 'Claude Code SDK is not installed. Please install the SDK to start chatting.'}
           </span>
           {!sdkStatusLoading && (
             <button className="sdk-install-btn" onClick={(e) => {
               e.stopPropagation();
               onInstallSdk?.();
             }}>
-              {t('chat.goInstallSdk')}
+              Go to Install
             </button>
           )}
         </div>
@@ -1940,7 +1938,7 @@ export const ChatInputBox = ({
         items={fileCompletion.items}
         selectedIndex={fileCompletion.activeIndex}
         loading={fileCompletion.loading}
-        emptyText={t('chat.noMatchingFiles')}
+        emptyText="No matching files"
         onClose={fileCompletion.close}
         onSelect={(_, index) => fileCompletion.selectIndex(index)}
         onMouseEnter={fileCompletion.handleMouseEnter}
@@ -1954,7 +1952,7 @@ export const ChatInputBox = ({
         items={commandCompletion.items}
         selectedIndex={commandCompletion.activeIndex}
         loading={commandCompletion.loading}
-        emptyText={t('chat.noMatchingCommands')}
+        emptyText="No matching commands"
         onClose={commandCompletion.close}
         onSelect={(_, index) => commandCompletion.selectIndex(index)}
         onMouseEnter={commandCompletion.handleMouseEnter}
@@ -1968,7 +1966,7 @@ export const ChatInputBox = ({
         items={agentCompletion.items}
         selectedIndex={agentCompletion.activeIndex}
         loading={agentCompletion.loading}
-        emptyText={t('chat.noAvailableAgents')}
+        emptyText="No available agents"
         onClose={agentCompletion.close}
         onSelect={(_, index) => agentCompletion.selectIndex(index)}
         onMouseEnter={agentCompletion.handleMouseEnter}
