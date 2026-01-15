@@ -21,7 +21,7 @@ Each iteration:
 ## Section 1: Delete Non-English Locale Files
 
 - [x] Delete `webview/src/i18n/locales/zh.json` ✓
-- [ ] Delete `webview/src/i18n/locales/zh-TW.json`
+- [x] Delete `webview/src/i18n/locales/zh-TW.json` ✓
 - [ ] Delete `webview/src/i18n/locales/ja.json`
 - [ ] Delete `webview/src/i18n/locales/es.json`
 - [ ] Delete `webview/src/i18n/locales/fr.json`
