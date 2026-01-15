@@ -45,8 +45,8 @@ Each iteration:
 
 ## Section 3: Delete Codex Provider Files (ai-bridge)
 
-- [ ] Delete `ai-bridge/channels/codex-channel.js`
-- [ ] Delete `ai-bridge/services/codex/` directory (entire directory)
+- [x] Delete `ai-bridge/channels/codex-channel.js` ✓
+- [x] Delete `ai-bridge/services/codex/` directory (entire directory) ✓
 
 ## Section 4: Delete Codex UI and Documentation
 
