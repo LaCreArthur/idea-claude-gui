@@ -49,13 +49,9 @@ const isTruthy = (value: unknown) => value === true || value === 'true';
 const sendBridgeMessage = (event: string, payload = '') => {
   if (window.sendToJava) {
     const message = `${event}:${payload}`;
-    // Add detailed logging for permission and ask_user_question messages
-    if (event.includes('permission') || event.includes('ask_user_question')) {
-      console.log('[PERM_DEBUG][BRIDGE] Sending to Java:', message);
-    }
     window.sendToJava(message);
   } else {
-    console.error('[BRIDGE] ERROR: window.sendToJava not available for event:', event);
+    console.error('[Bridge] window.sendToJava not available for event:', event);
   }
 };
 
@@ -311,7 +307,6 @@ const App = () => {
           sendBridgeMessage('set_provider', 'claude');
           sendBridgeMessage('set_model', restoredClaudeModel);
           sendBridgeMessage('set_mode', initialPermissionMode);
-          console.log('[Frontend] Synced model state to backend:', { provider: 'claude', model: restoredClaudeModel });
         } else {
           syncRetryCount++;
           if (syncRetryCount < MAX_SYNC_RETRIES) {
@@ -348,7 +343,6 @@ const App = () => {
     const loadSelectedAgent = () => {
       if (window.sendToJava) {
         sendBridgeMessage('get_selected_agent');
-        console.log('[Frontend] Requested selected agent');
       } else {
         retryCount++;
         if (retryCount < MAX_RETRIES) {
@@ -438,7 +432,6 @@ const App = () => {
   };
 
   const handleRewindConfirm = (sessionId: string, userMessageId: string) => {
-    console.log('[Rewind] Confirming rewind:', { sessionId, userMessageId });
     setIsRewinding(true);
     rewindFiles(sessionId, userMessageId);
   };
@@ -689,9 +682,8 @@ const App = () => {
     };
 
     // 🔧 流式传输回调函数
-    // 流式开始时调用
+    // Stream start callback
     window.onStreamStart = () => {
-      console.log('[Frontend] Stream started');
       streamingContentRef.current = '';
       isStreamingRef.current = true;
       // Claude 流式：由后端通过 updateMessages 增量写入 raw blocks 进行渲染
@@ -854,9 +846,8 @@ const App = () => {
       }
     };
 
-    // 流式结束回调
+    // Stream end callback
     window.onStreamEnd = () => {
-      console.log('[Frontend] Stream ended');
       const useBackendRender = useBackendStreamingRenderRef.current;
       isStreamingRef.current = false;
       useBackendStreamingRenderRef.current = false;
@@ -931,15 +922,13 @@ const App = () => {
       setIsThinking(false);
     };
 
-    // 设置当前会话 ID（用于 rewind 功能）
+    // Set current session ID (for rewind feature)
     window.setSessionId = (sessionId: string) => {
-      console.log('[Frontend] Received session ID:', sessionId);
       setCurrentSessionId(sessionId);
     };
 
-    // 检查是否有待处理的 sessionId（Java 端可能先于 React 组件挂载）
+    // Check for pending sessionId (Java may call before React mounts)
     if ((window as any).__pendingSessionId) {
-      console.log('[Frontend] Found pending session ID, applying...');
       setCurrentSessionId((window as any).__pendingSessionId);
       delete (window as any).__pendingSessionId;
     }
@@ -1009,12 +998,11 @@ const App = () => {
     window.updateDependencyStatus = (jsonStr: string) => {
       try {
         const status = JSON.parse(jsonStr);
-        console.log('[Frontend] SDK status updated (App):', status);
         setSdkStatus(status);
-        setSdkStatusLoaded(true); // 标记状态已加载
+        setSdkStatusLoaded(true);
       } catch (error) {
         console.error('[Frontend] Failed to parse SDK status:', error);
-        setSdkStatusLoaded(true); // 即使解析失败也标记为已加载，避免永久等待
+        setSdkStatusLoaded(true);
       }
       // 如果有原有回调（来自 DependencySection），也调用它
       if (originalUpdateDependencyStatus && originalUpdateDependencyStatus !== window.updateDependencyStatus) {
@@ -1024,9 +1012,8 @@ const App = () => {
     // 保存 App 的回调引用，供 DependencySection 使用
     (window as any)._appUpdateDependencyStatus = window.updateDependencyStatus;
 
-    // 处理 pending 的 SDK 状态（后端可能在 React 初始化前就返回了）
+    // Handle pending SDK status (backend may return before React initializes)
     if (window.__pendingDependencyStatus) {
-      console.log('[Frontend] Found pending dependency status, applying...');
       const pending = window.__pendingDependencyStatus;
       delete window.__pendingDependencyStatus;
       window.updateDependencyStatus?.(pending);
@@ -1065,15 +1052,13 @@ const App = () => {
     // 后端主动推送权限模式（窗口初始化时调用）
     window.onModeReceived = (mode) => updateMode(mode as PermissionMode);
 
-    // Backend notifies model change (Claude only)
+    // Backend notifies model change
     window.onModelChanged = (modelId) => {
-      console.log('[Frontend] onModelChanged:', { modelId });
       setSelectedClaudeModel(modelId);
     };
 
-    // Backend confirms model set successfully (Claude only)
+    // Backend confirms model set successfully
     window.onModelConfirmed = (modelId) => {
-      console.log('[Frontend] onModelConfirmed:', { modelId });
       setSelectedClaudeModel(modelId);
     };
 
@@ -1188,90 +1173,62 @@ const App = () => {
     };
     setTimeout(requestSendShortcut, 200);
 
-    // 权限弹窗回调
+    // Permission dialog callback
     window.showPermissionDialog = (json) => {
-      console.log('[PERM_DEBUG][FRONTEND] showPermissionDialog called');
-      console.log('[PERM_DEBUG][FRONTEND] Raw JSON:', json);
       try {
         const request = JSON.parse(json) as PermissionRequest;
-        console.log('[PERM_DEBUG][FRONTEND] Parsed request:', request);
-        console.log('[PERM_DEBUG][FRONTEND] channelId:', request.channelId);
-        console.log('[PERM_DEBUG][FRONTEND] toolName:', request.toolName);
         if (permissionDialogOpenRef.current || currentPermissionRequestRef.current) {
           pendingPermissionRequestsRef.current.push(request);
-          console.log('[PERM_DEBUG][FRONTEND] Dialog busy, queued request. queueSize=', pendingPermissionRequestsRef.current.length);
         } else {
           openPermissionDialog(request);
-          console.log('[PERM_DEBUG][FRONTEND] Dialog state set to open');
         }
       } catch (error) {
-        console.error('[PERM_DEBUG][FRONTEND] ERROR: Failed to parse permission request:', error);
+        console.error('[Permission] Failed to parse request:', error);
       }
     };
 
-    // AskUserQuestion 弹窗回调
+    // AskUserQuestion dialog callback
     window.showAskUserQuestionDialog = (json) => {
-      console.log('[ASK_USER_QUESTION][FRONTEND] showAskUserQuestionDialog called');
-      console.log('[ASK_USER_QUESTION][FRONTEND] Raw JSON:', json);
       try {
         const request = JSON.parse(json) as AskUserQuestionRequest;
-        console.log('[ASK_USER_QUESTION][FRONTEND] Parsed request:', request);
-        console.log('[ASK_USER_QUESTION][FRONTEND] requestId:', request.requestId);
-        console.log('[ASK_USER_QUESTION][FRONTEND] questions count:', request.questions?.length);
         if (askUserQuestionDialogOpenRef.current || currentAskUserQuestionRequestRef.current) {
           pendingAskUserQuestionRequestsRef.current.push(request);
-          console.log('[ASK_USER_QUESTION][FRONTEND] Dialog busy, queued request. queueSize=', pendingAskUserQuestionRequestsRef.current.length);
         } else {
           openAskUserQuestionDialog(request);
-          console.log('[ASK_USER_QUESTION][FRONTEND] Dialog state set to open');
         }
       } catch (error) {
-        console.error('[ASK_USER_QUESTION][FRONTEND] ERROR: Failed to parse request:', error);
+        console.error('[AskUserQuestion] Failed to parse request:', error);
       }
     };
 
-    // 【自动监听】更新 ContextBar（上面灰色条）- 由自动监听器调用
+    // Update ContextBar from auto-listener
     window.addSelectionInfo = (selectionInfo) => {
-      console.log('[Frontend] addSelectionInfo (auto) called:', selectionInfo);
       if (selectionInfo) {
-        // Try to parse the format @path#Lstart-end or just @path
-        // Regex: starts with @, captures path until # or end. Optional #L(start)[-(end)]
+        // Parse format @path#Lstart-end or just @path
         const match = selectionInfo.match(/^@([^#]+)(?:#L(\d+)(?:-(\d+))?)?$/);
         if (match) {
           const file = match[1];
           const startLine = match[2] ? parseInt(match[2], 10) : undefined;
           const endLine = match[3] ? parseInt(match[3], 10) : (startLine !== undefined ? startLine : undefined);
-
-          // 只更新 ContextBar 显示（不添加代码片段标签）
-          setContextInfo({
-            file,
-            startLine,
-            endLine,
-            raw: selectionInfo
-          });
-          console.log('[Frontend] Updated ContextBar (auto):', { file, startLine, endLine });
+          setContextInfo({ file, startLine, endLine, raw: selectionInfo });
         }
       }
     };
 
-    // 【手动发送】添加代码片段标签到输入框 - 由右键"发送到 GUI"调用
+    // Add code snippet to input box from context menu
     window.addCodeSnippet = (selectionInfo) => {
-      console.log('[Frontend] addCodeSnippet (manual) called:', selectionInfo);
       if (selectionInfo && window.insertCodeSnippetAtCursor) {
-        // 调用 ChatInputBox 注册的方法，在光标位置插入代码片段
         window.insertCodeSnippetAtCursor(selectionInfo);
       }
     };
 
-    // 清除选中代码信息回调
+    // Clear selection info callback
     window.clearSelectionInfo = () => {
-      console.log('[Frontend] clearSelectionInfo called');
       setContextInfo(null);
     };
 
-    // 接收选中的智能体回调
+    // Selected agent received callback
     window.onSelectedAgentReceived = (json) => {
-      console.log('[Frontend] onSelectedAgentReceived:', json);
       try {
         if (!json || json === 'null' || json === '{}') {
           setSelectedAgent(null);
@@ -1298,9 +1255,8 @@ const App = () => {
       }
     };
 
-    // 智能体选择变更确认回调
+    // Agent selection change callback
     window.onSelectedAgentChanged = (json) => {
-      console.log('[Frontend] onSelectedAgentChanged:', json);
       try {
         if (!json || json === 'null' || json === '{}') {
           setSelectedAgent(null);
@@ -1330,11 +1286,8 @@ const App = () => {
 
     // Rewind result callback from Java
     window.onRewindResult = (json: string) => {
-      console.log('[Frontend] onRewindResult:', json);
       try {
         const result = JSON.parse(json);
-        console.log('[Frontend] Parsed rewind result:', result);
-
         setIsRewinding(false);
         setRewindDialogOpen(false);
         setCurrentRewindRequest(null);
@@ -1585,8 +1538,7 @@ const App = () => {
       }
     });
 
-    // 【FIX】在发送消息前，强制同步 provider 设置，确保后端使用正确的 SDK
-    console.log('[DEBUG] Current provider before send:', currentProvider);
+    // Sync provider setting before sending message
     sendBridgeMessage('set_provider', currentProvider);
 
     // 【FIX】构建智能体信息，随消息一起发送，确保每个标签页使用自己选择的智能体
@@ -1782,20 +1734,16 @@ const App = () => {
   };
 
   /**
-   * 处理权限批准（允许一次）
+   * Handle permission approval (allow once)
    */
   const handlePermissionApprove = (channelId: string) => {
-    console.log('[PERM_DEBUG][FRONTEND] handlePermissionApprove called');
-    console.log('[PERM_DEBUG][FRONTEND] channelId:', channelId);
     const payload = JSON.stringify({
       channelId,
       allow: true,
       remember: false,
       rejectMessage: null,
     });
-    console.log('[PERM_DEBUG][FRONTEND] Sending decision payload:', payload);
     sendBridgeMessage('permission_decision', payload);
-    console.log('[PERM_DEBUG][FRONTEND] Decision sent, closing dialog');
     permissionDialogOpenRef.current = false;
     currentPermissionRequestRef.current = null;
     setPermissionDialogOpen(false);
@@ -1803,20 +1751,16 @@ const App = () => {
   };
 
   /**
-   * 处理权限批准（总是允许）
+   * Handle permission approval (always allow)
    */
   const handlePermissionApproveAlways = (channelId: string) => {
-    console.log('[PERM_DEBUG][FRONTEND] handlePermissionApproveAlways called');
-    console.log('[PERM_DEBUG][FRONTEND] channelId:', channelId);
     const payload = JSON.stringify({
       channelId,
       allow: true,
       remember: true,
       rejectMessage: null,
     });
-    console.log('[PERM_DEBUG][FRONTEND] Sending decision payload:', payload);
     sendBridgeMessage('permission_decision', payload);
-    console.log('[PERM_DEBUG][FRONTEND] Decision sent, closing dialog');
     permissionDialogOpenRef.current = false;
     currentPermissionRequestRef.current = null;
     setPermissionDialogOpen(false);
@@ -1824,19 +1768,14 @@ const App = () => {
   };
 
   /**
-   * 处理 AskUserQuestion 提交
+   * Handle AskUserQuestion submit
    */
   const handleAskUserQuestionSubmit = (requestId: string, answers: Record<string, string>) => {
-    console.log('[ASK_USER_QUESTION][FRONTEND] handleAskUserQuestionSubmit called');
-    console.log('[ASK_USER_QUESTION][FRONTEND] requestId:', requestId);
-    console.log('[ASK_USER_QUESTION][FRONTEND] answers:', answers);
     const payload = JSON.stringify({
       requestId,
       answers,
     });
-    console.log('[ASK_USER_QUESTION][FRONTEND] Sending response payload:', payload);
     sendBridgeMessage('ask_user_question_response', payload);
-    console.log('[ASK_USER_QUESTION][FRONTEND] Response sent, closing dialog');
     askUserQuestionDialogOpenRef.current = false;
     currentAskUserQuestionRequestRef.current = null;
     setAskUserQuestionDialogOpen(false);
@@ -1844,19 +1783,15 @@ const App = () => {
   };
 
   /**
-   * 处理 AskUserQuestion 取消
+   * Handle AskUserQuestion cancel
    */
   const handleAskUserQuestionCancel = (requestId: string) => {
-    console.log('[ASK_USER_QUESTION][FRONTEND] handleAskUserQuestionCancel called');
-    console.log('[ASK_USER_QUESTION][FRONTEND] requestId:', requestId);
-    // 发送空答案表示用户取消
+    // Send empty answers to indicate cancellation
     const payload = JSON.stringify({
       requestId,
       answers: {},
     });
-    console.log('[ASK_USER_QUESTION][FRONTEND] Sending cancel payload:', payload);
     sendBridgeMessage('ask_user_question_response', payload);
-    console.log('[ASK_USER_QUESTION][FRONTEND] Cancel sent, closing dialog');
     askUserQuestionDialogOpenRef.current = false;
     currentAskUserQuestionRequestRef.current = null;
     setAskUserQuestionDialogOpen(false);
@@ -1864,20 +1799,16 @@ const App = () => {
   };
 
   /**
-   * 处理权限拒绝
+   * Handle permission denial
    */
   const handlePermissionSkip = (channelId: string) => {
-    console.log('[PERM_DEBUG][FRONTEND] handlePermissionSkip called');
-    console.log('[PERM_DEBUG][FRONTEND] channelId:', channelId);
     const payload = JSON.stringify({
       channelId,
       allow: false,
       remember: false,
       rejectMessage: 'User denied the permission request',
     });
-    console.log('[PERM_DEBUG][FRONTEND] Sending decision payload:', payload);
     sendBridgeMessage('permission_decision', payload);
-    console.log('[PERM_DEBUG][FRONTEND] Decision sent, closing dialog');
     permissionDialogOpenRef.current = false;
     currentPermissionRequestRef.current = null;
     setPermissionDialogOpen(false);

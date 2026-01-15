@@ -41,7 +41,6 @@ export function resetSlashCommandsState() {
   retryCount = 0;
   pendingWaiters.forEach(w => w.reject(new Error('Slash commands state reset')));
   pendingWaiters = [];
-  console.log('[SlashCommand] State reset');
 }
 
 interface SDKSlashCommand {
@@ -54,8 +53,6 @@ export function setupSlashCommandsCallback() {
   if (callbackRegistered && window.updateSlashCommands) return;
 
   const handler = (json: string) => {
-    console.log('[SlashCommand] Received data from backend, length=' + json.length);
-
     try {
       const parsed = JSON.parse(json);
       let commands: CommandItem[] = [];
@@ -86,7 +83,6 @@ export function setupSlashCommandsCallback() {
         retryCount = 0;
         pendingWaiters.forEach(w => w.resolve());
         pendingWaiters = [];
-        console.log('[SlashCommand] Successfully loaded ' + commands.length + ' commands');
       } else {
         loadingState = 'failed';
         const error = new Error('Slash commands payload is not an array');
@@ -109,10 +105,8 @@ export function setupSlashCommandsCallback() {
     originalHandler?.(json);
   };
   callbackRegistered = true;
-  console.log('[SlashCommand] Callback registered');
 
   if (window.__pendingSlashCommands) {
-    console.log('[SlashCommand] Processing pending commands');
     const pending = window.__pendingSlashCommands;
     window.__pendingSlashCommands = undefined;
     handler(pending);
@@ -173,12 +167,10 @@ function requestRefresh(): boolean {
   const now = Date.now();
 
   if (now - lastRefreshTime < MIN_REFRESH_INTERVAL) {
-    console.log('[SlashCommand] Skipping refresh (too soon)');
     return false;
   }
 
   if (retryCount >= MAX_RETRY_COUNT) {
-    console.warn('[SlashCommand] Max retry count reached');
     loadingState = 'failed';
     return false;
   }
@@ -186,7 +178,6 @@ function requestRefresh(): boolean {
   const attempt = retryCount + 1;
   const sent = sendBridgeEvent('refresh_slash_commands');
   if (!sent) {
-    console.log('[SlashCommand] Bridge not available yet, refresh not sent');
     return false;
   }
 
@@ -194,7 +185,6 @@ function requestRefresh(): boolean {
   loadingState = 'loading';
   retryCount = attempt;
 
-  console.log('[SlashCommand] Requesting refresh from backend (attempt ' + retryCount + '/' + MAX_RETRY_COUNT + ')');
   return true;
 }
 
@@ -243,7 +233,6 @@ export async function slashCommandProvider(
   if (loadingState === 'idle' || loadingState === 'failed') {
     requestRefresh();
   } else if (loadingState === 'loading' && now - lastRefreshTime > LOADING_TIMEOUT) {
-    console.warn('[SlashCommand] Loading timeout');
     loadingState = 'failed';
     requestRefresh();
   }
@@ -285,7 +274,6 @@ export function commandToDropdownItem(command: CommandItem): DropdownItemData {
 }
 
 export function forceRefreshSlashCommands(): void {
-  console.log('[SlashCommand] Force refresh requested');
   loadingState = 'idle';
   lastRefreshTime = 0;
   retryCount = 0;
