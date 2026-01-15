@@ -1027,9 +1027,7 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
         }
 
         private void handleJavaScriptMessage(String message) {
-            // long receiveTime = System.currentTimeMillis();
-
-            // 处理控制台日志转发
+            // Handle console log forwarding
             if (message.startsWith("{\"type\":\"console.")) {
                 try {
                     JsonObject json = new Gson().fromJson(message, JsonObject.class);
@@ -1064,12 +1062,7 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
             String type = parts[0];
             String content = parts.length > 1 ? parts[1] : "";
 
-            // [PERF] 性能日志：记录消息接收时间
-            // if ("send_message".equals(type) || "send_message_with_attachments".equals(type)) {
-            //     LOG.info("[PERF][" + receiveTime + "] Java收到消息: type=" + type + ", 内容长度=" + content.length());
-            // }
-
-            // 使用 Handler 分发器处理
+            // Use handler dispatcher
             if (messageDispatcher.dispatch(type, content)) {
                 return;
             }

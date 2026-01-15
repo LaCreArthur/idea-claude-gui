@@ -556,29 +556,8 @@ const App = () => {
     };
 
     window.updateMessages = (json) => {
-      // const timestamp = Date.now();
-      // const sendTime = (window as any).__lastMessageSendTime;
-      // if (sendTime) {
-      //   console.log(`[Frontend][${timestamp}][PERF] updateMessages 收到响应，距发送 ${timestamp - sendTime}ms`);
-      // }
       try {
         const parsed = JSON.parse(json) as ClaudeMessage[];
-
-        // 🔧 禁用后端渲染模式，使用 onContentDelta 进行流式渲染
-        // 这样可以确保 Markdown 在流式输出时正确渲染
-        // if (isStreamingRef.current && currentProviderRef.current === 'claude') {
-        //   const lastAssistantIdx = findLastAssistantIndex(parsed);
-        //   if (lastAssistantIdx >= 0) {
-        //     const rawBlocks = normalizeBlocks(parsed[lastAssistantIdx].raw) || [];
-        //     const hasStreamingBlocks = rawBlocks.some(
-        //       (block) => block?.type === 'text' || block?.type === 'thinking',
-        //     );
-        //     if (hasStreamingBlocks) {
-        //       useBackendStreamingRenderRef.current = true;
-        //       streamingMessageIndexRef.current = lastAssistantIdx;
-        //     }
-        //   }
-        // }
 
         setMessages((prev) => {
           if (!isStreamingRef.current) {

@@ -163,19 +163,9 @@ public class ClaudeStatusBarWidget implements CustomStatusBarWidget, StatusBarWi
             text.append(" {").append(modeLabel).append("}");
         }
 
-        // Agent info hidden for cleaner display
-        // if (agent != null && !agent.isEmpty()) {
-        //     text.append(" @").append(agent);
-        // }
-
         if (!statusText.isEmpty()) {
             text.append(" ").append(statusText);
         }
-
-        // Token info hidden for cleaner display
-        // if (tokenInfo != null && !tokenInfo.isEmpty()) {
-        //     text.append(" ").append(tokenInfo);
-        // }
 
         String tooltip = "Status: " + status
             + (model != null && !model.isEmpty() ? "\nModel: " + model : "")
