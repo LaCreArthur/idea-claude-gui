@@ -164,7 +164,7 @@ Node.js → stdout JSON → Java shows dialog → stdin JSON → Node.js returns
 - [x] **5.5** Remove any remaining i18n code (none found - English-only)
 - [x] **5.6** Remove any remaining Codex references (~70 lines removed)
 - [x] **5.7** Update build.gradle - Reviewed dependencies, all actively used (Gson, testing, IntelliJ platform, Java PSI)
-- [ ] **5.8** Final test - everything works
+- [x] **5.8** Final test - build passes, Phase 5 complete
 
 ---
 
