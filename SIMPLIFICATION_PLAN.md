@@ -23,9 +23,9 @@ Each iteration:
 - [x] Delete `webview/src/i18n/locales/zh.json` ✓
 - [x] Delete `webview/src/i18n/locales/zh-TW.json` ✓
 - [x] Delete `webview/src/i18n/locales/ja.json` ✓
-- [ ] Delete `webview/src/i18n/locales/es.json`
-- [ ] Delete `webview/src/i18n/locales/fr.json`
-- [ ] Delete `webview/src/i18n/locales/hi.json`
+- [x] Delete `webview/src/i18n/locales/es.json` ✓
+- [x] Delete `webview/src/i18n/locales/fr.json` ✓
+- [x] Delete `webview/src/i18n/locales/hi.json` ✓
 - [ ] Delete `src/main/resources/messages/ClaudeCodeGuiBundle_zh.properties`
 - [ ] Delete `src/main/resources/messages/ClaudeCodeGuiBundle_zh_TW.properties`
 - [ ] Delete `src/main/resources/messages/ClaudeCodeGuiBundle_ja.properties`
