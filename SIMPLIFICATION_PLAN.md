@@ -21,9 +21,22 @@ Transform complex, over-engineered plugin into focused Claude Code GUI.
 
 | Component | Before | After | Reduction |
 |-----------|--------|-------|-----------|
-| ai-bridge (Node.js) | ~4,800 lines | ~150 lines | 97% |
-| Java | ~15,000 lines | ~8,000 lines | 47% |
-| Settings options | ~30 | ~5 | 83% |
+| ai-bridge (Node.js) | ~4,800 lines | ~770 lines | 84% |
+| Java | ~15,000 lines | TBD | TBD |
+| Settings options | ~30 | TBD | TBD |
+
+### Progress Summary
+
+**Lines Deleted:**
+- Phase 2 (ai-bridge): ~4,800 lines
+- Phase 3 (UsageStatistics): ~730 lines
+- Phase 4.1 (PromptEnhancer): ~700 lines
+- **Total: ~6,200+ lines**
+
+**Features Removed:**
+- File-based permission IPC (replaced with stdin/stdout)
+- Usage Statistics tracking
+- Prompt Enhancer (sparkle button)
 
 ---
 
