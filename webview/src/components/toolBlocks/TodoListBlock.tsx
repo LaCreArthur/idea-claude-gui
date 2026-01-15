@@ -1,4 +1,3 @@
-import { useTranslation } from 'react-i18next';
 import type { TodoItem } from '../../types';
 
 interface TodoListBlockProps {
@@ -18,7 +17,6 @@ const statusIconMap: Record<TodoItem['status'], string> = {
 };
 
 const TodoListBlock = ({ todos }: TodoListBlockProps) => {
-  const { t } = useTranslation();
   if (!todos?.length) {
     return null;
   }
@@ -27,7 +25,7 @@ const TodoListBlock = ({ todos }: TodoListBlockProps) => {
     <div className="todo-container">
       <div className="todo-header">
         <span className="codicon codicon-list-unordered todo-header-icon" />
-        <span>{t('tools.todoList')} {todos.length}</span>
+        <span>Todo List {todos.length}</span>
       </div>
       <div className="todo-list">
         {todos.map((todo, index) => {
@@ -50,4 +48,3 @@ const TodoListBlock = ({ todos }: TodoListBlockProps) => {
 };
 
 export default TodoListBlock;
-

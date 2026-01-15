@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import type { ToolInput, ToolResultBlock } from '../../types';
 import { openFile } from '../../utils/bridge';
 import { formatParamValue, getFileName, truncate } from '../../utils/helpers';
@@ -16,9 +15,41 @@ const CODICON_MAP: Record<string, string> = {
   webfetch: 'codicon-globe',
   websearch: 'codicon-search',
   delete: 'codicon-trash',
-  augmentcontextengine: 'codicon-symbol-class', // Added based on Picture 2
-  update_plan: 'codicon-checklist', // Update plan tool
-  shell_command: 'codicon-terminal', // Shell command tool
+  augmentcontextengine: 'codicon-symbol-class',
+  update_plan: 'codicon-checklist',
+  shell_command: 'codicon-terminal',
+};
+
+// Tool display name mapping
+const TOOL_DISPLAY_NAMES: Record<string, string> = {
+  'augmentcontextengine': 'Context Engine',
+  'task': 'Task',
+  'read': 'Read File',
+  'read_file': 'Read File',
+  'edit': 'Edit File',
+  'edit_file': 'Edit File',
+  'write': 'Write File',
+  'write_to_file': 'Write File',
+  'replace_string': 'Replace String',
+  'bash': 'Run Command',
+  'run_terminal_cmd': 'Run Command',
+  'execute_command': 'Execute Command',
+  'executecommand': 'Execute Command',
+  'shell_command': 'Run Command',
+  'grep': 'Search',
+  'glob': 'File Match',
+  'webfetch': 'Web Fetch',
+  'websearch': 'Web Search',
+  'delete': 'Delete',
+  'explore': 'Explore',
+  'createdirectory': 'Create Directory',
+  'movefile': 'Move File',
+  'copyfile': 'Copy File',
+  'list': 'List Files',
+  'search': 'Search',
+  'find': 'Find File',
+  'todowrite': 'Todo List',
+  'update_plan': 'Update Plan',
 };
 
 /**
@@ -32,9 +63,9 @@ const isFileViewingCommand = (command?: string): boolean => {
          /^sed\s+-n\s+/.test(trimmed);
 };
 
-const getToolDisplayName = (t: any, name?: string, input?: ToolInput) => {
+const getToolDisplayName = (name?: string, input?: ToolInput) => {
   if (!name) {
-    return t('tools.toolCall');
+    return 'Tool Call';
   }
 
   const lowerName = name.toLowerCase();
@@ -42,44 +73,12 @@ const getToolDisplayName = (t: any, name?: string, input?: ToolInput) => {
   // For shell_command, check the actual command to determine display name
   if (lowerName === 'shell_command' && input?.command) {
     if (isFileViewingCommand(input.command as string)) {
-      return t('tools.readFile');
+      return 'Read File';
     }
   }
 
-  // Translation key mapping
-  const toolKeyMap: Record<string, string> = {
-    'augmentcontextengine': 'tools.contextEngine',
-    'task': 'tools.task',
-    'read': 'tools.readFile',
-    'read_file': 'tools.readFile',
-    'edit': 'tools.editFile',
-    'edit_file': 'tools.editFile',
-    'write': 'tools.writeFile',
-    'write_to_file': 'tools.writeFile',
-    'replace_string': 'tools.replaceString',
-    'bash': 'tools.runCommand',
-    'run_terminal_cmd': 'tools.runCommand',
-    'execute_command': 'tools.executeCommand',
-    'executecommand': 'tools.executeCommand',
-    'shell_command': 'tools.runCommand',
-    'grep': 'tools.search',
-    'glob': 'tools.fileMatch',
-    'webfetch': 'tools.webFetch',
-    'websearch': 'tools.webSearch',
-    'delete': 'tools.delete',
-    'explore': 'tools.explore',
-    'createdirectory': 'tools.createDirectory',
-    'movefile': 'tools.moveFile',
-    'copyfile': 'tools.copyFile',
-    'list': 'tools.listFiles',
-    'search': 'tools.search',
-    'find': 'tools.findFile',
-    'todowrite': 'tools.todoList',
-    'update_plan': 'tools.updatePlan',
-  };
-
-  if (toolKeyMap[lowerName]) {
-    return t(toolKeyMap[lowerName]);
+  if (TOOL_DISPLAY_NAMES[lowerName]) {
+    return TOOL_DISPLAY_NAMES[lowerName];
   }
 
   // If it's snake_case, replace underscores with spaces and capitalize
@@ -220,7 +219,6 @@ interface GenericToolBlockProps {
 }
 
 const GenericToolBlock = ({ name, input, result }: GenericToolBlockProps) => {
-  const { t } = useTranslation();
   // Tools that should be collapsible (Grep, Glob, Write, Update Plan, Shell Command and MCP tools)
   const lowerName = (name ?? '').toLowerCase();
   const isMcpTool = lowerName.startsWith('mcp__');
@@ -237,7 +235,7 @@ const GenericToolBlock = ({ name, input, result }: GenericToolBlockProps) => {
     return null;
   }
 
-  const displayName = getToolDisplayName(t, name, input);
+  const displayName = getToolDisplayName(name, input);
   const codicon = CODICON_MAP[(name ?? '').toLowerCase()] ?? 'codicon-tools';
 
   let summary: string | null = null;
@@ -257,7 +255,7 @@ const GenericToolBlock = ({ name, input, result }: GenericToolBlockProps) => {
 
   const shouldShowDetails = otherParams.length > 0 && (!isCollapsible || expanded);
 
-  // 检查是否为特殊文件（没有扩展名但确实是文件）
+  // Check if it's a special file (no extension but is actually a file)
   const isSpecialFile = (fileName: string): boolean => {
     const specialFiles = [
       'makefile', 'dockerfile', 'jenkinsfile', 'vagrantfile',
@@ -268,7 +266,7 @@ const GenericToolBlock = ({ name, input, result }: GenericToolBlockProps) => {
     return specialFiles.includes(fileName.toLowerCase());
   };
 
-  // 判断是否为目录：以 / 结尾、是 . 或 ..、或者文件名不包含扩展名（且不是特殊文件）
+  // Determine if it's a directory: ends with /, is . or .., or filename has no extension (and not a special file)
   const fileName = filePath ? getFileName(filePath) : '';
   // Remove line number suffix when checking if it's a directory
   const cleanFileName = fileName.replace(/:\d+(-\d+)?$/, '');
@@ -278,7 +276,7 @@ const GenericToolBlock = ({ name, input, result }: GenericToolBlockProps) => {
     filePath === '..' ||
     (!cleanFileName.includes('.') && !isSpecialFile(cleanFileName))
   );
-  // 判断是否为文件路径（非目录）
+  // Determine if it's a file path (not a directory)
   const isFilePath = filePath && !isDirectoryPath;
 
   const handleFileClick = (e: React.MouseEvent) => {
@@ -293,7 +291,7 @@ const GenericToolBlock = ({ name, input, result }: GenericToolBlockProps) => {
     const name = getFileName(path);
 
     if (isDirectoryPath) {
-      // 对于目录，使用 getFolderIcon 获取彩色文件夹图标
+      // For directories, use getFolderIcon to get colored folder icon
       return getFolderIcon(name);
     } else {
       // Remove line number suffix if present (e.g., "App.tsx:700-780" -> "App.tsx")
@@ -360,4 +358,3 @@ const GenericToolBlock = ({ name, input, result }: GenericToolBlockProps) => {
 };
 
 export default GenericToolBlock;
-

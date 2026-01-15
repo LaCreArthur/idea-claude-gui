@@ -113,11 +113,11 @@ Each iteration:
 
 ## Section 11: Replace Translations in React Components (Batch 5 - Tool Blocks)
 
-- [ ] Remove i18n from `webview/src/components/toolBlocks/BashToolBlock.tsx`
-- [ ] Remove i18n from `webview/src/components/toolBlocks/EditToolBlock.tsx`
-- [ ] Remove i18n from `webview/src/components/toolBlocks/ReadToolBlock.tsx`
-- [ ] Remove i18n from `webview/src/components/toolBlocks/GenericToolBlock.tsx`
-- [ ] Remove i18n from `webview/src/components/toolBlocks/TodoListBlock.tsx`
+- [x] Remove i18n from `webview/src/components/toolBlocks/BashToolBlock.tsx` ✓
+- [x] Remove i18n from `webview/src/components/toolBlocks/EditToolBlock.tsx` ✓
+- [x] Remove i18n from `webview/src/components/toolBlocks/ReadToolBlock.tsx` ✓
+- [x] Remove i18n from `webview/src/components/toolBlocks/GenericToolBlock.tsx` ✓
+- [x] Remove i18n from `webview/src/components/toolBlocks/TodoListBlock.tsx` ✓
 
 ## Section 12: Replace Translations in React Components (Batch 6 - Remaining)
 

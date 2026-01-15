@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import type { ToolInput } from '../../types';
 import { openFile } from '../../utils/bridge';
 import { getFileName } from '../../utils/helpers';
@@ -88,7 +87,6 @@ const extractFilePathFromCommand = (command: string | undefined, workdir?: strin
 
 const ReadToolBlock = ({ input }: ReadToolBlockProps) => {
   const [expanded, setExpanded] = useState(false);
-  const { t } = useTranslation();
 
   if (!input) {
     return null;
@@ -117,7 +115,7 @@ const ReadToolBlock = ({ input }: ReadToolBlockProps) => {
   if (typeof input.offset === 'number' && typeof input.limit === 'number') {
     const startLine = Number(input.offset) + 1;
     const endLine = Number(input.offset) + Number(input.limit);
-    lineInfo = t('tools.lineRange', { start: startLine, end: endLine });
+    lineInfo = `Lines ${startLine}-${endLine}`;
   }
   // If not found, try extracting from file path suffix (e.g., "file.txt:300-370")
   else if (filePath && /:\d+(-\d+)?$/.test(filePath)) {
@@ -126,9 +124,9 @@ const ReadToolBlock = ({ input }: ReadToolBlockProps) => {
       const startLine = match[1];
       const endLine = match[2];
       if (endLine) {
-        lineInfo = t('tools.lineRange', { start: startLine, end: endLine });
+        lineInfo = `Lines ${startLine}-${endLine}`;
       } else {
-        lineInfo = t('tools.lineNumber', { line: startLine });
+        lineInfo = `Line ${startLine}`;
       }
     }
   }
@@ -136,10 +134,10 @@ const ReadToolBlock = ({ input }: ReadToolBlockProps) => {
   // Check if it's a directory (ends with / or is . or ..)
   const isDirectory = filePath === '.' || filePath === '..' || filePath?.endsWith('/');
   const iconClass = isDirectory ? 'codicon-folder' : 'codicon-file-code';
-  const actionText = isDirectory ? t('permission.tools.readDirectory') : t('permission.tools.Read');
+  const actionText = isDirectory ? 'Read Directory' : 'Read File';
 
   const handleFileClick = (e: React.MouseEvent) => {
-    e.stopPropagation(); // 阻止冒泡，避免触发展开/折叠
+    e.stopPropagation(); // Prevent bubbling to avoid triggering expand/collapse
     if (filePath && !isDirectory) {
       openFile(filePath);
     }
@@ -188,7 +186,7 @@ const ReadToolBlock = ({ input }: ReadToolBlockProps) => {
           <span
             className={`tool-title-summary ${!isDirectory ? 'clickable-file' : ''}`}
             onClick={!isDirectory ? handleFileClick : undefined}
-            title={!isDirectory ? t('tools.clickToOpen', { filePath }) : undefined}
+            title={!isDirectory ? `Click to open ${filePath}` : undefined}
             style={{ display: 'flex', alignItems: 'center' }}
           >
             <span
@@ -255,4 +253,3 @@ const ReadToolBlock = ({ input }: ReadToolBlockProps) => {
 };
 
 export default ReadToolBlock;
-

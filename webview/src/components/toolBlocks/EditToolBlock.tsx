@@ -1,5 +1,4 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
 import type { ToolInput, ToolResultBlock } from '../../types';
 import { openFile, showDiff, refreshFile } from '../../utils/bridge';
 import { getFileName } from '../../utils/helpers';
@@ -25,7 +24,7 @@ interface DiffResult {
   deletions: number;
 }
 
-// 使用 LCS 算法计算真正的 diff
+// Use LCS algorithm to compute real diff
 function computeDiff(oldLines: string[], newLines: string[]): DiffResult {
   if (oldLines.length === 0 && newLines.length === 0) {
     return { lines: [], additions: 0, deletions: 0 };
@@ -48,7 +47,7 @@ function computeDiff(oldLines: string[], newLines: string[]): DiffResult {
   const m = oldLines.length;
   const n = newLines.length;
 
-  // 计算 LCS 的 DP 表
+  // Compute LCS DP table
   const dp: number[][] = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
 
   for (let i = 1; i <= m; i++) {
@@ -61,7 +60,7 @@ function computeDiff(oldLines: string[], newLines: string[]): DiffResult {
     }
   }
 
-  // 回溯生成 diff
+  // Backtrack to generate diff
   const diffLines: DiffLine[] = [];
   let i = m, j = n;
 
@@ -86,7 +85,6 @@ function computeDiff(oldLines: string[], newLines: string[]): DiffResult {
 }
 
 const EditToolBlock = ({ name, input, result }: EditToolBlockProps) => {
-  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
 
   // Determine tool call status based on result
@@ -142,7 +140,7 @@ const EditToolBlock = ({ name, input, result }: EditToolBlockProps) => {
   const handleShowDiff = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (filePath) {
-      showDiff(filePath, oldString, newString, t('tools.editPrefix', { fileName: getFileName(filePath) }));
+      showDiff(filePath, oldString, newString, `Edit: ${getFileName(filePath)}`);
     }
   };
 
@@ -150,7 +148,7 @@ const EditToolBlock = ({ name, input, result }: EditToolBlockProps) => {
     e.stopPropagation();
     if (filePath) {
       refreshFile(filePath);
-      window.addToast?.(t('tools.refreshFileInIdeaSuccess'), 'success');
+      window.addToast?.('Manually refreshed this file in IDEA', 'success');
     }
   };
 
@@ -171,7 +169,7 @@ const EditToolBlock = ({ name, input, result }: EditToolBlockProps) => {
               e.stopPropagation();
               handleShowDiff(e);
             }}
-            title={t('tools.showDiffInIdea')}
+            title="Show changes in IDEA"
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -197,14 +195,14 @@ const EditToolBlock = ({ name, input, result }: EditToolBlockProps) => {
             }}
           >
             <span className="codicon codicon-diff" style={{ marginRight: '4px', fontSize: '12px' }} />
-            {t('tools.diffButton')}
+            Diff
           </button>
           <button
             onClick={(e) => {
               e.stopPropagation();
               handleRefreshInIdea(e);
             }}
-            title={t('tools.refreshFileInIdea')}
+            title="Refresh file in IDEA"
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -239,21 +237,21 @@ const EditToolBlock = ({ name, input, result }: EditToolBlockProps) => {
             <span className="codicon codicon-edit tool-title-icon" />
 
             <span className="tool-title-text">
-              {t('tools.editFileTitle')}
+              Edit File
             </span>
             <span
               className="tool-title-summary clickable-file"
               onClick={handleFileClick}
-              title={t('tools.clickToOpen', { filePath })}
+              title={`Click to open ${filePath}`}
               style={{ display: 'flex', alignItems: 'center' }}
             >
-              <span 
-                style={{ marginRight: '4px', display: 'flex', alignItems: 'center', width: '16px', height: '16px' }} 
-                dangerouslySetInnerHTML={{ __html: getFileIconSvg(filePath) }} 
+              <span
+                style={{ marginRight: '4px', display: 'flex', alignItems: 'center', width: '16px', height: '16px' }}
+                dangerouslySetInnerHTML={{ __html: getFileIconSvg(filePath) }}
               />
               {getFileName(filePath) || filePath}
             </span>
-            
+
             {(diff.additions > 0 || diff.deletions > 0) && (
               <span
                 style={{
@@ -278,20 +276,20 @@ const EditToolBlock = ({ name, input, result }: EditToolBlockProps) => {
         <div className="task-details" style={{ padding: 0, borderTop: '1px solid var(--border-primary)' }}>
           <div
             style={{
-              // 使用等宽字体确保制表符与空格宽度一致
+              // Use monospace font to ensure tab and space widths are consistent
               fontFamily: 'var(--idea-editor-font-family, monospace)',
               fontSize: '12px',
               lineHeight: 1.5,
               background: '#1e1e1e',
-              // 统一设置 Tab 宽度，避免不同环境默认值造成缩进偏移
+              // Set unified tab width to avoid indentation drift
               tabSize: 4 as unknown as number,
               MozTabSize: 4 as unknown as number,
-              // 保持空白和换行，不进行自动换行，防止选择过程重排
+              // Preserve whitespace and line breaks, no auto-wrap
               whiteSpace: 'pre' as const,
-              // 横向滚动，避免纵向与横向同时变化造成抖动和卡顿
+              // Horizontal scroll, avoid vertical and horizontal changes causing jitter
               overflowX: 'auto' as const,
               overflowY: 'hidden' as const,
-              // 提示浏览器在该容器进行合成层优化，提升选择性能
+              // Hint browser to optimize with compositing layer
               willChange: 'transform' as const,
               transform: 'translateZ(0)',
             }}
@@ -346,15 +344,15 @@ const EditToolBlock = ({ name, input, result }: EditToolBlockProps) => {
                   </div>
                   <pre
                     style={{
-                      // 保持原始空白与制表符宽度一致
+                      // Preserve original whitespace and tab width
                       whiteSpace: 'pre',
                       margin: 0,
                       paddingLeft: '4px',
                       flex: 1,
-                      // 再次声明 tabSize 以防高亮/包裹层影响
+                      // Declare tabSize again to prevent highlight/wrapper layer from affecting it
                       tabSize: 4 as unknown as number,
                       MozTabSize: 4 as unknown as number,
-                      // 禁止任意断行，保持选择与滚动稳定
+                      // Disable arbitrary line breaks, keep selection and scroll stable
                       overflowWrap: 'normal' as const,
                     }}
                   >
