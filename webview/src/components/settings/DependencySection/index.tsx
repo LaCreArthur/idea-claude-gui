@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react';
-import { useTranslation } from 'react-i18next';
 import type { SdkId, SdkStatus, InstallProgress, InstallResult, UninstallResult, NodeEnvironmentStatus } from '../../../types/dependency';
 import styles from './style.module.less';
 
@@ -18,20 +17,13 @@ const sendToJava = (message: string) => {
 const SDK_DEFINITIONS = [
   {
     id: 'claude-sdk' as SdkId,
-    nameKey: 'settings.dependency.claudeSdkName',
-    description: 'settings.dependency.claudeSdkDescription',
+    name: 'Claude Code SDK',
+    description: 'Required for Claude AI features. Includes Claude Code SDK and related dependencies.',
     relatedProviders: ['anthropic', 'bedrock'],
-  },
-  {
-    id: 'codex-sdk' as SdkId,
-    nameKey: 'settings.dependency.codexSdkName',
-    description: 'settings.dependency.codexSdkDescription',
-    relatedProviders: ['openai'],
   },
 ];
 
 const DependencySection = ({ addToast }: DependencySectionProps) => {
-  const { t } = useTranslation();
   const [sdkStatus, setSdkStatus] = useState<Record<SdkId, SdkStatus>>({} as Record<SdkId, SdkStatus>);
   const [loading, setLoading] = useState(true);
   const [installingSdk, setInstallingSdk] = useState<SdkId | null>(null);
@@ -41,38 +33,25 @@ const DependencySection = ({ addToast }: DependencySectionProps) => {
   const [nodeAvailable, setNodeAvailable] = useState<boolean | null>(null);
   const logContainerRef = useRef<HTMLDivElement>(null);
 
-  // Use refs to store the latest callback and t function to avoid useEffect re-runs
   const addToastRef = useRef(addToast);
-  const tRef = useRef(t);
 
-  // Update refs when props change
   useEffect(() => {
     addToastRef.current = addToast;
-    tRef.current = t;
-  }, [addToast, t]);
+  }, [addToast]);
 
-  // Auto-scroll logs to bottom
   useEffect(() => {
     if (logContainerRef.current && showLogs) {
       logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
     }
   }, [installLogs, showLogs]);
 
-  // Setup window callbacks - only run once on mount
   useEffect(() => {
-    // 🔧 使用更安全的回调管理方式：
-    // 1. 保存原有回调的引用（在 effect 执行时捕获）
-    // 2. 创建包装函数而不是直接覆盖
-    // 3. 清理时恢复原有回调
-
-    // 捕获当前的回调引用（可能是 App.tsx 设置的）
     const savedUpdateDependencyStatus = window.updateDependencyStatus;
     const savedDependencyInstallProgress = window.dependencyInstallProgress;
     const savedDependencyInstallResult = window.dependencyInstallResult;
     const savedDependencyUninstallResult = window.dependencyUninstallResult;
     const savedNodeEnvironmentStatus = window.nodeEnvironmentStatus;
 
-    // 🔧 创建包装后的回调函数
     window.updateDependencyStatus = (jsonStr: string) => {
       try {
         const status = JSON.parse(jsonStr);
@@ -82,7 +61,6 @@ const DependencySection = ({ addToast }: DependencySectionProps) => {
         console.error('[DependencySection] Failed to parse dependency status:', error);
         setLoading(false);
       }
-      // 🔧 链式调用：同时触发之前保存的回调（如 App.tsx 的）
       if (typeof savedUpdateDependencyStatus === 'function') {
         try {
           savedUpdateDependencyStatus(jsonStr);
@@ -99,7 +77,6 @@ const DependencySection = ({ addToast }: DependencySectionProps) => {
       } catch (error) {
         console.error('[DependencySection] Failed to parse install progress:', error);
       }
-      // 链式调用
       if (typeof savedDependencyInstallProgress === 'function') {
         try {
           savedDependencyInstallProgress(jsonStr);
@@ -116,18 +93,17 @@ const DependencySection = ({ addToast }: DependencySectionProps) => {
 
         if (result.success) {
           const sdkDef = SDK_DEFINITIONS.find(d => d.id === result.sdkId);
-          const sdkName = sdkDef ? tRef.current(sdkDef.nameKey) : result.sdkId;
-          addToastRef.current?.(tRef.current('settings.dependency.installSuccess', { name: sdkName }), 'success');
+          const sdkName = sdkDef?.name || result.sdkId;
+          addToastRef.current?.(`${sdkName} installed successfully`, 'success');
         } else if (result.error === 'node_not_configured') {
-          addToastRef.current?.(tRef.current('settings.dependency.nodeNotConfigured'), 'warning');
+          addToastRef.current?.('Node.js is not configured. Please set the Node.js path in Basic Settings first.', 'warning');
         } else {
-          addToastRef.current?.(tRef.current('settings.dependency.installFailed', { error: result.error }), 'error');
+          addToastRef.current?.(`Installation failed: ${result.error}`, 'error');
         }
       } catch (error) {
         console.error('[DependencySection] Failed to parse install result:', error);
         setInstallingSdk(null);
       }
-      // 链式调用
       if (typeof savedDependencyInstallResult === 'function') {
         try {
           savedDependencyInstallResult(jsonStr);
@@ -144,16 +120,15 @@ const DependencySection = ({ addToast }: DependencySectionProps) => {
 
         if (result.success) {
           const sdkDef = SDK_DEFINITIONS.find(d => d.id === result.sdkId);
-          const sdkName = sdkDef ? tRef.current(sdkDef.nameKey) : result.sdkId;
-          addToastRef.current?.(tRef.current('settings.dependency.uninstallSuccess', { name: sdkName }), 'success');
+          const sdkName = sdkDef?.name || result.sdkId;
+          addToastRef.current?.(`${sdkName} has been uninstalled`, 'success');
         } else {
-          addToastRef.current?.(tRef.current('settings.dependency.uninstallFailed', { error: result.error }), 'error');
+          addToastRef.current?.(`Uninstall failed: ${result.error}`, 'error');
         }
       } catch (error) {
         console.error('[DependencySection] Failed to parse uninstall result:', error);
         setUninstallingSdk(null);
       }
-      // 链式调用
       if (typeof savedDependencyUninstallResult === 'function') {
         try {
           savedDependencyUninstallResult(jsonStr);
@@ -170,7 +145,6 @@ const DependencySection = ({ addToast }: DependencySectionProps) => {
       } catch (error) {
         console.error('[DependencySection] Failed to parse node environment status:', error);
       }
-      // 链式调用
       if (typeof savedNodeEnvironmentStatus === 'function') {
         try {
           savedNodeEnvironmentStatus(jsonStr);
@@ -180,23 +154,21 @@ const DependencySection = ({ addToast }: DependencySectionProps) => {
       }
     };
 
-    // Load initial status - only once on mount
     sendToJava('get_dependency_status:');
     sendToJava('check_node_environment:');
 
     return () => {
-      // 🔧 清理时恢复之前保存的回调，确保不丢失其他组件的回调
       window.updateDependencyStatus = savedUpdateDependencyStatus;
       window.dependencyInstallProgress = savedDependencyInstallProgress;
       window.dependencyInstallResult = savedDependencyInstallResult;
       window.dependencyUninstallResult = savedDependencyUninstallResult;
       window.nodeEnvironmentStatus = savedNodeEnvironmentStatus;
     };
-  }, []); // Empty dependency array - only run once on mount
+  }, []);
 
   const handleInstall = (sdkId: SdkId) => {
     if (nodeAvailable === false) {
-      addToast?.(t('settings.dependency.nodeNotConfigured'), 'warning');
+      addToast?.('Node.js is not configured. Please set the Node.js path in Basic Settings first.', 'warning');
       return;
     }
 
@@ -222,29 +194,26 @@ const DependencySection = ({ addToast }: DependencySectionProps) => {
 
   return (
     <div className={styles.dependencySection}>
-      <h3 className={styles.sectionTitle}>{t('settings.dependency.title')}</h3>
-      <p className={styles.sectionDesc}>{t('settings.dependency.description')}</p>
+      <h3 className={styles.sectionTitle}>SDK Dependency Management</h3>
+      <p className={styles.sectionDesc}>Manage AI SDK dependencies. Install the required SDK before first use.</p>
 
-      {/* SDK Install Policy Tip */}
       <div className={styles.sdkWarningBar}>
         <span className="codicon codicon-info" />
-        <span className={styles.warningText}>{t('settings.dependency.installPolicyTip')}</span>
+        <span className={styles.warningText}>To reduce package size, SDKs now need to be installed manually</span>
       </div>
 
-      {/* Node.js Environment Warning */}
       {nodeAvailable === false && (
         <div className={styles.warningBanner}>
           <span className="codicon codicon-warning" />
-          <span>{t('settings.dependency.nodeNotConfigured')}</span>
+          <span>Node.js is not configured. Please set the Node.js path in Basic Settings first.</span>
         </div>
       )}
 
-      {/* SDK List */}
       <div className={styles.sdkList}>
         {loading ? (
           <div className={styles.loadingState}>
             <span className="codicon codicon-loading codicon-modifier-spin" />
-            <span>{t('settings.dependency.loading')}</span>
+            <span>Loading dependency status...</span>
           </div>
         ) : (
           SDK_DEFINITIONS.map((sdk) => {
@@ -253,7 +222,6 @@ const DependencySection = ({ addToast }: DependencySectionProps) => {
             const isInstalling = installingSdk === sdk.id;
             const isUninstalling = uninstallingSdk === sdk.id;
             const hasUpdate = info?.hasUpdate;
-            // Only allow one operation at a time (install or uninstall)
             const isAnyOperationInProgress = installingSdk !== null || uninstallingSdk !== null;
 
             return (
@@ -262,17 +230,17 @@ const DependencySection = ({ addToast }: DependencySectionProps) => {
                   <div className={styles.sdkInfo}>
                     <div className={styles.sdkName}>
                       <span className={`codicon ${installed ? 'codicon-check' : 'codicon-package'}`} />
-                      <span>{t(sdk.nameKey)}</span>
+                      <span>{sdk.name}</span>
                       {installed && info?.installedVersion && (
                         <span className={styles.versionBadge}>v{info.installedVersion}</span>
                       )}
                       {hasUpdate && (
                         <span className={styles.updateBadge}>
-                          {t('settings.dependency.updateAvailable')}
+                          Update available
                         </span>
                       )}
                     </div>
-                    <div className={styles.sdkDescription}>{t(sdk.description)}</div>
+                    <div className={styles.sdkDescription}>{sdk.description}</div>
                   </div>
 
                   <div className={styles.sdkActions}>
@@ -285,12 +253,12 @@ const DependencySection = ({ addToast }: DependencySectionProps) => {
                         {isInstalling ? (
                           <>
                             <span className="codicon codicon-loading codicon-modifier-spin" />
-                            <span>{t('settings.dependency.installing')}</span>
+                            <span>Installing...</span>
                           </>
                         ) : (
                           <>
                             <span className="codicon codicon-cloud-download" />
-                            <span>{t('settings.dependency.install')}</span>
+                            <span>Install</span>
                           </>
                         )}
                       </button>
@@ -303,7 +271,7 @@ const DependencySection = ({ addToast }: DependencySectionProps) => {
                             disabled={isAnyOperationInProgress}
                           >
                             <span className="codicon codicon-sync" />
-                            <span>{t('settings.dependency.update')}</span>
+                            <span>Update</span>
                           </button>
                         )}
                         <button
@@ -314,12 +282,12 @@ const DependencySection = ({ addToast }: DependencySectionProps) => {
                           {isUninstalling ? (
                             <>
                               <span className="codicon codicon-loading codicon-modifier-spin" />
-                              <span>{t('settings.dependency.uninstalling')}</span>
+                              <span>Uninstalling...</span>
                             </>
                           ) : (
                             <>
                               <span className="codicon codicon-trash" />
-                              <span>{t('settings.dependency.uninstall')}</span>
+                              <span>Uninstall</span>
                             </>
                           )}
                         </button>
@@ -328,7 +296,6 @@ const DependencySection = ({ addToast }: DependencySectionProps) => {
                   </div>
                 </div>
 
-                {/* Install path info */}
                 {installed && info?.installPath && (
                   <div className={styles.installPath}>
                     <span className="codicon codicon-folder" />
@@ -341,17 +308,16 @@ const DependencySection = ({ addToast }: DependencySectionProps) => {
         )}
       </div>
 
-      {/* Install Logs */}
       {showLogs && (
         <div className={styles.logsSection}>
           <div className={styles.logsHeader}>
-            <span>{t('settings.dependency.installLogs')}</span>
+            <span>Install Logs</span>
             <button className={styles.closeLogsBtn} onClick={() => setShowLogs(false)}>
               <span className="codicon codicon-close" />
             </button>
           </div>
           <div className={styles.logsContainer} ref={logContainerRef}>
-            <pre>{installLogs || t('settings.dependency.waitingForLogs')}</pre>
+            <pre>{installLogs || 'Waiting for log output...'}</pre>
           </div>
         </div>
       )}
