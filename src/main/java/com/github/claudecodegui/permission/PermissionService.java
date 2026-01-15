@@ -1,6 +1,7 @@
 package com.github.claudecodegui.permission;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.diagnostic.Logger;
@@ -1061,6 +1062,129 @@ public class PermissionService {
                 LOG.error("Error occurred", e);
             }
         }
+    }
+
+    // ============================================================================
+    // Direct permission request API (for stdin/stdout bridge protocol)
+    // ============================================================================
+
+    /**
+     * Request permission directly (no file-based IPC).
+     * Used by the new bridge.js stdin/stdout protocol.
+     *
+     * @param toolName Tool name requesting permission
+     * @param inputs   Tool input parameters
+     * @return CompletableFuture resolving to JsonObject with { allow: boolean, message?: string }
+     */
+    public CompletableFuture<JsonObject> requestPermissionDirect(String toolName, JsonObject inputs) {
+        debugLog("DIRECT_REQUEST", "Permission request for: " + toolName);
+
+        // Check tool-level permission memory (always allow)
+        if (toolOnlyPermissionMemory.containsKey(toolName)) {
+            boolean allow = toolOnlyPermissionMemory.get(toolName);
+            debugLog("DIRECT_MEMORY_HIT", "Using tool-level memory for " + toolName + " -> " + (allow ? "ALLOW" : "DENY"));
+
+            JsonObject response = new JsonObject();
+            response.addProperty("allow", allow);
+            notifyDecision(toolName, inputs, allow ? PermissionResponse.ALLOW_ALWAYS : PermissionResponse.DENY);
+            return CompletableFuture.completedFuture(response);
+        }
+
+        // Find dialog shower
+        PermissionDialogShower matchedDialogShower = findDialogShowerByInputs(inputs);
+
+        if (matchedDialogShower == null) {
+            debugLog("DIRECT_NO_SHOWER", "No dialog shower registered, denying by default");
+            JsonObject response = new JsonObject();
+            response.addProperty("allow", false);
+            response.addProperty("message", "No permission dialog available");
+            return CompletableFuture.completedFuture(response);
+        }
+
+        debugLog("DIRECT_DIALOG", "Showing permission dialog for: " + toolName);
+
+        // Show dialog and wait for response
+        return matchedDialogShower.showPermissionDialog(toolName, inputs)
+            .thenApply(responseValue -> {
+                PermissionResponse decision = PermissionResponse.fromValue(responseValue);
+                if (decision == null) {
+                    decision = PermissionResponse.DENY;
+                }
+
+                boolean allow;
+                switch (decision) {
+                    case ALLOW:
+                        allow = true;
+                        break;
+                    case ALLOW_ALWAYS:
+                        allow = true;
+                        toolOnlyPermissionMemory.put(toolName, true);
+                        debugLog("DIRECT_ALLOW_ALWAYS", "Saved tool-level memory for: " + toolName);
+                        break;
+                    case DENY:
+                    default:
+                        allow = false;
+                        break;
+                }
+
+                notifyDecision(toolName, inputs, decision);
+
+                JsonObject response = new JsonObject();
+                response.addProperty("allow", allow);
+                return response;
+            })
+            .exceptionally(ex -> {
+                debugLog("DIRECT_ERROR", "Dialog error: " + ex.getMessage());
+                JsonObject response = new JsonObject();
+                response.addProperty("allow", false);
+                response.addProperty("message", "Dialog error: " + ex.getMessage());
+                return response;
+            });
+    }
+
+    /**
+     * Request AskUserQuestion directly (no file-based IPC).
+     * Used by the new bridge.js stdin/stdout protocol.
+     *
+     * @param questions Questions array from the AskUserQuestion tool
+     * @return CompletableFuture resolving to JsonObject with { allow: boolean, answers?: object }
+     */
+    public CompletableFuture<JsonObject> requestAskUserQuestionDirect(JsonArray questions) {
+        debugLog("DIRECT_ASK_USER", "AskUserQuestion request");
+
+        AskUserQuestionDialogShower dialogShower = getAskUserQuestionDialogShower();
+        if (dialogShower == null) {
+            debugLog("DIRECT_NO_ASK_SHOWER", "No AskUserQuestion dialog shower registered");
+            JsonObject response = new JsonObject();
+            response.addProperty("allow", false);
+            response.addProperty("message", "No AskUserQuestion dialog available");
+            return CompletableFuture.completedFuture(response);
+        }
+
+        // Build request object
+        JsonObject request = new JsonObject();
+        request.add("questions", questions);
+
+        String requestId = String.valueOf(System.currentTimeMillis());
+
+        return dialogShower.showAskUserQuestionDialog(requestId, request)
+            .thenApply(answers -> {
+                JsonObject response = new JsonObject();
+                if (answers != null) {
+                    response.addProperty("allow", true);
+                    response.add("answers", answers);
+                } else {
+                    response.addProperty("allow", false);
+                }
+                return response;
+            })
+            .exceptionally(ex -> {
+                debugLog("DIRECT_ASK_ERROR", "Dialog error: " + ex.getMessage());
+                JsonObject response = new JsonObject();
+                response.addProperty("allow", false);
+                response.addProperty("message", "Dialog error: " + ex.getMessage());
+                return response;
+            });
     }
 
     private void notifyDecision(String toolName, JsonObject inputs, PermissionResponse response) {

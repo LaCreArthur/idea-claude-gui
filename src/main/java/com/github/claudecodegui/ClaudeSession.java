@@ -7,6 +7,7 @@ import com.google.gson.JsonObject;
 import com.intellij.openapi.diagnostic.Logger;
 import com.github.claudecodegui.permission.PermissionManager;
 import com.github.claudecodegui.permission.PermissionRequest;
+import com.github.claudecodegui.permission.PermissionService;
 import com.github.claudecodegui.provider.claude.ClaudeSDKBridge;
 import com.github.claudecodegui.session.ClaudeMessageHandler;
 import com.github.claudecodegui.util.EditorFileUtils;
@@ -487,6 +488,77 @@ public class ClaudeSession {
             openedFilesJson,
             agentPrompt,
             streaming,
+            handler
+        ).thenApply(result -> null);
+    }
+
+    /**
+     * Send message using new bridge.js protocol (stdin/stdout IPC).
+     * This method handles permissions directly without file-based polling.
+     *
+     * @param channelId           Channel ID
+     * @param input               User message
+     * @param openedFilesJson     Open files context
+     * @param externalAgentPrompt Agent prompt (optional)
+     * @return CompletableFuture that completes when message is processed
+     */
+    private CompletableFuture<Void> sendMessageWithBridge(
+        String channelId,
+        String input,
+        JsonObject openedFilesJson,
+        String externalAgentPrompt
+    ) {
+        String agentPrompt = externalAgentPrompt != null ? externalAgentPrompt : getAgentPrompt();
+
+        // Get permission service for direct permission handling
+        PermissionService permissionService = PermissionService.getInstance(project);
+
+        // Create permission callback
+        ClaudeSDKBridge.PermissionCallback permissionCallback = (requestId, toolName, toolInput) -> {
+            LOG.info("[Bridge] Permission request: " + toolName);
+            return permissionService.requestPermissionDirect(toolName, toolInput);
+        };
+
+        // Create AskUserQuestion callback
+        ClaudeSDKBridge.AskUserQuestionCallback askUserCallback = (requestId, questions) -> {
+            LOG.info("[Bridge] AskUserQuestion request");
+            return permissionService.requestAskUserQuestionDirect(questions);
+        };
+
+        // Create message handler for streaming callbacks
+        ClaudeMessageHandler handler = new ClaudeMessageHandler(
+            project,
+            state,
+            callbackHandler,
+            messageParser,
+            messageMerger,
+            gson
+        );
+
+        // Read streaming configuration
+        Boolean streaming = null;
+        try {
+            String projectPath = project.getBasePath();
+            if (projectPath != null) {
+                CodemossSettingsService settingsService = new CodemossSettingsService();
+                streaming = settingsService.getStreamingEnabled(projectPath);
+            }
+        } catch (Exception e) {
+            LOG.warn("[Streaming] Failed to read streaming config: " + e.getMessage());
+        }
+
+        return claudeSDKBridge.sendMessageWithBridge(
+            channelId,
+            input,
+            state.getSessionId(),
+            state.getCwd(),
+            state.getPermissionMode(),
+            state.getModel(),
+            openedFilesJson,
+            agentPrompt,
+            streaming,
+            permissionCallback,
+            askUserCallback,
             handler
         ).thenApply(result -> null);
     }

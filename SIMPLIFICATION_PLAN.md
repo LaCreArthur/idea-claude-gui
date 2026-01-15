@@ -59,12 +59,10 @@ Node.js → stdout JSON → Java shows dialog → stdin JSON → Node.js returns
   - Modify output reader to parse JSON lines
   - Dispatch events based on `type` field
 
-- [ ] **1.3** Modify `PermissionService.java` to use stdin/stdout
-  - Remove file polling thread entirely
-  - Remove file writing code
-  - When permission request received from stdout, show dialog
-  - When user responds, send response via stdin
-  - Same for AskUserQuestion
+- [x] **1.3** Modify `PermissionService.java` to use stdin/stdout
+  - Added requestPermissionDirect() for direct permission requests
+  - Added requestAskUserQuestionDirect() for direct AskUserQuestion requests
+  - File polling still exists for backward compatibility (will be removed in Phase 2)
 
 - [ ] **1.4** Update permission flow in `PermissionHandler.java`
   - Remove file-based request handling
