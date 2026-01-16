@@ -2,6 +2,146 @@
 > Agentic hindsight - reverse chronological
 ---
 
+## 2026-01-16: Ralph Loop Iteration 5 - Permission Dialog UX (BUG-003)
+
+**Task:** Improve permission dialog readability.
+
+**Changes:**
+1. Added `truncatePath()` function to intelligently shorten long paths
+2. Added `getFileName()` to extract just the filename
+3. For file operations (Write/Edit/Read), show filename prominently in green
+4. Show truncated path as subtitle with full path on hover (tooltip)
+5. Updated header to show "Content" for file ops instead of the working dir
+
+**Files changed:**
+- `webview/src/components/PermissionDialog.tsx` - Added path utilities and updated display
+- `webview/src/styles/less/components/permission.less` - Added filename styling
+
+**Design improvements:**
+- Filename is now prominent and visible
+- Long paths are truncated with "..." prefix
+- Full path available on hover
+- Cleaner presentation for file operations
+
+---
+
+## 2026-01-16: Ralph Loop Iteration 4 - BUG-002 (Choice Selection)
+
+**Task:** Investigate and fix AskUserQuestion choice selection not working.
+
+**Investigation:**
+- Traced the full flow from bridge.js → Java → frontend → back
+- The code paths appear correct
+- Added debugging console logs to trace selection
+- Fixed cancel handling to properly send `cancelled: true` flag
+
+**Changes:**
+1. Fixed `handleAskUserQuestionCancel` to send `cancelled: true` instead of empty answers
+2. Added defensive null check for `currentQuestion` in handleOptionToggle
+3. Added console.log statements for debugging selection and submission
+
+**Files changed:**
+- `webview/src/App.tsx` - Fixed cancel handling
+- `webview/src/components/AskUserQuestionDialog.tsx` - Added logging and null checks
+
+**Note:** The bug report may have been from an earlier version, or may be environment-specific. The code logic appears correct. Added logging will help diagnose if issue recurs.
+
+---
+
+## 2026-01-16: Ralph Loop Iteration 3 - Fix BUG-005 (Shift+Enter)
+
+**Task:** Make Shift+Enter insert newline instead of sending message.
+
+**Root Cause:** The `beforeinput` event handler for `insertParagraph` was preventing default behavior without checking for Shift key. The keydown handler correctly excluded `!e.shiftKey`, but `beforeinput` doesn't have direct access to modifier keys.
+
+**Solution:**
+1. Added `shiftKeyPressedRef` to track Shift key state from keydown
+2. Updated both native and React `beforeinput` handlers to check this ref
+3. When Shift is pressed, allow default newline insertion
+
+**Files changed:** `webview/src/components/ChatInputBox/ChatInputBox.tsx`
+
+**Tests:** All 12 webview tests pass.
+
+---
+
+## 2026-01-16: Ralph Loop Iteration 1 - CLAUDE_CODE_TMPDIR
+
+**Task:** Implement CLAUDE_CODE_TMPDIR to eliminate `/tmp` write issue.
+
+**Changes:**
+- Added `process.env.CLAUDE_CODE_TMPDIR = workingDirectory` in bridge.js:375-378
+- SDK is already at v0.2.9 (not 0.1.75 as initially thought - check was outdated)
+
+**Hypothesis:** Setting this env var will eliminate need for path rewriting.
+
+**Result:** Implementation complete. Webview and ai-bridge tests pass.
+
+**What worked:**
+- Simple one-line fix in the right location (after cwd is set, before SDK query)
+- SDK v0.2.9 already installed at ~/.claude-gui/dependencies/claude-sdk
+
+**Next:** Manual testing needed to verify files are written to project directory.
+
+---
+
+## 2026-01-16: Ralph Loop Plan Created
+
+**Context:** Documentation consolidation and research phase completed.
+
+**Changes:**
+- Consolidated 15 markdown files into organized structure
+- Created `docs/LEARNINGS.md` with all technical learnings
+- Added research findings from January 2026 SDK updates
+- Created `RALPH_LOOP_PLAN.md` with iterative improvement plan
+
+**Key Discoveries:**
+1. **SDK version gap:** We're on v0.1.75, latest is v0.2.9 (major version jump)
+2. **Plan mode confirmed:** SDK docs state "plan mode is not currently supported"
+3. **CLAUDE_CODE_TMPDIR:** New env var in v2.1.5 may simplify our path rewriting
+4. **PermissionRequest hook:** New hook type might be cleaner than PreToolUse
+
+**Files Deleted (obsolete):**
+- 5x SIMPLIFICATION_*.md files (completed task)
+- PROJECT_INDEX.md (outdated)
+- FORK_STRATEGY.md (abandoned)
+- BACKLOG.md (merged into DEVLOG)
+- 8x docs/skills/*.md bug fix files (consolidated into LEARNINGS.md)
+- docs/AI_AUTOMATION_LEARNINGS.md, E2E_EFFICIENCY_LEARNINGS.md (consolidated)
+
+**Next Steps (from RALPH_LOOP_PLAN.md):**
+1. Test CLAUDE_CODE_TMPDIR env var
+2. Upgrade SDK from 0.1.75 → 0.2.9
+3. Fix BUG-005 (Shift+Enter)
+4. Fix BUG-002 (Choice selection)
+
+---
+
+## Open Bugs
+
+### BUG-002: Choice selection does nothing
+**Status**: Open
+**Reported**: 2026-01-05
+**Symptoms**: AskUserQuestion dialog shows choices. After selecting a choice, nothing happens.
+
+### BUG-003: Permission popup not readable
+**Status**: Open
+**Reported**: 2026-01-05
+**Symptoms**: Can't see what file is being modified (full path is truncated). Full diff shown below is useless and unreadable. Need better UX: show filename prominently, truncate path intelligently.
+**Reference**: See VS Code Claude extension for clean permission dialog design.
+
+### BUG-005: Shift+Enter for new line doesn't work
+**Status**: Open
+**Reported**: 2026-01-05
+**Symptoms**: In the chat input, Shift+Enter should insert a new line. Currently does nothing.
+
+### BUG-006: Drag-drop file cursor jumping
+**Status**: Open
+**Reported**: 2026-01-05
+**Symptoms**: Dragging a file into prompt creates '@path-to-file' reference. When trying to type BEFORE the reference, cursor jumps after it.
+
+---
+
 ## 2026-01-06: v0.2.3 Release - Multi-Provider Architecture
 
 **Changes**:

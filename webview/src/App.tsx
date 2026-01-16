@@ -1816,10 +1816,10 @@ const App = () => {
    * Handle AskUserQuestion cancel
    */
   const handleAskUserQuestionCancel = (requestId: string) => {
-    // Send empty answers to indicate cancellation
+    // Send cancelled flag to indicate user cancelled
     const payload = JSON.stringify({
       requestId,
-      answers: {},
+      cancelled: true,
     });
     sendBridgeMessage('ask_user_question_response', payload);
     askUserQuestionDialogOpenRef.current = false;

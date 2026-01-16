@@ -134,6 +134,36 @@ const PermissionDialog = ({
     return '~';
   };
 
+  // Truncate path intelligently: show ...project/src/file.js
+  const truncatePath = (path: string, maxLength = 60): string => {
+    if (!path || path.length <= maxLength) return path;
+
+    // Split by path separator
+    const parts = path.split(/[/\\]/);
+    if (parts.length <= 3) return path;
+
+    // Keep filename and some context
+    const fileName = parts[parts.length - 1];
+    const parentDir = parts[parts.length - 2];
+    const grandParentDir = parts[parts.length - 3];
+
+    // Try to fit: ...grandparent/parent/filename
+    const truncated = `...${grandParentDir}/${parentDir}/${fileName}`;
+    if (truncated.length <= maxLength) {
+      return truncated;
+    }
+
+    // Just show ...parent/filename
+    return `...${parentDir}/${fileName}`;
+  };
+
+  // Get just the filename from a path
+  const getFileName = (path: string): string => {
+    if (!path) return '';
+    const parts = path.split(/[/\\]/);
+    return parts[parts.length - 1] || path;
+  };
+
   // Get tool display title
   const getToolTitle = (toolName: string): string => {
     return TOOL_TITLES[toolName] || `Execute ${toolName}`;
@@ -141,17 +171,25 @@ const PermissionDialog = ({
 
   const commandContent = getCommandContent();
   const workingDirectory = getWorkingDirectory();
+  const fileName = getFileName(workingDirectory);
+  const truncatedPath = truncatePath(workingDirectory);
+  const isFileOperation = ['Write', 'Edit', 'Read'].includes(request.toolName);
 
   return (
     <div className="permission-dialog-overlay">
       <div className="permission-dialog-v3">
         <h3 className="permission-dialog-v3-title">{getToolTitle(request.toolName)}</h3>
-        <p className="permission-dialog-v3-subtitle">Request from external process</p>
+        {isFileOperation && fileName && (
+          <p className="permission-dialog-v3-filename">{fileName}</p>
+        )}
+        <p className="permission-dialog-v3-subtitle" title={workingDirectory}>
+          {isFileOperation ? truncatedPath : 'Request from external process'}
+        </p>
 
         <div className="permission-dialog-v3-command-box">
           <div className="permission-dialog-v3-command-header">
             <span className="command-path">
-              <span className="command-arrow">→</span> ~ {workingDirectory}
+              <span className="command-arrow">→</span> {isFileOperation ? 'Content' : '~'}
             </span>
             <button
               className="command-toggle"

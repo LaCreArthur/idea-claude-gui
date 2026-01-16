@@ -372,6 +372,11 @@ async function main() {
       // Ignore if can't change directory
     }
 
+    // Set CLAUDE_CODE_TMPDIR to working directory so Claude writes files there
+    // instead of /tmp. This was added in SDK v2.1.5 and eliminates the need
+    // for path rewriting in permission-handler.
+    process.env.CLAUDE_CODE_TMPDIR = workingDirectory;
+
     // Build system prompt append
     let systemPromptAppend = '';
     if (agentPrompt) {

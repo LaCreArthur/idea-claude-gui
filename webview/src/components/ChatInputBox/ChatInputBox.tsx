@@ -85,6 +85,7 @@ export const ChatInputBox = ({
   const submittedOnEnterRef = useRef(false);
   const completionSelectedRef = useRef(false);
   const justRenderedTagRef = useRef(false); // 标记是否刚刚渲染了文件标签 // 标记补全菜单刚选中项目，防止回车同时发送消息
+  const shiftKeyPressedRef = useRef(false); // Track if Shift was pressed during keydown (for Shift+Enter newline)
   const [isComposing, setIsComposing] = useState(false);
   const isComposingRef = useRef(false); // 同步的 IME 状态 ref，比 React state 更快响应
   const [hasContent, setHasContent] = useState(false);
@@ -965,6 +966,9 @@ export const ChatInputBox = ({
    * 处理键盘事件
    */
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+    // Track Shift key state for Shift+Enter newline handling in beforeinput
+    shiftKeyPressedRef.current = e.shiftKey;
+
     // 检测 IME 组合状态（多种方式）
     // keyCode 229 是 IME 输入时的特殊代码
     // nativeEvent.isComposing 是原生事件的组合状态
@@ -1121,6 +1125,9 @@ export const ChatInputBox = ({
     if (!el) return;
 
     const nativeKeyDown = (ev: KeyboardEvent) => {
+      // Track Shift key state for Shift+Enter newline handling in beforeinput
+      shiftKeyPressedRef.current = ev.shiftKey;
+
       // 检测 IME 输入：keyCode 229 表示 IME 正在处理按键
       // 这比 compositionStart 事件更早，可以更早地设置 composing 状态
       const isIMEProcessing = (ev as unknown as { keyCode?: number }).keyCode === 229 || ev.isComposing;
@@ -1217,6 +1224,12 @@ export const ChatInputBox = ({
         // 对于 cmdEnter 模式，普通 Enter 应该允许换行
         if (sendShortcut === 'cmdEnter') {
           // 允许默认的换行行为
+          return;
+        }
+
+        // For enter mode: Shift+Enter should insert newline (allow default behavior)
+        if (shiftKeyPressedRef.current) {
+          // Allow default newline insertion
           return;
         }
 
@@ -1778,6 +1791,14 @@ export const ChatInputBox = ({
           onBeforeInput={(e) => {
             const inputType = (e.nativeEvent as unknown as { inputType?: string }).inputType;
             if (inputType === 'insertParagraph') {
+              // For cmdEnter mode, allow normal Enter to insert newline
+              if (sendShortcut === 'cmdEnter') {
+                return;
+              }
+              // For enter mode: Shift+Enter should insert newline (allow default behavior)
+              if (shiftKeyPressedRef.current) {
+                return;
+              }
               e.preventDefault();
               // 如果刚刚在补全菜单中用回车选择了项目，则不发送消息
               if (completionSelectedRef.current) {

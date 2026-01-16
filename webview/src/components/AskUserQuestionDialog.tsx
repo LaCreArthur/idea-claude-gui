@@ -65,9 +65,15 @@ const AskUserQuestionDialog = ({
   const currentAnswerSet = answers[currentQuestion.question] || new Set<string>();
 
   const handleOptionToggle = (label: string) => {
+    console.log('[AskUserQuestion] Option toggled:', label);
     setAnswers((prev) => {
       const newAnswers = { ...prev };
-      const currentSet = new Set(newAnswers[currentQuestion.question] || []);
+      const questionKey = currentQuestion?.question;
+      if (!questionKey) {
+        console.warn('[AskUserQuestion] No current question');
+        return prev;
+      }
+      const currentSet = new Set(newAnswers[questionKey] || []);
 
       if (currentQuestion.multiSelect) {
         // Multi-select mode: toggle option
@@ -82,7 +88,10 @@ const AskUserQuestionDialog = ({
         currentSet.add(label);
       }
 
-      newAnswers[currentQuestion.question] = currentSet;
+      newAnswers[questionKey] = currentSet;
+      console.log('[AskUserQuestion] Updated answers:', Object.fromEntries(
+        Object.entries(newAnswers).map(([k, v]) => [k, Array.from(v as Set<string>)])
+      ));
       return newAnswers;
     });
   };
@@ -102,6 +111,7 @@ const AskUserQuestionDialog = ({
   };
 
   const handleSubmitFinal = () => {
+    console.log('[AskUserQuestion] Submitting answers');
     // Convert Set to comma-separated string (multi) or single string (single)
     const formattedAnswers: Record<string, string> = {};
     request.questions.forEach((q) => {
@@ -113,6 +123,8 @@ const AskUserQuestionDialog = ({
       }
     });
 
+    console.log('[AskUserQuestion] Formatted answers:', formattedAnswers);
+    console.log('[AskUserQuestion] Request ID:', request.requestId);
     onSubmit(request.requestId, formattedAnswers);
   };
 
