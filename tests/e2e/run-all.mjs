@@ -15,9 +15,12 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // List of validated tests to run (in order)
 const TESTS = [
-  'test-mode-switching.mjs',
-  'test-permission-flow.mjs',
-  'test-plan-approval.mjs',
+  'test-message-flow.mjs',        // US-1: Core message flow
+  'test-session-management.mjs',  // US-2: Session management
+  'test-model-selection.mjs',     // US-4: Model selection
+  'test-mode-switching.mjs',      // US-6: Mode switching
+  'test-permission-flow.mjs',     // US-5: Permission dialogs
+  'test-plan-approval.mjs',       // US-7: Plan mode
 ];
 
 async function runTest(testFile) {
