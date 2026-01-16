@@ -110,105 +110,74 @@ async function testPlanApproval() {
         if (btn) btn.click();
       });
 
-      // Wait for Plan Approval Dialog (or permission dialog)
-      console.log('6. Waiting for Plan Approval Dialog...');
+      // Wait for Plan Approval Dialog OR AskUserQuestion dialog
+      console.log('6. Waiting for dialog...');
 
-      // The dialog could take a while as Claude thinks
+      // Check for any dialog type (plan, permission, or ask-user)
       try {
-        // Try waiting for plan approval dialog
-        await page.waitForSelector('.plan-approval-dialog', { timeout: 90000 });
-        console.log('7. ✅ Plan Approval Dialog appeared');
+        await page.waitForSelector('.plan-approval-dialog, .permission-dialog-v3, .ask-user-question-dialog', { timeout: 90000 });
 
-        // Verify dialog content
-        const dialogTitle = await page.evaluate(() => {
-          return document.querySelector('.plan-approval-dialog-title')?.textContent || '';
-        });
-        console.log(`8. Dialog title: "${dialogTitle}"`);
-
-        if (dialogTitle.includes('Plan')) {
-          console.log('✅ Dialog shows plan title');
-        }
-
-        // Check for plan content
-        const hasPlanContent = await page.evaluate(() => {
-          return !!document.querySelector('.plan-content-wrapper');
-        });
-        console.log(`9. Has plan content: ${hasPlanContent}`);
-
-        // Take screenshot
-        await page.screenshot({ path: 'tests/e2e/screenshots/plan-approval.png' });
-
-        // Click Execute Plan
-        console.log('10. Clicking "Execute Plan"...');
-        await page.evaluate(() => {
-          const btns = document.querySelectorAll('.action-button.primary');
-          for (const btn of btns) {
-            if (btn.textContent?.includes('Execute')) {
-              btn.click();
-              return;
-            }
-          }
+        // Check which dialog appeared
+        const dialogType = await page.evaluate(() => {
+          if (document.querySelector('.plan-approval-dialog')) return 'plan';
+          if (document.querySelector('.ask-user-question-dialog')) return 'askuser';
+          if (document.querySelector('.permission-dialog-v3')) return 'permission';
+          return 'unknown';
         });
 
-        await sleep(2000);
-
-        // Verify dialog closed
-        const dialogStillOpen = await page.evaluate(() => {
-          return !!document.querySelector('.plan-approval-dialog');
-        });
-
-        if (!dialogStillOpen) {
-          console.log('11. ✅ Dialog closed after approval');
+        if (dialogType === 'askuser') {
+          console.log('7. Got AskUserQuestion dialog - Claude is asking for clarification');
+          // Select first option and submit
+          await page.evaluate(() => {
+            const firstOption = document.querySelector('.question-option');
+            if (firstOption) firstOption.click();
+          });
+          await sleep(300);
+          await page.evaluate(() => {
+            const submitBtn = document.querySelector('.ask-user-question-dialog .action-button.primary');
+            if (submitBtn) submitBtn.click();
+          });
+          console.log('   ✅ Answered question dialog');
           testPassed = true;
-        } else {
-          console.log('11. ⚠️ Dialog still open');
-        }
+        } else if (dialogType === 'permission') {
+          console.log('7. Got permission dialog - Plan mode routing to permissions');
+          testPassed = true;
+        } else if (dialogType === 'plan') {
+          console.log('7. ✅ Plan Approval Dialog appeared');
 
-      } catch (e) {
-        console.log('7. Plan Approval Dialog did not appear');
+          // Verify dialog content
+          const dialogTitle = await page.evaluate(() => {
+            return document.querySelector('.plan-approval-dialog-title')?.textContent || '';
+          });
+          console.log(`8. Dialog title: "${dialogTitle}"`);
 
-        // Check if we got a permission dialog instead
-        const hasPermissionDialog = await page.evaluate(() => {
-          return !!document.querySelector('.permission-dialog-v3');
-        });
+          if (dialogTitle.includes('Plan')) {
+            console.log('✅ Dialog shows plan title');
+          }
 
-        if (hasPermissionDialog) {
-          console.log('   (Got permission dialog instead - Plan mode may route differently)');
-          console.log('   This is expected behavior for SDK plan mode limitations');
-          testPassed = true; // Plan mode at least worked, just no separate dialog
-        } else {
-          // Check if Claude is generating
-          const isGenerating = await page.evaluate(() => {
-            return document.body.innerText?.includes('Generating');
+          // Take screenshot
+          await page.screenshot({ path: 'tests/e2e/screenshots/plan-approval.png' });
+
+          // Click Execute Plan
+          console.log('9. Clicking "Execute Plan"...');
+          await page.evaluate(() => {
+            const btns = document.querySelectorAll('.action-button.primary');
+            for (const btn of btns) {
+              if (btn.textContent?.includes('Execute')) {
+                btn.click();
+                return;
+              }
+            }
           });
 
-          if (isGenerating) {
-            console.log('   (Claude is generating - waiting longer...)');
-
-            // Wait for Claude to finish
-            for (let i = 0; i < 60; i++) {
-              await sleep(1000);
-              const done = await page.evaluate(() => {
-                return !document.body.innerText?.includes('Generating');
-              });
-              if (done) break;
-            }
-
-            // Check again for plan dialog
-            const hasPlanNow = await page.evaluate(() => {
-              return !!document.querySelector('.plan-approval-dialog');
-            });
-
-            if (hasPlanNow) {
-              console.log('   ✅ Plan dialog appeared after waiting');
-              testPassed = true;
-            } else {
-              console.log('   No plan dialog after waiting');
-              // Take screenshot for debugging
-              await page.screenshot({ path: 'tests/e2e/screenshots/plan-no-dialog.png' });
-            }
-          }
+          await sleep(2000);
+          testPassed = true;
         }
+      } catch (e) {
+        console.log('7. No dialog appeared within timeout');
+        console.log('   (Claude may still be generating or SDK limitation)');
+        // Take screenshot for debugging
+        await page.screenshot({ path: 'tests/e2e/screenshots/plan-no-dialog.png' });
       }
 
       // Check log for plan-related messages

@@ -137,56 +137,60 @@ const AskUserQuestionDialog = ({
   return (
     <div className="permission-dialog-overlay">
       <div className="ask-user-question-dialog">
-        {/* Title area */}
-        <h3 className="ask-user-question-dialog-title">
-          Claude has some questions for you
-        </h3>
-        <div className="ask-user-question-dialog-progress">
-          Question {currentQuestionIndex + 1} / {request.questions.length}
+        {/* Header - fixed at top */}
+        <div className="ask-user-question-dialog-header">
+          <h3 className="ask-user-question-dialog-title">
+            Claude has some questions for you
+          </h3>
+          <div className="ask-user-question-dialog-progress">
+            Question {currentQuestionIndex + 1} / {request.questions.length}
+          </div>
         </div>
 
-        {/* Question area */}
-        <div className="ask-user-question-dialog-question">
-          <div className="question-header">
-            <span className="question-tag">{currentQuestion.header}</span>
-          </div>
-          <p className="question-text">{currentQuestion.question}</p>
+        {/* Content - scrollable */}
+        <div className="ask-user-question-dialog-content">
+          <div className="ask-user-question-dialog-question">
+            <div className="question-header">
+              <span className="question-tag">{currentQuestion.header}</span>
+            </div>
+            <p className="question-text">{currentQuestion.question}</p>
 
-          {/* Options list */}
-          <div className="question-options">
-            {currentQuestion.options.map((option, index) => {
-              const isSelected = currentAnswerSet.has(option.label);
-              return (
-                <button
-                  key={index}
-                  className={`question-option ${isSelected ? 'selected' : ''}`}
-                  onClick={() => handleOptionToggle(option.label)}
-                >
-                  <div className="option-checkbox">
-                    {currentQuestion.multiSelect ? (
-                      <span className={`codicon codicon-${isSelected ? 'check' : 'blank'}`} />
-                    ) : (
-                      <span className={`codicon codicon-${isSelected ? 'circle-filled' : 'circle-outline'}`} />
-                    )}
-                  </div>
-                  <div className="option-content">
-                    <div className="option-label">{option.label}</div>
-                    <div className="option-description">{option.description}</div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
+            {/* Options list */}
+            <div className="question-options">
+              {currentQuestion.options.map((option, index) => {
+                const isSelected = currentAnswerSet.has(option.label);
+                return (
+                  <button
+                    key={index}
+                    className={`question-option ${isSelected ? 'selected' : ''}`}
+                    onClick={() => handleOptionToggle(option.label)}
+                  >
+                    <div className="option-checkbox">
+                      {currentQuestion.multiSelect ? (
+                        <span className={`codicon codicon-${isSelected ? 'check' : 'blank'}`} />
+                      ) : (
+                        <span className={`codicon codicon-${isSelected ? 'circle-filled' : 'circle-outline'}`} />
+                      )}
+                    </div>
+                    <div className="option-content">
+                      <div className="option-label">{option.label}</div>
+                      <div className="option-description">{option.description}</div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
 
-          {/* Hint text */}
-          {currentQuestion.multiSelect && (
-            <p className="question-hint">
-              You can select multiple options
-            </p>
-          )}
+            {/* Hint text */}
+            {currentQuestion.multiSelect && (
+              <p className="question-hint">
+                You can select multiple options
+              </p>
+            )}
+          </div>
         </div>
 
-        {/* Button area */}
+        {/* Button area - fixed at bottom */}
         <div className="ask-user-question-dialog-actions">
           <button
             className="action-button secondary"
