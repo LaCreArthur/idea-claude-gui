@@ -109,3 +109,30 @@ See `docs/AI_AUTOMATION_LEARNINGS.md` for accumulated knowledge.
 - Consider API-level testing instead of UI
 
 **Commit:** `1d37675` - docs: Add AI-driven E2E testing learnings
+
+### Iteration 2 - COMPLETED
+**Date:** 2026-01-16
+
+**Goal:** Investigate JCEF JavaScript injection alternatives
+
+**Findings:**
+- Plugin already has test mode! (`-Dclaude.test.mode=true`)
+- Test mode injects `window.__testMessageLog` for message tracking
+- `executeJavaScript` method exists in `ClaudeSDKToolWindow.java`
+
+**Key Discovery:**
+```java
+// ClaudeSDKToolWindow.java:740-751
+if (Boolean.getBoolean("claude.test.mode")) {
+    // Injects test helpers into webview
+    window.__testMode = true;
+    window.__testMessageLog = [];
+}
+```
+
+**Implication:** Instead of UI automation, we can:
+1. Start Rider with `-Dclaude.test.mode=true`
+2. Inject JavaScript commands via plugin API
+3. Verify via `window.__testMessageLog`
+
+**Commit:** `610f60f` - docs: Add test mode discovery to learnings
