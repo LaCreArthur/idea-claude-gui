@@ -255,6 +255,7 @@ DEBUG=1 node tests/e2e/test-permissions.mjs
 |------|------|--------|-------|
 | Message Flow | 2026-01-16 | PASS | Send/receive with Auto-accept mode |
 | Session Mgmt | 2026-01-16 | PASS | Session isolation verified |
+| Session Resume | 2026-01-16 | PASS* | Navigation works; message loading varies |
 | Model Selection | 2026-01-16 | PASS | Sonnet/Opus/Haiku switching |
 | Mode Switch | 2026-01-16 | PASS | All modes switch correctly |
 | Permission | 2026-01-16 | PASS | Works for non-allowed commands (curl) |
@@ -265,7 +266,7 @@ DEBUG=1 node tests/e2e/test-permissions.mjs
 **Run all tests:**
 ```bash
 node tests/e2e/run-all.mjs
-# Expected: Passed: 7/7
+# Expected: Passed: 8/8
 ```
 
 **Architecture:**

@@ -37,10 +37,10 @@ Autonomous improvement loop for Claude GUI plugin testing and development.
 ## Untested User Stories (Priority Order)
 
 ### P0 - Core Functionality
-- [ ] **US-1**: Send message, receive streaming response
-- [ ] **US-2**: Session management (create, switch, delete)
-- [ ] **US-3**: Resume existing session
-- [ ] **US-4**: Model selection (Sonnet, Opus, Haiku)
+- [x] **US-1**: Send message, receive streaming response (TESTED)
+- [x] **US-2**: Session management (create, switch, delete) (TESTED)
+- [x] **US-3**: Resume existing session (TESTED - navigation works)
+- [x] **US-4**: Model selection (Sonnet, Opus, Haiku) (TESTED)
 
 ### P1 - Important Features
 - [x] **US-5**: Permission dialog flow (TESTED)
@@ -115,16 +115,21 @@ Autonomous improvement loop for Claude GUI plugin testing and development.
 
 **Status:** Complete
 
-### Iteration 3: MCP and Skills (Next)
-**Goal:** Test MCP server configuration and Skills execution
+### Iteration 3: Session Resume and Favorites (In Progress)
+**Goal:** Test session lifecycle and secondary features
 
 **Tasks:**
-- [ ] 3.1 Test US-9 (MCP server configuration)
-- [ ] 3.2 Test US-10 (Skills/Agents execution)
-- [ ] 3.3 Test US-3 (Resume existing session)
-- [ ] 3.4 Refactor to self-healing selectors
+- [x] 3.1 Test US-3 (Resume existing session)
+- [ ] 3.2 Test US-11 (Favorites)
+- [ ] 3.3 Test US-9 (MCP server configuration)
+- [ ] 3.4 Test US-10 (Skills/Agents execution)
 
-**Status:** Pending
+**Results:**
+- 8 tests now passing (up from 7)
+- Session resume test validates navigation and view switching
+- Message loading after resume varies (async loading)
+
+**Status:** In Progress
 
 ---
 

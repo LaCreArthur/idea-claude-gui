@@ -17,6 +17,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const TESTS = [
   'test-message-flow.mjs',        // US-1: Core message flow
   'test-session-management.mjs',  // US-2: Session management
+  'test-session-resume.mjs',      // US-3: Resume existing session
   'test-model-selection.mjs',     // US-4: Model selection
   'test-mode-switching.mjs',      // US-6: Mode switching
   'test-permission-flow.mjs',     // US-5: Permission dialogs
