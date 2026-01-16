@@ -224,11 +224,12 @@ export function setCursorAtCharOffset(
   const range = document.createRange();
   try {
     if (targetNode) {
-      if (targetNode.nodeType === Node.TEXT_NODE) {
-        const textNode = targetNode as Text;
+      const node = targetNode as Node;
+      if (node.nodeType === Node.TEXT_NODE) {
+        const textNode = node as Text;
         range.setStart(textNode, Math.max(0, Math.min(targetOffset, textNode.textContent?.length ?? 0)));
-      } else if (targetNode.nodeType === Node.ELEMENT_NODE) {
-        const el = targetNode as HTMLElement;
+      } else if (node.nodeType === Node.ELEMENT_NODE) {
+        const el = node as HTMLElement;
         if (targetOffset > 0 && el.childNodes.length >= targetOffset) {
           range.setStartAfter(el.childNodes[targetOffset - 1]);
         } else {
