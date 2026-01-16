@@ -21,6 +21,7 @@ const TESTS = [
   'test-mode-switching.mjs',      // US-6: Mode switching
   'test-permission-flow.mjs',     // US-5: Permission dialogs
   'test-plan-approval.mjs',       // US-7: Plan mode
+  'test-error-handling.mjs',      // US-14: Error handling
 ];
 
 async function runTest(testFile) {

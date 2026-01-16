@@ -37,6 +37,17 @@ jobs:
         working-directory: ai-bridge
         run: npm ci
 
+      - name: Run webview tests
+        working-directory: webview
+        run: npm test
+
+      - name: Run ai-bridge tests
+        working-directory: ai-bridge
+        run: npm test
+
+      - name: Run Java tests
+        run: ./gradlew test
+
       - name: Build Plugin
         run: ./gradlew buildPlugin
 

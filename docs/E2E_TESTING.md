@@ -260,11 +260,12 @@ DEBUG=1 node tests/e2e/test-permissions.mjs
 | Permission | 2026-01-16 | PASS | Works for non-allowed commands (curl) |
 | Plan Approval | 2026-01-16 | PASS* | UI works; SDK doesn't support plan mode yet |
 | AskUserQuestion | 2026-01-16 | PASS | Dialog interaction validated |
+| Error Handling | 2026-01-16 | PASS | Empty msg prevention, interrupt recovery, UI stability |
 
 **Run all tests:**
 ```bash
 node tests/e2e/run-all.mjs
-# Expected: Passed: 6/6
+# Expected: Passed: 7/7
 ```
 
 **Architecture:**
