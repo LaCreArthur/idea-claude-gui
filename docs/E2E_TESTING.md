@@ -253,17 +253,25 @@ DEBUG=1 node tests/e2e/test-permissions.mjs
 
 | Test | Date | Status | Notes |
 |------|------|--------|-------|
-| AskUserQuestion | 2026-01-16 | PASS | Full flow validated |
-| Permission | 2026-01-16 | PASS | Works for non-allowed commands (curl); allowed commands auto-approved by SDK |
-| Mode Switch | 2026-01-16 | PASS | All modes switch correctly, messages sent to backend |
+| Message Flow | 2026-01-16 | PASS | Send/receive with Auto-accept mode |
+| Session Mgmt | 2026-01-16 | PASS | Session isolation verified |
+| Model Selection | 2026-01-16 | PASS | Sonnet/Opus/Haiku switching |
+| Mode Switch | 2026-01-16 | PASS | All modes switch correctly |
+| Permission | 2026-01-16 | PASS | Works for non-allowed commands (curl) |
 | Plan Approval | 2026-01-16 | PASS* | UI works; SDK doesn't support plan mode yet |
-| Session Mgmt | - | TODO | |
+| AskUserQuestion | 2026-01-16 | PASS | Dialog interaction validated |
 
 **Run all tests:**
 ```bash
 node tests/e2e/run-all.mjs
-# Expected: Passed: 3/3
+# Expected: Passed: 6/6
 ```
+
+**Architecture:**
+- Page Object Model: `tests/e2e/pages/ClaudeGUIPage.mjs`
+- Resilient selectors with fallbacks
+- Auto-cleanup of leftover dialogs
 
 **Fixed Bugs:**
 - Default permission mode was `bypassPermissions` instead of `default` (fixed in App.tsx)
+- Model selector now excludes mode buttons

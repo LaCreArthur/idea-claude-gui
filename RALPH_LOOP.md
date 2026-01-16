@@ -98,6 +98,17 @@ Autonomous improvement loop for Claude GUI plugin testing and development.
 - Model selector fixed (exclude mode buttons)
 - Session isolation verified
 
+### Iteration 2: Extended Coverage (2026-01-16)
+**Goal:** Test AskUserQuestion, error scenarios
+
+**Tasks:**
+- [x] 2.1 Create test-askuser-custom.mjs
+- [x] 2.2 Update E2E_TESTING.md with coverage table
+- [ ] 2.3 Test error handling scenarios
+- [ ] 2.4 Add CI/CD integration (GitHub Actions)
+
+**Status:** In Progress
+
 ---
 
 ## Learnings Log
