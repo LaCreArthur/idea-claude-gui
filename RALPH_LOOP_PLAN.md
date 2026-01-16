@@ -239,6 +239,8 @@ Permission dialog is unreadable because it shows full path and raw diff.
 | 6 | 2026-01-16 | Cursor Jumping | ✅ Fixed | renderFileTags was always restoring cursor to end; now saves/restores position |
 | 7 | 2026-01-16 | WeChat QR | ✅ Replaced | Community tab now shows GitHub links instead of WeChat QR |
 | 8 | 2026-01-16 | Path Rewriting | ✅ Already done | Was removed when CLAUDE_CODE_TMPDIR was implemented |
+| 9 | 2026-01-16 | File Link Click | ✅ Verified | FileHandler parses file:line format, jumps to line |
+| 10 | 2026-01-16 | Permissions Tab | ✅ Removed | Was only placeholder; permissions handled via dialogs |
 
 ### Metrics to Track
 

@@ -751,9 +751,6 @@ const SettingsView = ({ onClose, initialTab, streamingEnabled: streamingEnabledP
           {/* MCP servers */}
           {currentTab === 'mcp' && <PlaceholderSection type="mcp" />}
 
-          {/* Permissions config */}
-          {currentTab === 'permissions' && <PlaceholderSection type="permissions" />}
-
           {/* Agents */}
           {currentTab === 'agents' && (
             <AgentSection

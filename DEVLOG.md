@@ -2,6 +2,25 @@
 > Agentic hindsight - reverse chronological
 ---
 
+## 2026-01-16: Ralph Loop Iterations 8-10 - Cleanup & Verification
+
+**Iteration 8:** Path rewriting already simplified (verified CLAUDE_CODE_TMPDIR implementation)
+**Iteration 9:** File link clicking with line numbers already works (verified FileHandler.java:431-502)
+**Iteration 10:** Removed Permissions settings tab (was only placeholder)
+
+**Changes:**
+- Removed Permissions tab from settings sidebar (8 tabs → 7 tabs)
+- Updated SettingsTab type, PlaceholderSection props
+
+**Files changed:**
+- `webview/src/components/settings/SettingsSidebar/index.tsx`
+- `webview/src/components/settings/index.tsx`
+- `webview/src/components/settings/PlaceholderSection/index.tsx`
+
+**Tests:** All 12 webview tests pass.
+
+---
+
 ## 2026-01-16: Ralph Loop Iteration 7 - Remove WeChat QR (Task 1.4)
 
 **Task:** Replace WeChat QR code with GitHub links.

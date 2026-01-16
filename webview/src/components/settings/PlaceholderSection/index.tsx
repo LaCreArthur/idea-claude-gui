@@ -2,16 +2,10 @@ import { McpSettingsSection } from '../../mcp/McpSettingsSection';
 import styles from './style.module.less';
 
 interface PlaceholderSectionProps {
-  type: 'permissions' | 'mcp' | 'agents' | 'skills';
+  type: 'mcp' | 'agents' | 'skills';
 }
 
 const sectionConfig = {
-  permissions: {
-    title: 'Permissions',
-    desc: 'Manage Claude Code\'s file access and operation permissions',
-    icon: 'codicon-shield',
-    message: 'Permissions configuration coming soon...',
-  },
   mcp: {
     title: 'MCP Servers',
     desc: 'Configure and manage Model Context Protocol servers',
