@@ -110,8 +110,8 @@ const App = () => {
   // ChatInputBox 相关状态
   const [currentProvider, setCurrentProvider] = useState('claude');
   const [selectedClaudeModel, setSelectedClaudeModel] = useState(CLAUDE_MODELS[0].id);
-  const [claudePermissionMode, setClaudePermissionMode] = useState<PermissionMode>('bypassPermissions');
-  const [permissionMode, setPermissionMode] = useState<PermissionMode>('bypassPermissions');
+  const [claudePermissionMode, setClaudePermissionMode] = useState<PermissionMode>('default');
+  const [permissionMode, setPermissionMode] = useState<PermissionMode>('default');
   const [usagePercentage, setUsagePercentage] = useState(0);
   const [usageUsedTokens, setUsageUsedTokens] = useState<number | undefined>(undefined);
   const [usageMaxTokens, setUsageMaxTokens] = useState<number | undefined>(undefined);
@@ -278,13 +278,64 @@ const App = () => {
     document.documentElement.style.setProperty('--font-scale', scale.toString());
   }, []);
 
+  // Initialize E2E test bridge if in test mode (set by Java when claude.test.mode=true)
+  useEffect(() => {
+    if (!window.__testMode) return;
+
+    console.log('[TEST_MODE] Initializing test bridge in React');
+
+    window.__testBridge = {
+      getMessageLog: () => window.__testMessageLog || [],
+
+      clearLog: () => {
+        window.__testMessageLog = [];
+      },
+
+      waitForMessage: (typePrefix: string, timeoutMs = 10000) =>
+        new Promise((resolve, reject) => {
+          const startTime = Date.now();
+          const check = () => {
+            const log = window.__testMessageLog || [];
+            const found = log.find((e) => e.msg.startsWith(typePrefix));
+            if (found) {
+              resolve(found.msg);
+            } else if (Date.now() - startTime > timeoutMs) {
+              reject(new Error(`Timeout waiting for message: ${typePrefix}`));
+            } else {
+              setTimeout(check, 100);
+            }
+          };
+          check();
+        }),
+
+      waitForCondition: (predicate: (msg: string) => boolean, timeoutMs = 10000) =>
+        new Promise((resolve, reject) => {
+          const startTime = Date.now();
+          const check = () => {
+            const log = window.__testMessageLog || [];
+            const found = log.find((e) => predicate(e.msg));
+            if (found) {
+              resolve(found.msg);
+            } else if (Date.now() - startTime > timeoutMs) {
+              reject(new Error('Timeout waiting for condition'));
+            } else {
+              setTimeout(check, 100);
+            }
+          };
+          check();
+        }),
+    };
+
+    console.log('[TEST_MODE] Test bridge initialized');
+  }, []);
+
   // 从 LocalStorage 加载模型选择状态，并同步到后端
   // Load model selection state from LocalStorage and sync to backend
   useEffect(() => {
     try {
       const saved = localStorage.getItem('model-selection-state');
       let restoredClaudeModel = CLAUDE_MODELS[0].id;
-      const initialPermissionMode: PermissionMode = 'bypassPermissions';
+      const initialPermissionMode: PermissionMode = 'default';
 
       if (saved) {
         const state = JSON.parse(saved);

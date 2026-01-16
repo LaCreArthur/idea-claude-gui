@@ -11,7 +11,7 @@ export const ButtonArea = ({
   hasInputContent = false,
   isLoading = false,
   selectedModel = 'claude-sonnet-4-5',
-  permissionMode = 'bypassPermissions',
+  permissionMode = 'default',
   currentProvider = 'claude',
   onSubmit,
   onStop,
