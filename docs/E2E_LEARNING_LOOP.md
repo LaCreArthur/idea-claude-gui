@@ -77,9 +77,35 @@ See `docs/AI_AUTOMATION_LEARNINGS.md` for accumulated knowledge.
 
 ## Progress Log
 
-### Iteration 1
-- [ ] Screenshot current state
-- [ ] Identify Claude GUI panel location
-- [ ] Navigate via keyboard
-- [ ] Attempt safe interaction
-- [ ] Document results
+### Iteration 1 - COMPLETED
+**Date:** 2026-01-16
+
+**Actions:**
+- [x] Screenshot current state
+- [x] Identify Claude GUI panel location (CENTER panel, not left)
+- [x] Navigate via keyboard (Tab, Cmd+Shift+A)
+- [x] Attempt safe interaction (click, type, paste, Enter)
+- [x] Document results
+
+**Critical Finding:** JCEF webview doesn't receive system input!
+
+| Method Tried | Result |
+|-------------|--------|
+| `cliclick t:"text"` | Failed - no input |
+| `osascript keystroke` | Failed - no input |
+| Clipboard paste | Failed - no input |
+| Click + Enter | Failed - no send |
+
+**Learnings:**
+1. Claude GUI panel is in CENTER (not LEFT - that's Git/Changes panel)
+2. Input field shows "Hello Claude" text
+3. JCEF webviews have their own event handling
+4. Standard automation tools cannot interact with webview content
+5. Need alternative approach (JS injection, plugin API, etc.)
+
+**Next Steps:**
+- Investigate JCEF JavaScript injection
+- Look at plugin's test mode hooks
+- Consider API-level testing instead of UI
+
+**Commit:** `1d37675` - docs: Add AI-driven E2E testing learnings
