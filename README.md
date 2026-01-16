@@ -10,8 +10,6 @@ IntelliJ IDEA Plugin for Claude Code
 
 A powerful IntelliJ IDEA plugin that provides a visual interface for **Claude Code**, making AI-assisted programming more efficient and intuitive.
 
-> Fork of [zhukunpenglinyutong/idea-claude-code-gui](https://github.com/zhukunpenglinyutong/idea-claude-code-gui)
-
 ---
 
 ## Key Features
@@ -47,28 +45,13 @@ A powerful IntelliJ IDEA plugin that provides a visual interface for **Claude Co
 
 ---
 
-## Project Status
-
-Current version: **v0.1.5-beta1** (Updated on January 8, 2026)
-
-The project is under active development with continuous updates. For more iteration progress, please read [CHANGELOG.md](CHANGELOG.md)
-
----
-
 ## Installation
 
 [Claude GUI on JetBrains Marketplace](https://plugins.jetbrains.com/plugin/29599-claude-gui)
 
 ---
 
-### Collaborative Contributing
-
-For contributing guidelines, please read [CONTRIBUTING.md](CONTRIBUTING.md)
-
----
-
-
-## Local Development and Debugging
+## Local Development
 
 ### 1. Install Frontend Dependencies
 
@@ -96,8 +79,14 @@ Run in IDEA:
 ```sh
 ./gradlew clean buildPlugin
 
-# The generated plugin package will be in the build/distributions/ directory (package size approximately 40MB)
+# The generated plugin package will be in the build/distributions/ directory
 ```
+
+---
+
+## Contributing
+
+For contributing guidelines, please read [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ---
 
@@ -107,109 +96,15 @@ AGPL-3.0
 
 ---
 
-## Contributing
-
-Thanks to all contributors who help make IDEA-Claude-Code-GUI better!
-
-<table>
-  <tr>
-    <td align="center">
-      <a href="https://github.com/zhukunpenglinyutong">
-        <img src="https://avatars.githubusercontent.com/u/31264015?size=100" width="100" height="100" alt="zhukunpenglinyutong" style="border-radius: 50%; border: 3px solid #ff6b35; box-shadow: 0 0 15px rgba(255, 107, 53, 0.6);" />
-      </a>
-      <div>🔥🔥🔥</div>
-    </td>
-    <td align="center">
-      <a href="https://github.com/M1sury">
-        <img src="https://avatars.githubusercontent.com/u/64764195?size=100" width="100" height="100" alt="M1sury" style="border-radius: 50%;" />
-      </a>
-    </td>
-    <td align="center">
-      <a href="https://github.com/gadfly3173">
-        <img src="https://avatars.githubusercontent.com/u/28685179?size=100" width="100" height="100" alt="gadfly3173" style="border-radius: 50%; border: 3px solid #ff6b35; box-shadow: 0 0 15px rgba(255, 107, 53, 0.6);" />
-      </a>
-      <div>🔥</div>
-    </td>
-    <td align="center">
-      <a href="https://github.com/song782360037">
-        <img src="https://avatars.githubusercontent.com/u/66980578?size=100" width="100" height="100" alt="song782360037" style="border-radius: 50%;" />
-      </a>
-      <div>🔥</div>
-    </td>
-    <td align="center">
-      <a href="https://github.com/hpstream">
-        <img src="https://avatars.githubusercontent.com/u/18394192?size=100" width="100" height="100" alt="hpstream" style="border-radius: 50%;" />
-      </a>
-    </td>
-    <td align="center">
-      <a href="https://github.com/imblowsnow">
-        <img src="https://avatars.githubusercontent.com/u/74449531?size=100" width="100" height="100" alt="imblowsnow" style="border-radius: 50%;" />
-      </a>
-    </td>
-    <td align="center">
-      <a href="https://github.com/Rinimabi">
-        <img src="https://avatars.githubusercontent.com/u/18625271?size=100" width="100" height="100" alt="Rinimabi" style="border-radius: 50%;" />
-      </a>
-    </td>
-  </tr>
-  <tr>
-    <td align="center">
-      <a href="https://github.com/GotoFox">
-        <img src="https://avatars.githubusercontent.com/u/68596145?size=100" width="100" height="100" alt="GotoFox" style="border-radius: 50%;" />
-      </a>
-    </td>
-    <td align="center">
-      <a href="https://github.com/changshunxu520">
-        <img src="https://avatars.githubusercontent.com/u/16171624?size=100" width="100" height="100" alt="changshunxu520" style="border-radius: 50%;" />
-      </a>
-    </td>
-    <td align="center">
-      <a href="https://github.com/lie5860">
-        <img src="https://avatars.githubusercontent.com/u/30894657?size=100" width="100" height="100" alt="lie5860" style="border-radius: 50%;" />
-      </a>
-    </td>
-    <td align="center">
-      <a href="https://github.com/buddhist-coder">
-        <img src="https://avatars.githubusercontent.com/u/61658071?size=100" width="100" height="100" alt="buddhist-coder" style="border-radius: 50%;" />
-      </a>
-    </td>
-    <td align="center">
-      <a href="https://github.com/LaCreArthur">
-        <img src="https://avatars.githubusercontent.com/u/14138307?size=100" width="100" height="100" alt="LaCreArthur" style="border-radius: 50%;" />
-      </a>
-    </td>
-    <td align="center">
-      <a href="https://github.com/dungnguyent8">
-        <img src="https://avatars.githubusercontent.com/u/39462756?size=100" width="100" height="100" alt="dungnguyent8" style="border-radius: 50%;" />
-      </a>
-      <div>🔥</div>
-    </td>
-    <td align="center">
-      <a href="https://github.com/magic5295">
-        <img src="https://avatars.githubusercontent.com/u/157901486?size=100" width="100" height="100" alt="magic5295" style="border-radius: 50%;" />
-      </a>
-    </td>
-  </tr>
-  <tr>
-    <td align="center">
-      <a href="https://github.com/JackWPP">
-        <img src="https://avatars.githubusercontent.com/u/120316122?size=100" width="100" height="100" alt="JackWPP" style="border-radius: 50%;" />
-      </a>
-    </td>
-  </tr>
-</table>
-
----
-
 ## Star History
 
-[![Star History](https://api.star-history.com/svg?repos=zhukunpenglinyutong/idea-claude-code-gui&type=date&legend=top-left)](https://www.star-history.com/#zhukunpenglinyutong/idea-claude-code-gui&type=date&legend=top-left)
+[![Star History Chart](https://api.star-history.com/svg?repos=LaCreArthur/idea-claude-gui&type=Date)](https://star-history.com/#LaCreArthur/idea-claude-gui&Date)
 
 <!-- LINK GROUP -->
 
-[github-contributors-shield]: https://img.shields.io/github/contributors/zhukunpenglinyutong/idea-claude-code-gui?color=c4f042&labelColor=black&style=flat-square
-[github-forks-shield]: https://img.shields.io/github/forks/zhukunpenglinyutong/idea-claude-code-gui?color=8ae8ff&labelColor=black&style=flat-square
-[github-issues-link]: https://github.com/zhukunpenglinyutong/idea-claude-code-gui/issues
-[github-issues-shield]: https://img.shields.io/github/issues/zhukunpenglinyutong/idea-claude-code-gui?color=ff80eb&labelColor=black&style=flat-square
-[github-license-link]: https://github.com/zhukunpenglinyutong/idea-claude-code-gui/blob/main/LICENSE
-[github-stars-shield]: https://img.shields.io/github/stars/zhukunpenglinyutong/idea-claude-code-gui?color=ffcb47&labelColor=black&style=flat-square
+[github-contributors-shield]: https://img.shields.io/github/contributors/LaCreArthur/idea-claude-gui?color=c4f042&labelColor=black&style=flat-square
+[github-forks-shield]: https://img.shields.io/github/forks/LaCreArthur/idea-claude-gui?color=8ae8ff&labelColor=black&style=flat-square
+[github-issues-link]: https://github.com/LaCreArthur/idea-claude-gui/issues
+[github-issues-shield]: https://img.shields.io/github/issues/LaCreArthur/idea-claude-gui?color=ff80eb&labelColor=black&style=flat-square
+[github-license-link]: https://github.com/LaCreArthur/idea-claude-gui/blob/main/LICENSE
+[github-stars-shield]: https://img.shields.io/github/stars/LaCreArthur/idea-claude-gui?color=ffcb47&labelColor=black&style=flat-square
