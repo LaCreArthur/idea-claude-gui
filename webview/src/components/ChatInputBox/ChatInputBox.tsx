@@ -5,6 +5,7 @@ import { AttachmentList } from './AttachmentList';
 import { ContextBar } from './ContextBar';
 import { CompletionDropdown } from './Dropdown';
 import { useCompletionDropdown, useTriggerDetection } from './hooks';
+import { setCursorAtCharOffset } from './hooks/useTriggerDetection';
 import {
   commandToDropdownItem,
   fileReferenceProvider,
@@ -335,6 +336,9 @@ export const ChatInputBox = ({
       return;
     }
 
+    // Save cursor position before modifying innerHTML (BUG-006 fix)
+    const savedCursorPos = getCursorPosition(editableRef.current);
+
     // 构建新的 HTML 内容
     let newHTML = '';
     let lastIndex = 0;
@@ -435,22 +439,9 @@ export const ChatInputBox = ({
       });
     });
 
-    // 恢复光标位置到末尾
-    const selection = window.getSelection();
-    if (selection && editableRef.current.childNodes.length > 0) {
-      try {
-        const range = document.createRange();
-        const lastChild = editableRef.current.lastChild;
-        if (lastChild) {
-          range.setStartAfter(lastChild);
-          range.collapse(true);
-          selection.removeAllRanges();
-          selection.addRange(range);
-        }
-      } catch (e) {
-        // 忽略光标恢复错误
-      }
-    }
+    // Restore cursor to saved position (BUG-006 fix)
+    // Previously always moved cursor to end, causing jumping when typing before file references
+    setCursorAtCharOffset(editableRef.current, savedCursorPos);
 
     // 渲染完成后，立即重置标志，允许后续的补全检测
     // 使用 setTimeout 0 确保在当前事件循环后重置

@@ -137,6 +137,121 @@ export function getRectAtCharOffset(
 }
 
 /**
+ * Set cursor position at the specified character offset.
+ * Uses the same character counting logic as getCursorPosition/getTextContent.
+ */
+export function setCursorAtCharOffset(
+  element: HTMLElement,
+  charOffset: number
+): void {
+  let position = 0;
+  let targetNode: Node | null = null;
+  let targetOffset = 0;
+  let endsWithNewline = false;
+
+  const walk = (node: Node): boolean => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const text = node.textContent ?? '';
+      const len = text.length;
+      if (position + len >= charOffset) {
+        targetNode = node;
+        targetOffset = charOffset - position;
+        return true;
+      }
+      position += len;
+      endsWithNewline = textEndsWithNewline(text);
+    } else if (node.nodeType === Node.ELEMENT_NODE) {
+      const el = node as HTMLElement;
+      const tagName = el.tagName.toLowerCase();
+
+      if (tagName === 'br') {
+        if (position + 1 >= charOffset) {
+          targetNode = el;
+          targetOffset = 0;
+          return true;
+        }
+        position += 1;
+        endsWithNewline = true;
+        return false;
+      }
+
+      if (tagName === 'div' || tagName === 'p') {
+        if (position > 0 && !endsWithNewline) {
+          if (position + 1 >= charOffset) {
+            targetNode = el;
+            targetOffset = 0;
+            return true;
+          }
+          position += 1;
+          endsWithNewline = true;
+        }
+
+        for (const child of Array.from(el.childNodes)) {
+          if (walk(child)) return true;
+        }
+        return false;
+      }
+
+      // File tags count as @filepath (1 + path length)
+      if (el.classList.contains('file-tag')) {
+        const filePath = el.getAttribute('data-file-path') || '';
+        const tagLength = filePath.length + 1;
+
+        if (position + tagLength >= charOffset) {
+          // Cursor inside file tag - place after it
+          targetNode = el.nextSibling || el.parentNode;
+          targetOffset = el.nextSibling ? 0 : Array.from(el.parentNode?.childNodes || []).indexOf(el) + 1;
+          return true;
+        }
+        position += tagLength;
+        endsWithNewline = false;
+      } else {
+        for (const child of Array.from(node.childNodes)) {
+          if (walk(child)) return true;
+        }
+      }
+    }
+    return false;
+  };
+
+  for (const child of Array.from(element.childNodes)) {
+    if (walk(child)) break;
+  }
+
+  const selection = window.getSelection();
+  if (!selection) return;
+
+  const range = document.createRange();
+  try {
+    if (targetNode) {
+      if (targetNode.nodeType === Node.TEXT_NODE) {
+        const textNode = targetNode as Text;
+        range.setStart(textNode, Math.max(0, Math.min(targetOffset, textNode.textContent?.length ?? 0)));
+      } else if (targetNode.nodeType === Node.ELEMENT_NODE) {
+        const el = targetNode as HTMLElement;
+        if (targetOffset > 0 && el.childNodes.length >= targetOffset) {
+          range.setStartAfter(el.childNodes[targetOffset - 1]);
+        } else {
+          range.setStart(el, 0);
+        }
+      }
+    } else {
+      // Offset beyond content, place at end
+      if (element.lastChild) {
+        range.setStartAfter(element.lastChild);
+      } else {
+        range.setStart(element, 0);
+      }
+    }
+    range.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(range);
+  } catch {
+    // Ignore cursor setting errors
+  }
+}
+
+/**
  * 检查文本位置是否在文件标签内
  * @param element - contenteditable 元素
  * @param textPosition - 文本位置（基于 getTextContent 的虚拟位置）

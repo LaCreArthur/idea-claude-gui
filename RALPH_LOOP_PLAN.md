@@ -236,12 +236,15 @@ Permission dialog is unreadable because it shows full path and raw diff.
 | 3 | 2026-01-16 | Shift+Enter | ✅ Fixed | beforeinput doesn't have modifier keys; use ref to track from keydown |
 | 4 | 2026-01-16 | Choice Selection | ✅ Investigated | Code appears correct; added logging; fixed cancel handling |
 | 5 | 2026-01-16 | Permission UX | ✅ Improved | Added path truncation, filename display, tooltips |
+| 6 | 2026-01-16 | Cursor Jumping | ✅ Fixed | renderFileTags was always restoring cursor to end; now saves/restores position |
+| 7 | 2026-01-16 | WeChat QR | ✅ Replaced | Community tab now shows GitHub links instead of WeChat QR |
+| 8 | 2026-01-16 | Path Rewriting | ✅ Already done | Was removed when CLAUDE_CODE_TMPDIR was implemented |
 
 ### Metrics to Track
 
 | Metric | Start | Current | Target |
 |--------|-------|---------|--------|
-| Open bugs | 4 | 1 | 0 |
+| Open bugs | 4 | 0 | 0 ✅ |
 | SDK version | 0.2.9 | 0.2.9 | 0.2.9 (latest) ✅ |
 | E2E tests | 13 | 13 | 15+ |
 | Code complexity | - | - | Lower |

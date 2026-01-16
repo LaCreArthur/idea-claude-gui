@@ -2,6 +2,42 @@
 > Agentic hindsight - reverse chronological
 ---
 
+## 2026-01-16: Ralph Loop Iteration 7 - Remove WeChat QR (Task 1.4)
+
+**Task:** Replace WeChat QR code with GitHub links.
+
+**Changes:**
+- Replaced WeChat QR code and Chinese text in CommunitySection
+- Added GitHub links: Issues, Discussions, View on GitHub
+- Updated styles to support link items instead of QR code display
+
+**Files changed:**
+- `webview/src/components/settings/CommunitySection/index.tsx` - Complete rewrite
+- `webview/src/components/settings/CommunitySection/style.module.less` - Replaced QR styles with link styles
+
+**Tests:** All 12 webview tests pass.
+
+---
+
+## 2026-01-16: Ralph Loop Iteration 6 - Fix BUG-006 (Cursor Jumping)
+
+**Task:** Fix cursor jumping when typing before file reference tags.
+
+**Root Cause:** The `renderFileTags` function in ChatInputBox.tsx always restored cursor to the END of content after rebuilding innerHTML (line 438-452). When typing before a file tag, the cursor would jump to the end.
+
+**Solution:**
+1. Added `setCursorAtCharOffset` function to `hooks/useTriggerDetection.ts` - sets cursor to a specific character offset
+2. Modified `renderFileTags` to save cursor position BEFORE modifying innerHTML
+3. Restore cursor to the SAME position (not end) AFTER modifying
+
+**Files changed:**
+- `webview/src/components/ChatInputBox/hooks/useTriggerDetection.ts` - Added setCursorAtCharOffset export
+- `webview/src/components/ChatInputBox/ChatInputBox.tsx` - Import and use setCursorAtCharOffset
+
+**Tests:** All 12 webview tests pass.
+
+---
+
 ## 2026-01-16: Ralph Loop Iteration 5 - Permission Dialog UX (BUG-003)
 
 **Task:** Improve permission dialog readability.
@@ -136,9 +172,10 @@
 **Symptoms**: In the chat input, Shift+Enter should insert a new line. Currently does nothing.
 
 ### BUG-006: Drag-drop file cursor jumping
-**Status**: Open
+**Status**: ✅ Fixed (2026-01-16)
 **Reported**: 2026-01-05
 **Symptoms**: Dragging a file into prompt creates '@path-to-file' reference. When trying to type BEFORE the reference, cursor jumps after it.
+**Fix**: renderFileTags now saves/restores cursor position instead of always moving to end.
 
 ---
 
