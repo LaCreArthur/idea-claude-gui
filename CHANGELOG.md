@@ -1,3 +1,24 @@
+##### **v0.2.7** (2026-01-16)
+
+**Ralph Loop Bug Fixes & UX Improvements**
+
+Bug Fixes:
+- Fix Shift+Enter not inserting newline in chat input (BUG-005)
+- Fix cursor jumping when typing before file references (BUG-006)
+- Fix AskUserQuestion cancel handling
+
+UX Improvements:
+- Permission dialog: filename now prominent, path truncated with tooltip
+- Community tab: replaced WeChat QR with GitHub links
+- Removed unused Permissions settings tab (8→7 tabs)
+
+Infrastructure:
+- Add TestSendMessageAction for E2E testing automation
+- Consolidate documentation and learnings
+- Update RALPH_LOOP_PLAN.md with completed iterations
+
+---
+
 ##### **v0.2.6** (2026-01-16)
 
 **E2E Testing & Cleanup Release**

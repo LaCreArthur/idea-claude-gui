@@ -566,42 +566,62 @@ SDK now supports these hook events we're not using:
 
 ## Improvement Opportunities
 
-### High Priority
+### Completed (January 2026)
 
-1. **Try CLAUDE_CODE_TMPDIR** - May eliminate path rewriting complexity
-2. **Upgrade to latest SDK** - Get security fixes and new features
-3. **Use PermissionRequest hook** - Cleaner permission handling
+1. ~~**Try CLAUDE_CODE_TMPDIR**~~ ✅ Implemented in bridge.js
+2. ~~**Upgrade to latest SDK**~~ ✅ Already at v0.2.9
+3. ~~**Add settingSources**~~ ✅ Already implemented in bridge.js:400
 
-### Medium Priority
+### Deferred (Low Priority)
 
-4. **Evaluate V2 Interface** - Simpler multi-turn conversations
-5. **Add settingSources** - Control which settings load
-6. **Use new hook events** - SessionStart/End for lifecycle management
-
-### Low Priority
-
-7. **Unix sockets for IPC** - Faster than file-based, but more complex
-8. **node-ipc library** - Consider for better cross-platform IPC
+4. **Evaluate V2 Interface** - Still in preview; wait for stable release
+5. **Use PermissionRequest hook** - canUseTool works; refactor adds risk without benefit
+6. **Add SessionStart/End hooks** - Nice-to-have; current lifecycle handling works
+7. **Unix sockets for IPC** - File-based works well; complexity not justified
 
 ---
 
-## Open Bugs
+## Resolved Bugs (January 2026)
 
-### BUG-002: Choice selection does nothing
-AskUserQuestion dialog shows choices but selecting does nothing.
-**Hypothesis:** May be related to how we handle the tool response.
+### BUG-002: Choice selection (Investigated)
+**Status:** Code appears correct; added logging for future diagnosis if it recurs.
 
-### BUG-003: Permission popup not readable
-Full path truncated, diff unreadable.
-**Fix needed:** Better UX design for permission dialog.
+### BUG-003: Permission popup not readable → FIXED
+**Solution:** Added `truncatePath()` and `getFileName()` utilities. Filename now prominent in green, full path on hover.
 
-### BUG-005: Shift+Enter doesn't work
-Should insert newline in chat input.
-**Fix needed:** Handle keyboard event in React component.
+### BUG-005: Shift+Enter → FIXED
+**Root cause:** `beforeinput` event doesn't have modifier keys.
+**Solution:** Track Shift key state via `keydown` in a ref, check in `beforeinput` handler.
 
-### BUG-006: Drag-drop cursor jumping
-Cursor jumps after file reference when typing before it.
-**Fix needed:** ContentEditable cursor position management.
+### BUG-006: Cursor jumping → FIXED
+**Root cause:** `renderFileTags` always restored cursor to END after rebuilding innerHTML.
+**Solution:** Added `setCursorAtCharOffset()` function to save/restore cursor position.
+
+---
+
+## ContentEditable Cursor Management
+
+### Problem
+Rich text editors using `contentEditable` lose cursor position when innerHTML is modified (e.g., to render file tags).
+
+### Solution Pattern
+```typescript
+// 1. Save cursor position BEFORE modifying innerHTML
+const savedCursorPos = getCursorPosition(editableRef.current);
+
+// 2. Modify innerHTML
+editableRef.current.innerHTML = newHtml;
+
+// 3. Restore cursor to SAVED position (not end)
+setCursorAtCharOffset(editableRef.current, savedCursorPos);
+```
+
+### Key Functions
+- `getCursorPosition(element)` - Returns character offset accounting for all node types
+- `setCursorAtCharOffset(element, offset)` - Sets cursor at specific character position
+- Both handle: text nodes, BR elements, DIV/P blocks, file tags with `data-file-path`
+
+**Location:** `webview/src/components/ChatInputBox/hooks/useTriggerDetection.ts`
 
 ---
 
