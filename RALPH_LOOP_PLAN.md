@@ -245,6 +245,8 @@ Permission dialog is unreadable because it shows full path and raw diff.
 | 12 | 2026-01-16 | settingSources | ✅ Already done | bridge.js:400 has ['user', 'project', 'local'] |
 | 13 | 2026-01-16 | Zod v4 | ✅ Not needed | SDK 0.2.9 from dependencies folder works fine |
 | 14 | 2026-01-16 | PermissionRequest | ⏸️ Deferred | canUseTool works; refactor is risk without benefit |
+| 15 | 2026-01-16 | V2 Interface | ⏸️ Deferred | Still in preview; wait for stable release |
+| 16 | 2026-01-16 | SessionStart/End | ⏸️ Deferred | Nice-to-have; current lifecycle handling works |
 
 ### Metrics to Track
 
