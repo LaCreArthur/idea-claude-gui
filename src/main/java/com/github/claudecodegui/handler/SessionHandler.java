@@ -15,10 +15,6 @@ import java.io.File;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-/**
- * 会话管理消息处理器
- * 处理消息发送、中断、重启、新建会话等
- */
 public class SessionHandler extends BaseMessageHandler {
 
     private static final Logger LOG = Logger.getInstance(SessionHandler.class);
@@ -28,7 +24,6 @@ public class SessionHandler extends BaseMessageHandler {
         "send_message_with_attachments",
         "interrupt_session",
         "restart_session"
-        // 注意：create_new_session 不应该在这里处理，应该由 ClaudeSDKToolWindow.createNewSession() 处理
     };
 
     public SessionHandler(HandlerContext context) {
@@ -44,19 +39,15 @@ public class SessionHandler extends BaseMessageHandler {
     public boolean handle(String type, String content) {
         switch (type) {
             case "send_message":
-                LOG.debug("[SessionHandler] 处理: send_message");
                 handleSendMessage(content);
                 return true;
             case "send_message_with_attachments":
-                LOG.debug("[SessionHandler] 处理: send_message_with_attachments");
                 handleSendMessageWithAttachments(content);
                 return true;
             case "interrupt_session":
-                LOG.debug("[SessionHandler] 处理: interrupt_session");
                 handleInterruptSession();
                 return true;
             case "restart_session":
-                LOG.debug("[SessionHandler] 处理: restart_session");
                 handleRestartSession();
                 return true;
             default:
@@ -64,10 +55,6 @@ public class SessionHandler extends BaseMessageHandler {
         }
     }
 
-    /**
-     * Send message to Claude
-     * 【FIX】Now parses JSON format to extract text and agent info
-     */
     private void handleSendMessage(String content) {
         String nodeVersion = context.getClaudeSDKBridge().getCachedNodeVersion();
         if (nodeVersion == null) {
@@ -85,7 +72,6 @@ public class SessionHandler extends BaseMessageHandler {
             return;
         }
 
-        // 【FIX】Parse JSON format to extract text and agent info for per-tab agent selection
         String prompt;
         String agentPrompt = null;
         try {
@@ -128,7 +114,6 @@ public class SessionHandler extends BaseMessageHandler {
                 ClaudeNotifier.setWaiting(project);
             }
 
-            // 【FIX】Pass agent prompt directly to session instead of relying on global setting
             context.getSession().send(finalPrompt, finalAgentPrompt)
                 .thenRun(() -> {
                     if (project != null) {
@@ -148,10 +133,6 @@ public class SessionHandler extends BaseMessageHandler {
         });
     }
 
-    /**
-     * 发送带附件的消息
-     * 【FIX】Now extracts agent info from payload for per-tab agent selection
-     */
     private void handleSendMessageWithAttachments(String content) {
         try {
             Gson gson = new Gson();
@@ -178,7 +159,6 @@ public class SessionHandler extends BaseMessageHandler {
                 }
             }
 
-            // 【FIX】Extract agent prompt from the payload for per-tab agent selection
             String agentPrompt = null;
             if (payload != null && payload.has("agent") && !payload.get("agent").isJsonNull()) {
                 JsonObject agent = payload.getAsJsonObject("agent");
@@ -191,15 +171,11 @@ public class SessionHandler extends BaseMessageHandler {
 
             sendMessageWithAttachments(text, atts, agentPrompt);
         } catch (Exception e) {
-            LOG.error("[SessionHandler] 解析附件负载失败: " + e.getMessage(), e);
+            LOG.error("[SessionHandler] Failed to parse attachments: " + e.getMessage(), e);
             handleSendMessage(content);
         }
     }
 
-    /**
-     * Send message with attachments to Claude
-     * 【FIX】Now accepts agent prompt parameter for per-tab agent selection
-     */
     private void sendMessageWithAttachments(String prompt, List<ClaudeSession.Attachment> attachments, String agentPrompt) {
         // Version check (consistent with handleSendMessage)
         String nodeVersion = context.getClaudeSDKBridge().getCachedNodeVersion();
@@ -234,7 +210,6 @@ public class SessionHandler extends BaseMessageHandler {
                 ClaudeNotifier.setWaiting(project);
             }
 
-            // 【FIX】Pass agent prompt directly to session instead of relying on global setting
             context.getSession().send(prompt, attachments, finalAgentPrompt)
                 .thenRun(() -> {
                     if (project != null) {
@@ -254,51 +229,35 @@ public class SessionHandler extends BaseMessageHandler {
         });
     }
 
-    /**
-     * 中断会话
-     */
     private void handleInterruptSession() {
         context.getSession().interrupt().thenRun(() -> {
             ApplicationManager.getApplication().invokeLater(() -> {});
         });
     }
 
-    /**
-     * 重启会话
-     */
     private void handleRestartSession() {
         context.getSession().restart().thenRun(() -> {
             ApplicationManager.getApplication().invokeLater(() -> {});
         });
     }
 
-    /**
-     * 确定合适的工作目录
-     */
     private String determineWorkingDirectory() {
         String projectPath = context.getProject().getBasePath();
-
-        // 如果项目路径无效，回退到用户主目录
         if (projectPath == null || !new File(projectPath).exists()) {
             String userHome = System.getProperty("user.home");
             LOG.warn("[SessionHandler] Using user home directory as fallback: " + userHome);
             return userHome;
         }
 
-        // 尝试从配置中读取自定义工作目录
         try {
-            com.github.claudecodegui.CodemossSettingsService settingsService =
-                new com.github.claudecodegui.CodemossSettingsService();
+            com.github.claudecodegui.PluginSettingsService settingsService =
+                new com.github.claudecodegui.PluginSettingsService();
             String customWorkingDir = settingsService.getCustomWorkingDirectory(projectPath);
-
             if (customWorkingDir != null && !customWorkingDir.isEmpty()) {
-                // 如果是相对路径，拼接到项目根路径
                 File workingDirFile = new File(customWorkingDir);
                 if (!workingDirFile.isAbsolute()) {
                     workingDirFile = new File(projectPath, customWorkingDir);
                 }
-
-                // 验证目录是否存在
                 if (workingDirFile.exists() && workingDirFile.isDirectory()) {
                     String resolvedPath = workingDirFile.getAbsolutePath();
                     LOG.info("[SessionHandler] Using custom working directory: " + resolvedPath);
@@ -310,8 +269,6 @@ public class SessionHandler extends BaseMessageHandler {
         } catch (Exception e) {
             LOG.warn("[SessionHandler] Failed to read custom working directory: " + e.getMessage());
         }
-
-        // 默认使用项目根路径
         return projectPath;
     }
 }

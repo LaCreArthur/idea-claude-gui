@@ -19,18 +19,12 @@ import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Codemoss 配置文件服务(门面模式)
- * 委托具体功能给各个专门的 Manager
- */
-public class CodemossSettingsService {
+public class PluginSettingsService {
 
-    private static final Logger LOG = Logger.getInstance(CodemossSettingsService.class);
+    private static final Logger LOG = Logger.getInstance(PluginSettingsService.class);
     private static final int CONFIG_VERSION = 2;
 
     private final Gson gson;
-
-    // Managers
     private final ConfigPathManager pathManager;
     private final ClaudeSettingsManager claudeSettingsManager;
     private final WorkingDirectoryManager workingDirectoryManager;
@@ -39,16 +33,10 @@ public class CodemossSettingsService {
     private final McpServerManager mcpServerManager;
     private final ProviderManager providerManager;
 
-    public CodemossSettingsService() {
+    public PluginSettingsService() {
         this.gson = new GsonBuilder().setPrettyPrinting().serializeNulls().create();
-
-        // 初始化 ConfigPathManager
         this.pathManager = new ConfigPathManager();
-
-        // 初始化 ClaudeSettingsManager
         this.claudeSettingsManager = new ClaudeSettingsManager(gson, pathManager);
-
-        // 初始化 WorkingDirectoryManager
         this.workingDirectoryManager = new WorkingDirectoryManager(
             (ignored) -> {
                 try {
@@ -65,11 +53,7 @@ public class CodemossSettingsService {
                 }
             }
         );
-
-        // 初始化 AgentManager
         this.agentManager = new AgentManager(gson, pathManager);
-
-        // 初始化 SkillManager
         this.skillManager = new SkillManager(
             (ignored) -> {
                 try {
@@ -87,8 +71,6 @@ public class CodemossSettingsService {
             },
             claudeSettingsManager
         );
-
-        // 初始化 McpServerManager
         this.mcpServerManager = new McpServerManager(
             gson,
             (ignored) -> {
@@ -107,8 +89,6 @@ public class CodemossSettingsService {
             },
             claudeSettingsManager
         );
-
-        // Initialize ProviderManager
         this.providerManager = new ProviderManager(
             gson,
             (ignored) -> {
@@ -130,18 +110,10 @@ public class CodemossSettingsService {
         );
     }
 
-    // ==================== 基础配置管理 ====================
-
-    /**
-     * 获取配置文件路径 (~/.codemoss/config.json)
-     */
     public String getConfigPath() {
         return pathManager.getConfigPath();
     }
 
-    /**
-     * 读取配置文件
-     */
     public JsonObject readConfig() throws IOException {
         String configPath = getConfigPath();
         File configFile = new File(configPath);
@@ -161,13 +133,8 @@ public class CodemossSettingsService {
         }
     }
 
-    /**
-     * 写入配置文件
-     */
     public void writeConfig(JsonObject config) throws IOException {
         pathManager.ensureConfigDirectory();
-
-        // 备份现有配置
         backupConfig();
 
         String configPath = getConfigPath();
@@ -191,30 +158,19 @@ public class CodemossSettingsService {
         }
     }
 
-    /**
-     * 创建默认配置
-     */
     private JsonObject createDefaultConfig() {
         JsonObject config = new JsonObject();
         config.addProperty("version", CONFIG_VERSION);
-
-        // Claude 配置 - 空的供应商列表
         JsonObject claude = new JsonObject();
         JsonObject providers = new JsonObject();
-
         claude.addProperty("current", "");
         claude.add("providers", providers);
         config.add("claude", claude);
-
         return config;
     }
 
-    // ==================== Claude Settings 管理 ====================
-
     public JsonObject getCurrentClaudeConfig() throws IOException {
         JsonObject currentConfig = claudeSettingsManager.getCurrentClaudeConfig();
-
-        // 如果有 codemossProviderId,尝试从 codemoss 配置中获取供应商名称
         if (currentConfig.has("providerId")) {
             String providerId = currentConfig.get("providerId").getAsString();
             try {
@@ -232,10 +188,8 @@ public class CodemossSettingsService {
                     }
                 }
             } catch (Exception e) {
-                // 忽略错误,供应商名称是可选的
             }
         }
-
         return currentConfig;
     }
 
@@ -259,8 +213,6 @@ public class CodemossSettingsService {
         providerManager.applyActiveProviderToClaudeSettings();
     }
 
-    // ==================== Working Directory 管理 ====================
-
     public String getCustomWorkingDirectory(String projectPath) throws IOException {
         return workingDirectoryManager.getCustomWorkingDirectory(projectPath);
     }
@@ -273,45 +225,23 @@ public class CodemossSettingsService {
         return workingDirectoryManager.getAllWorkingDirectories();
     }
 
-    // ==================== 🔧 Streaming 配置管理 ====================
-
-    /**
-     * 获取流式传输配置
-     * @param projectPath 项目路径
-     * @return 是否启用流式传输
-     */
     public boolean getStreamingEnabled(String projectPath) throws IOException {
         JsonObject config = readConfig();
-
-        // 检查是否有 streaming 配置
         if (!config.has("streaming")) {
             return false;
         }
-
         JsonObject streaming = config.getAsJsonObject("streaming");
-
-        // 先检查项目特定的配置
         if (projectPath != null && streaming.has(projectPath)) {
             return streaming.get(projectPath).getAsBoolean();
         }
-
-        // 如果没有项目特定的配置，使用全局默认值
         if (streaming.has("default")) {
             return streaming.get("default").getAsBoolean();
         }
-
         return false;
     }
 
-    /**
-     * 设置流式传输配置
-     * @param projectPath 项目路径
-     * @param enabled 是否启用
-     */
     public void setStreamingEnabled(String projectPath, boolean enabled) throws IOException {
         JsonObject config = readConfig();
-
-        // 确保 streaming 对象存在
         JsonObject streaming;
         if (config.has("streaming")) {
             streaming = config.getAsJsonObject("streaming");
@@ -319,18 +249,13 @@ public class CodemossSettingsService {
             streaming = new JsonObject();
             config.add("streaming", streaming);
         }
-
-        // 保存项目特定配置（同时也作为默认值）
         if (projectPath != null) {
             streaming.addProperty(projectPath, enabled);
         }
         streaming.addProperty("default", enabled);
-
         writeConfig(config);
-        LOG.info("[CodemossSettings] Set streaming enabled to " + enabled + " for project: " + projectPath);
+        LOG.info("[PluginSettings] Set streaming enabled to " + enabled + " for project: " + projectPath);
     }
-
-    // ==================== Provider 管理 ====================
 
     public List<JsonObject> getClaudeProviders() throws IOException {
         return providerManager.getClaudeProviders();
@@ -376,16 +301,9 @@ public class CodemossSettingsService {
         return providerManager.isLocalProviderActive();
     }
 
-    /**
-     * Auto-enable local settings.json provider if available and no provider is configured.
-     * This provides a better out-of-the-box experience for users who have already run 'claude login'.
-     * @return true if local provider was auto-enabled
-     */
     public boolean autoEnableLocalProviderIfAvailable() {
         return providerManager.autoEnableLocalProviderIfAvailable();
     }
-
-    // ==================== MCP Server 管理 ====================
 
     public List<JsonObject> getMcpServers() throws IOException {
         return mcpServerManager.getMcpServers();
@@ -411,8 +329,6 @@ public class CodemossSettingsService {
         return mcpServerManager.validateMcpServer(server);
     }
 
-    // ==================== Skills 管理 ====================
-
     public List<JsonObject> getSkills() throws IOException {
         return skillManager.getSkills();
     }
@@ -432,8 +348,6 @@ public class CodemossSettingsService {
     public void syncSkillsToClaudeSettings() throws IOException {
         skillManager.syncSkillsToClaudeSettings();
     }
-
-    // ==================== Agents 管理 ====================
 
     public List<JsonObject> getAgents() throws IOException {
         return agentManager.getAgents();

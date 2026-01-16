@@ -392,4 +392,42 @@ interface Window {
    * Pending loading state before showLoading is registered (for Quick Fix feature)
    */
   __pendingLoadingState?: boolean;
+
+  // ============================================================================
+  // E2E Test Mode Helpers (injected by Java when claude.test.mode=true)
+  // ============================================================================
+
+  /**
+   * Test mode flag - true when running E2E tests
+   */
+  __testMode?: boolean;
+
+  /**
+   * Log of all messages sent/received through the bridge
+   */
+  __testMessageLog?: Array<{ ts: number; dir: 'in' | 'out'; msg: string }>;
+
+  /**
+   * Registry for tracking callback completions
+   */
+  __testCallbackRegistry?: Map<string, boolean>;
+
+  /**
+   * Original sendToJava function (before test mode wrapping)
+   */
+  __originalSendToJava?: (message: string) => void;
+
+  /**
+   * Test bridge API for E2E tests
+   */
+  __testBridge?: {
+    /** Get all logged messages */
+    getMessageLog: () => Array<{ ts: number; dir: 'in' | 'out'; msg: string }>;
+    /** Clear the message log */
+    clearLog: () => void;
+    /** Wait for a message matching the given type prefix */
+    waitForMessage: (typePrefix: string, timeoutMs?: number) => Promise<string>;
+    /** Wait for any message in the log that matches a predicate */
+    waitForCondition: (predicate: (msg: string) => boolean, timeoutMs?: number) => Promise<string>;
+  };
 }

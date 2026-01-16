@@ -2,203 +2,228 @@
 
 Hard-won lessons from attempting AI-driven E2E testing with computer control.
 
-## Problem: Clicking on Wrong Elements
+**Last Updated:** 2026-01-16
 
-### What Happened
-- Tried to click on Claude GUI input field
-- Kept clicking on Rider's Git panel, search boxes, file trees instead
-- Coordinate-based clicking is unreliable
+---
 
-### Why It Failed
-1. **Screen layout assumptions are wrong** - Claude GUI panel was in CENTER, not LEFT
-2. **JCEF webviews may not receive clicks normally** - Embedded browser components
-3. **Popups and overlays intercept clicks** - Search dialogs appeared instead
-4. **Coordinate math is error-prone** - Estimating pixel positions from screenshots
+## Executive Summary
 
-### What Works Better
-1. **Use keyboard navigation** - `Cmd+Shift+A` → search for "Claude GUI" → Enter
-2. **Use application's own shortcuts** - Find tool window focus shortcuts
-3. **Click then verify with screenshot** - Always check what actually happened
-4. **Escape first** - Clear any popups before clicking
+After extensive testing, we discovered:
 
-## Correct cliclick Syntax
+1. **JCEF webviews have Chrome DevTools on port 9222 by default** - This is the proper automation path
+2. **Raw cliclick/osascript cannot interact with JCEF content** - System events don't reach embedded browsers
+3. **A hybrid approach works best** - Test utilities + AI orchestration
+4. **JetBrains provides testing frameworks** - Driver framework and JBCefTestHelper exist
+
+---
+
+## JCEF Webview Automation (Key Finding)
+
+### The Right Way: Chrome DevTools Protocol (CDP)
+
+JCEF in JetBrains IDEs exposes Chrome DevTools **by default on port 9222**.
+
+From [JetBrains documentation](https://plugins.jetbrains.com/docs/intellij/embedded-browser-jcef.html):
+> "The Chrome DevTools, embedded into JCEF, can be used as a debugging and profiling tool. It is active by default, so that a Chrome DevTools client can attach to it via the default port 9222."
+
+#### Using Playwright to Automate JCEF
+
+```javascript
+const { chromium } = require('playwright');
+
+async function automateJcefWebview() {
+  // Connect to JCEF's DevTools on port 9222
+  const browser = await chromium.connectOverCDP('http://localhost:9222');
+  const context = browser.contexts()[0];
+  const page = context.pages()[0];
+
+  // Now you can interact with the webview like any web page
+  await page.fill('textarea', 'Hello Claude!');
+  await page.click('button[type="submit"]');
+
+  // Read state
+  const messages = await page.evaluate(() => window.__testMessageLog);
+  console.log('Messages:', messages);
+}
+```
+
+#### Configuration
+
+| Setting | Default | Registry Key |
+|---------|---------|--------------|
+| Debug port | 9222 | `ide.browser.jcef.debug.port` |
+| DevTools context menu | false | `ide.browser.jcef.contextMenu.devTools.enabled` |
+
+### What We Tried That Didn't Work
+
+| Method | Result | Why |
+|--------|--------|-----|
+| `cliclick t:"text"` | Text not entered | System events don't reach JCEF |
+| `osascript keystroke` | Text not entered | Same reason |
+| Clipboard paste (Cmd+V) | Text not entered | Same reason |
+| Click coordinates | Inconsistent | May hit container, not DOM |
+
+### Why Raw Automation Fails
+
+JCEF webviews are embedded Chromium browsers with their own event loop. System-level input events (keyboard, mouse) are handled by the JVM/Swing layer and don't propagate into the browser's JavaScript event system.
+
+---
+
+## JetBrains Testing Frameworks
+
+### 1. Driver Framework (UI Testing)
+
+JetBrains provides an [official UI testing framework](https://blog.jetbrains.com/platform/2025/02/integration-tests-for-plugin-developers-ui-testing/) with Kotlin DSL.
+
+```kotlin
+ideFrame {
+    invokeAction("SearchEverywhere")
+    searchEverywherePopup {
+        // Find and interact with UI elements
+        actionButtonByXpath(xQuery { byAccessibleName("Preview") })
+            .click()
+    }
+}
+```
+
+**Limitations:** Focuses on Swing/AWT components. Limited JCEF support.
+
+### 2. JBCefTestHelper
+
+JetBrains provides `JBCefTestHelper` for JCEF-specific testing. Located in intellij-community test sources.
+
+### 3. Programmatic DevTools Access
+
+```java
+JBCefBrowser myBrowser = new JBCefBrowser(myUrl);
+CefBrowser myDevTools = myBrowser.getCefBrowser().getDevTools();
+JBCefBrowser myDevToolsBrowser = JBCefBrowser(myDevTools, myBrowser.getJBCefClient());
+```
+
+---
+
+## Recommended Hybrid Approach
+
+### Architecture
+
+| Layer | Tool | Purpose |
+|-------|------|---------|
+| IDE UI | JetBrains Driver / AppleScript | Open windows, navigate menus |
+| JCEF Webview | Playwright via CDP:9222 | Interact with React UI |
+| Test Logic | Kotlin/TypeScript | Assertions, data setup |
+| AI Orchestration | Claude | Handle edge cases, verify visually |
+
+### Example Hybrid Test
+
+```typescript
+// test-helper.ts
+import { chromium } from 'playwright';
+import { exec } from 'child_process';
+
+export async function openClaudeGui() {
+  // Use AppleScript for IDE navigation
+  await exec(`osascript -e 'tell application "System Events"
+    tell process "rider"
+      click menu item "Claude GUI" of menu "Tool Windows" of menu item "Tool Windows" of menu "View" of menu bar 1
+    end tell
+  end tell'`);
+}
+
+export async function sendMessage(text: string) {
+  // Use Playwright for webview interaction
+  const browser = await chromium.connectOverCDP('http://localhost:9222');
+  const page = browser.contexts()[0].pages()[0];
+  await page.fill('textarea', text);
+  await page.click('button:has-text("Send")');
+}
+
+export async function waitForAskUser() {
+  const browser = await chromium.connectOverCDP('http://localhost:9222');
+  const page = browser.contexts()[0].pages()[0];
+  await page.waitForSelector('[data-testid="ask-user-dialog"]', { timeout: 30000 });
+}
+```
+
+### AI Orchestration Role
+
+The AI should **orchestrate**, not fight with raw automation:
+
+```
+✅ AI calls: await testHelper.sendMessage("Ask me a question")
+✅ AI calls: await testHelper.waitForAskUser()
+✅ AI verifies: screenshot shows expected dialog
+✅ AI calls: await testHelper.clickOption(0)
+
+❌ AI tries: cliclick c:320,355 (unreliable)
+❌ AI tries: cliclick t:"text" (doesn't work in JCEF)
+```
+
+---
+
+## cliclick Reference (For Native UI Only)
+
+cliclick works for native macOS/Swing UI elements, **not JCEF webviews**.
 
 ```bash
 # Click at coordinates
 cliclick c:400,300
 
-# Type text
+# Type text (only works in native text fields)
 cliclick t:"Hello World"
 
 # Press special keys
 cliclick kp:enter
 cliclick kp:esc
 cliclick kp:tab
-cliclick kp:space
-cliclick kp:delete
 
-# Arrow keys
-cliclick kp:arrow-up
-cliclick kp:arrow-down
-cliclick kp:arrow-left
-cliclick kp:arrow-right
-
-# Modifier keys (hold down, type, release)
-cliclick kd:cmd t:a ku:cmd           # Cmd+A (select all)
-cliclick kd:cmd,shift t:a ku:cmd,shift  # Cmd+Shift+A (Rider: Find Action)
-
-# Double click
-cliclick dc:400,300
-
-# Right click
-cliclick rc:400,300
+# Modifier keys
+cliclick kd:cmd,shift t:a ku:cmd,shift  # Cmd+Shift+A
 ```
-
-## Rider-Specific Navigation
-
-### Opening Tool Windows
-```bash
-# Open Find Action dialog
-cliclick kd:cmd,shift t:a ku:cmd,shift
-sleep 1
-cliclick t:"Claude GUI"
-sleep 0.5
-cliclick kp:enter
-```
-
-### Common Rider Shortcuts
-- `Cmd+Shift+A` - Find Action (search for anything)
-- `Cmd+1` - Project tool window
-- `Cmd+9` - Git tool window
-- `Cmd+E` - Recent files
-- `Escape` - Close current popup/dialog
-
-## Screenshot Analysis Tips
-
-### Identifying UI Elements
-1. Look for **text labels** to identify panels
-2. Note **panel borders** and **dividers**
-3. Watch for **dark/light theme** affecting visibility
-4. Check if element is **floating** vs **docked**
-
-### Common Misidentification
-| What I thought | What it actually was |
-|---------------|---------------------|
-| Claude GUI panel (left) | Rider's Changes/Git panel |
-| Input field | Search box |
-| Center panel | Floating overlay |
-
-## Best Practices
-
-### Before Clicking
-1. Take screenshot
-2. Identify ALL visible panels
-3. Note exact pixel boundaries
-4. Check for overlays/popups
-
-### After Clicking
-1. Take screenshot
-2. Verify intended element was activated
-3. Check for unintended popups
-4. Escape if wrong element
-
-### Reliable Patterns
-```bash
-# Pattern: Clear state → Navigate → Verify
-cliclick kp:esc                    # Clear any popups
-sleep 0.3
-cliclick kd:cmd,shift t:a ku:cmd,shift  # Open Find Action
-sleep 1
-cliclick t:"Target Action"         # Search
-sleep 0.5
-cliclick kp:enter                  # Select
-sleep 0.5
-screencapture -x /tmp/verify.png   # Verify
-```
-
-## When to Use What
-
-| Task | Approach |
-|------|----------|
-| Open tool window | Keyboard: Find Action → search → Enter |
-| Click specific button | Coordinates (with verification) |
-| Type in focused field | `cliclick t:"text"` |
-| Navigate menus | Keyboard shortcuts |
-| Dismiss popups | `cliclick kp:esc` |
-
-## Future Improvements
-
-1. **Use accessibility APIs** - Query element positions programmatically
-2. **Use Rider's remote API** - JetBrains Gateway or similar
-3. **Record and replay** - Capture known-good coordinates
-4. **Visual diffing** - Compare screenshots to detect changes
-
-## Key Lesson
-
-> **Keyboard navigation is more reliable than mouse clicks for IDE automation.**
->
-> Use `Cmd+Shift+A` (Find Action) to navigate to any feature by name,
-> rather than trying to click on pixel coordinates.
 
 ---
 
-## JCEF Webview Limitations (Critical Finding)
+## AppleScript for IDE Navigation
 
-**Date:** 2026-01-16
+AppleScript works for native IDE UI (menus, dialogs).
 
-### Problem
-The Claude GUI plugin uses JCEF (Java Chromium Embedded Framework) to render a React webview.
-Standard automation tools cannot interact with JCEF webview content.
+```bash
+# Activate Rider
+osascript -e 'tell application "Rider" to activate'
 
-### What DOESN'T Work
+# Click menu items
+osascript -e 'tell application "System Events"
+    tell process "rider"
+        click menu item "Claude GUI" of menu "Tool Windows" of menu item "Tool Windows" of menu "View" of menu bar 1
+    end tell
+end tell'
 
-| Method | Result |
-|--------|--------|
-| `cliclick t:"text"` | Text not entered |
-| `osascript keystroke` | Text not entered |
-| Clipboard paste (Cmd+V) | Text not entered |
-| `cliclick kp:return` | Message not sent |
-| Click coordinates on webview | Inconsistent/fails |
-
-### Why It Fails
-1. JCEF webview has its own event handling
-2. System-level keyboard events don't reach the embedded browser
-3. Click events may hit the webview container but not the actual DOM elements
-
-### Potential Solutions (Untested)
-1. **JavaScript injection** - Use JCEF's `executeJavaScript()` API
-2. **Plugin internal API** - Call Java methods directly
-3. **Chrome DevTools Protocol** - If JCEF exposes CDP
-4. **Accessibility APIs** - macOS accessibility might work differently
-5. **Focus handling** - Ensure webview has proper focus first
-
-### Implication for E2E Testing
-Direct UI automation of JCEF webviews requires either:
-- Modifying the plugin to expose test hooks
-- Using browser automation protocols (Playwright/Puppeteer-like)
-- Testing at the API level instead of UI level
+# Dismiss system dialogs
+osascript -e 'tell application "System Events"
+    tell process "UserNotificationCenter"
+        click button "Allow" of window 1
+    end tell
+end tell'
+```
 
 ---
 
-## Plugin Test Mode (Discovered Solution!)
+## Plugin Test Mode
 
-**Date:** 2026-01-16
+The plugin has a built-in test mode that provides JavaScript helpers.
 
-The plugin already has a test mode that can be enabled!
+### Enabling
 
-### Enabling Test Mode
-Start Rider/IDE with system property:
 ```
 -Dclaude.test.mode=true
 ```
 
-### What Test Mode Provides
-When enabled, the plugin injects these helpers into the webview:
+Add to `~/Library/Application Support/JetBrains/Rider2025.3/rider.vmoptions`
+
+### What It Provides
 
 ```javascript
 window.__testMode = true;
-window.__testMessageLog = [];  // Logs all messages
-window.__testCallbackRegistry = new Map();
+window.__testMessageLog = [];  // All messages logged here
 window.__originalSendToJava = window.sendToJava;
 
 // Wrapped sendToJava logs outgoing messages
@@ -208,17 +233,36 @@ window.sendToJava = function(msg) {
 };
 ```
 
-### Using Test Mode for E2E
-Instead of clicking/typing, we could:
-1. Start IDE with `-Dclaude.test.mode=true`
-2. Use the plugin's `executeJavaScript` to send test commands
-3. Read `window.__testMessageLog` to verify behavior
+### Using with Playwright
 
-### Key Files
-- `ClaudeSDKToolWindow.java:740-751` - Test mode injection
-- `HandlerContext.java:116` - `executeJavaScriptOnEDT()` method
+```typescript
+const browser = await chromium.connectOverCDP('http://localhost:9222');
+const page = browser.contexts()[0].pages()[0];
 
-### Next Steps
-- Investigate how to call `executeJavaScript` from outside
-- Or: Add more test mode helpers for E2E automation
-- Or: Expose a test API endpoint
+// Check test mode is active
+const testMode = await page.evaluate(() => window.__testMode);
+console.log('Test mode:', testMode);
+
+// Read message log
+const log = await page.evaluate(() => window.__testMessageLog);
+console.log('Messages:', log);
+```
+
+---
+
+## Key Lessons
+
+1. **Use the right tool for each layer** - AppleScript for IDE, Playwright for webview
+2. **CDP port 9222 is your friend** - It's enabled by default in JCEF
+3. **Don't fight the architecture** - Work with the browser's event system, not against it
+4. **AI orchestrates, utilities execute** - Pre-built helpers make AI testing reliable
+5. **Test mode helps** - Enable `-Dclaude.test.mode=true` for observability
+
+---
+
+## Sources
+
+- [JetBrains JCEF Documentation](https://plugins.jetbrains.com/docs/intellij/embedded-browser-jcef.html)
+- [JetBrains UI Testing Blog (Feb 2025)](https://blog.jetbrains.com/platform/2025/02/integration-tests-for-plugin-developers-ui-testing/)
+- [Playwright CDP Connection](https://playwright.dev/docs/api/class-browsertype#browser-type-connect-over-cdp)
+- [Chrome DevTools Protocol](https://chromedevtools.github.io/devtools-protocol/)

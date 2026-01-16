@@ -1,6 +1,9 @@
+import org.jetbrains.intellij.platform.gradle.TestFrameworkType
+
 plugins {
     id 'java'
     id 'checkstyle'
+    id 'org.jetbrains.kotlin.jvm' version '1.9.22'
     id 'org.jetbrains.intellij.platform' version '2.10.5'
 }
 
@@ -19,6 +22,10 @@ java {
 
 repositories {
     mavenCentral()
+    // JetBrains Space for IDE Starter
+    maven {
+        url 'https://packages.jetbrains.team/maven/p/ij/intellij-dependencies'
+    }
     intellijPlatform {
         defaultRepositories()
     }
@@ -35,10 +42,19 @@ dependencies {
     testImplementation 'org.mockito:mockito-core:5.8.0'
     testImplementation 'org.mockito:mockito-junit-jupiter:5.8.0'
 
+    // E2E Testing - JetBrains IDE Starter for remote IDE control
+    testImplementation 'org.jetbrains.kotlin:kotlin-stdlib:1.9.22'
+    testImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3'
+    // Explicitly add Starter runtime dependencies
+    testRuntimeOnly 'com.jetbrains.intellij.tools:ide-starter-squashed:243.22562.145'
+    testRuntimeOnly 'com.jetbrains.intellij.tools:ide-starter-junit5:243.22562.145'
+    testRuntimeOnly 'com.jetbrains.intellij.tools:ide-starter-driver:243.22562.145'
+
     intellijPlatform {
         intellijIdeaCommunity('2024.3.1')
         bundledPlugin('com.intellij.java')  // Java PSI for JavaContextCollector (compile-time only)
         instrumentationTools()
+        testFramework TestFrameworkType.Starter.INSTANCE  // JetBrains Starter Framework for E2E testing
     }
 }
 
@@ -232,7 +248,7 @@ tasks.register('packageAiBridge', Exec) {
     }
 
     // Use system zip command: -r recursive, -y preserve symlinks
-    // Exclude SDK packages (they will be installed by user on-demand to ~/.codemoss/dependencies/)
+    // Exclude SDK packages (installed by user on-demand to ~/.claude-gui/dependencies/)
     if (System.getProperty('os.name').toLowerCase().contains('windows')) {
         // Windows: Use PowerShell to exclude SDK packages
         // Compress-Archive doesn't support exclude patterns, so we copy to temp dir first
@@ -378,4 +394,55 @@ tasks.named('buildPlugin') {
             delete(tempDir)
         }
     }
+}
+
+// ============================================================================
+// E2E Testing Configuration
+// ============================================================================
+
+// Configure Kotlin for test sources
+sourceSets {
+    test {
+        kotlin {
+            srcDirs = ['src/test/kotlin', 'src/test/java']
+        }
+    }
+}
+
+// E2E test task - runs tests against Rider with full plugin installed
+tasks.register('testE2E', Test) {
+    description = 'Run E2E tests against Rider with the plugin installed'
+    group = 'verification'
+
+    dependsOn 'buildPlugin'
+
+    // Use the same classpath as the regular test task
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+
+    // Pass plugin path to tests
+    systemProperty 'path.to.build.plugin',
+        tasks.named('buildPlugin').get().archiveFile.get().asFile.absolutePath
+
+    // Rider path (can be overridden via -PriderPath=...)
+    systemProperty 'rider.path',
+        findProperty('riderPath') ?: '/Applications/Rider.app/Contents'
+
+    // Enable test mode and tracing
+    systemProperty 'claude.test.mode', 'true'
+    systemProperty 'claude.test.trace', 'true'
+
+    useJUnitPlatform()
+
+    // Only include E2E tests
+    include '**/e2e/**'
+
+    // Increase timeout for IDE startup
+    testLogging {
+        events 'passed', 'skipped', 'failed'
+        showStandardStreams = true
+    }
+
+    // Allow longer test execution time (IDE startup is slow)
+    timeout = Duration.ofMinutes(10)
 }

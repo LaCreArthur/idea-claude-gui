@@ -482,7 +482,7 @@ public class ClaudeSession {
         try {
             String projectPath = project.getBasePath();
             if (projectPath != null) {
-                CodemossSettingsService settingsService = new CodemossSettingsService();
+                PluginSettingsService settingsService = new PluginSettingsService();
                 streaming = settingsService.getStreamingEnabled(projectPath);
                 LOG.info("[Streaming] Read streaming config: " + streaming);
             }
@@ -563,7 +563,7 @@ public class ClaudeSession {
         try {
             String projectPath = project.getBasePath();
             if (projectPath != null) {
-                CodemossSettingsService settingsService = new CodemossSettingsService();
+                PluginSettingsService settingsService = new PluginSettingsService();
                 streaming = settingsService.getStreamingEnabled(projectPath);
             }
         } catch (Exception e) {
@@ -591,7 +591,7 @@ public class ClaudeSession {
      */
     private String getAgentPrompt() {
         try {
-            CodemossSettingsService settingsService = new CodemossSettingsService();
+            PluginSettingsService settingsService = new PluginSettingsService();
             String selectedAgentId = settingsService.getSelectedAgentId();
             LOG.info("[Agent] Checking selected agent ID: " + (selectedAgentId != null ? selectedAgentId : "null"));
 

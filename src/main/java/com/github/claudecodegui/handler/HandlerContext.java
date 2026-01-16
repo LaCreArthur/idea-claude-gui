@@ -2,7 +2,7 @@ package com.github.claudecodegui.handler;
 
 import com.github.claudecodegui.ClaudeSession;
 import com.github.claudecodegui.provider.claude.ClaudeSDKBridge;
-import com.github.claudecodegui.CodemossSettingsService;
+import com.github.claudecodegui.PluginSettingsService;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.project.Project;
 import com.intellij.ui.jcef.JBCefBrowser;
@@ -17,7 +17,7 @@ public class HandlerContext {
 
     private final Project project;
     private final ClaudeSDKBridge claudeSDKBridge;
-    private final CodemossSettingsService settingsService;
+    private final PluginSettingsService settingsService;
     private final JsCallback jsCallback;
 
     // Mutable state accessed via getter/setter
@@ -38,7 +38,7 @@ public class HandlerContext {
     public HandlerContext(
             Project project,
             ClaudeSDKBridge claudeSDKBridge,
-            CodemossSettingsService settingsService,
+            PluginSettingsService settingsService,
             JsCallback jsCallback
     ) {
         this.project = project;
@@ -56,7 +56,7 @@ public class HandlerContext {
         return claudeSDKBridge;
     }
 
-    public CodemossSettingsService getSettingsService() {
+    public PluginSettingsService getSettingsService() {
         return settingsService;
     }
 

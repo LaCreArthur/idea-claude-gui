@@ -1,6 +1,6 @@
 package com.github.claudecodegui.handler;
 
-import com.github.claudecodegui.CodemossSettingsService;
+import com.github.claudecodegui.PluginSettingsService;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.intellij.openapi.application.ApplicationManager;
@@ -24,12 +24,12 @@ public class AgentHandler extends BaseMessageHandler {
         "set_selected_agent"
     };
 
-    private final CodemossSettingsService settingsService;
+    private final PluginSettingsService settingsService;
     private final Gson gson;
 
     public AgentHandler(HandlerContext context) {
         super(context);
-        this.settingsService = new CodemossSettingsService();
+        this.settingsService = new PluginSettingsService();
         this.gson = new Gson();
     }
 

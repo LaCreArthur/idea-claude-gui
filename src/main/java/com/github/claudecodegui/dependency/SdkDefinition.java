@@ -4,10 +4,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-/**
- * SDK 定义枚举
- * 定义可安装的 AI SDK 包信息
- */
 public enum SdkDefinition {
 
     CLAUDE_SDK(
@@ -60,17 +56,10 @@ public enum SdkDefinition {
         return description;
     }
 
-    /**
-     * 获取完整的 npm 安装包名（包含版本）
-     * 例如: @anthropic-ai/claude-agent-sdk@^0.1.76
-     */
     public String getFullPackageSpec() {
         return npmPackage + "@" + version;
     }
 
-    /**
-     * 获取所有需要安装的包（主包 + 依赖包）
-     */
     public List<String> getAllPackages() {
         if (dependencies.isEmpty()) {
             return Collections.singletonList(getFullPackageSpec());
@@ -81,9 +70,6 @@ public enum SdkDefinition {
         return all;
     }
 
-    /**
-     * 根据 ID 查找 SDK 定义
-     */
     public static SdkDefinition fromId(String id) {
         for (SdkDefinition sdk : values()) {
             if (sdk.getId().equals(id)) {
@@ -93,9 +79,6 @@ public enum SdkDefinition {
         return null;
     }
 
-    /**
-     * 根据提供商名称查找对应的 SDK
-     */
     public static SdkDefinition fromProvider(String provider) {
         if ("claude".equalsIgnoreCase(provider)) {
             return CLAUDE_SDK;

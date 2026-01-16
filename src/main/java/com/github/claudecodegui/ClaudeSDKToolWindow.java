@@ -231,7 +231,7 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
         private final JPanel mainPanel;
         private final ClaudeSDKBridge claudeSDKBridge;
         private final Project project;
-        private final CodemossSettingsService settingsService;
+        private final PluginSettingsService settingsService;
         private final HtmlLoader htmlLoader;
         private Content parentContent;
 
@@ -279,7 +279,7 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
         public ClaudeChatWindow(Project project, boolean skipRegister) {
             this.project = project;
             this.claudeSDKBridge = new ClaudeSDKBridge();
-            this.settingsService = new CodemossSettingsService();
+            this.settingsService = new PluginSettingsService();
             this.htmlLoader = new HtmlLoader(getClass());
             this.mainPanel = new JPanel(new BorderLayout());
 
@@ -736,6 +736,85 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
                         String injection = "window.sendToJava = function(msg) { " + jsQuery.inject("msg") + " };";
                         cefBrowser.executeJavaScript(injection, cefBrowser.getURL(), 0);
 
+                        // Inject E2E test mode helpers if enabled via system property
+                        if (Boolean.getBoolean("claude.test.mode")) {
+                            String testModeInjection =
+                                "window.__testMode = true;" +
+                                "window.__testMessageLog = [];" +
+                                "window.__testCallbackRegistry = new Map();" +
+                                "window.__originalSendToJava = window.sendToJava;" +
+                                "window.sendToJava = function(msg) {" +
+                                "  window.__testMessageLog.push({ ts: Date.now(), dir: 'out', msg: msg });" +
+                                "  return window.__originalSendToJava(msg);" +
+                                "};" +
+                                // Add test command polling via localStorage
+                                "window.__testCommandPoll = setInterval(function() {" +
+                                "  try {" +
+                                "    var cmd = localStorage.getItem('__testCommand');" +
+                                "    if (cmd) {" +
+                                "      localStorage.removeItem('__testCommand');" +
+                                "      console.log('[TEST_MODE] Executing command:', cmd);" +
+                                "      var parsed = JSON.parse(cmd);" +
+                                "      if (parsed.type === 'send_message' && parsed.message) {" +
+                                "        window.sendToJava('send_message:' + JSON.stringify({message: parsed.message, provider: 'claude'}));" +
+                                "      } else if (parsed.type === 'click_option' && typeof parsed.index === 'number') {" +
+                                "        var btns = document.querySelectorAll('button');" +
+                                "        if (btns[parsed.index]) btns[parsed.index].click();" +
+                                "      } else if (parsed.type === 'execute_js' && parsed.code) {" +
+                                "        eval(parsed.code);" +
+                                "      }" +
+                                "      localStorage.setItem('__testResult', JSON.stringify({success: true, ts: Date.now()}));" +
+                                "    }" +
+                                "  } catch(e) {" +
+                                "    console.error('[TEST_MODE] Command error:', e);" +
+                                "    localStorage.setItem('__testResult', JSON.stringify({error: e.message, ts: Date.now()}));" +
+                                "  }" +
+                                "}, 500);";
+                            cefBrowser.executeJavaScript(testModeInjection, cefBrowser.getURL(), 0);
+                            LOG.info("[TEST_MODE] Test mode helpers injected with command polling");
+
+                            // Start file-based command watcher for E2E testing
+                            final CefBrowser browserRef = cefBrowser;
+                            java.util.concurrent.ScheduledExecutorService testCommandWatcher =
+                                java.util.concurrent.Executors.newSingleThreadScheduledExecutor();
+                            testCommandWatcher.scheduleAtFixedRate(() -> {
+                                try {
+                                    java.nio.file.Path cmdPath = java.nio.file.Paths.get("/tmp/claude-gui-test-command.txt");
+                                    if (java.nio.file.Files.exists(cmdPath)) {
+                                        String content = java.nio.file.Files.readString(cmdPath);
+                                        java.nio.file.Files.delete(cmdPath);
+                                        String[] lines = content.split("\n", 2);
+                                        if (lines.length >= 1) {
+                                            String command = lines[0].trim();
+                                            String payload = lines.length > 1 ? lines[1].trim() : "";
+                                            LOG.info("[TEST_MODE] Executing file command: " + command);
+
+                                            String js = "";
+                                            if ("send_message".equals(command)) {
+                                                String escaped = payload.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n");
+                                                js = "window.sendToJava('send_message:' + JSON.stringify({message: \"" + escaped + "\", provider: 'claude'}));";
+                                            } else if ("click_option".equals(command)) {
+                                                js = "var btns = document.querySelectorAll('button'); if (btns[" + payload + "]) btns[" + payload + "].click();";
+                                            } else if ("execute_js".equals(command)) {
+                                                js = payload;
+                                            }
+
+                                            if (!js.isEmpty()) {
+                                                final String jsCode = js;
+                                                ApplicationManager.getApplication().invokeLater(() -> {
+                                                    browserRef.executeJavaScript(jsCode, browserRef.getURL(), 0);
+                                                    LOG.info("[TEST_MODE] JavaScript executed successfully");
+                                                });
+                                            }
+                                        }
+                                    }
+                                } catch (Exception e) {
+                                    LOG.warn("[TEST_MODE] Error processing command file: " + e.getMessage());
+                                }
+                            }, 500, 500, java.util.concurrent.TimeUnit.MILLISECONDS);
+                            LOG.info("[TEST_MODE] File command watcher started");
+                        }
+
                         // 注入获取剪贴板路径的函数
                         String clipboardPathInjection =
                             "window.getClipboardFilePath = function() {" +
@@ -1127,7 +1206,7 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
 
             // 尝试从配置中读取自定义工作目录
             try {
-                CodemossSettingsService settingsService = new CodemossSettingsService();
+                PluginSettingsService settingsService = new PluginSettingsService();
                 String customWorkingDir = settingsService.getCustomWorkingDirectory(projectPath);
 
                 if (customWorkingDir != null && !customWorkingDir.isEmpty()) {

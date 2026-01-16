@@ -21,10 +21,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 
-/**
- * MCP Server 管理器
- * 负责管理 MCP 服务器配置
- */
 public class McpServerManager {
     private static final Logger LOG = Logger.getInstance(McpServerManager.class);
 
@@ -44,23 +40,13 @@ public class McpServerManager {
         this.claudeSettingsManager = claudeSettingsManager;
     }
 
-    /**
-     * Get all MCP servers (without project-level filtering)
-     * Reads from ~/.claude.json (Claude CLI standard location)
-     * Falls back to ~/.codemoss/config.json
-     */
     public List<JsonObject> getMcpServers() throws IOException {
         return getMcpServersWithProjectPath(null);
     }
 
-    /**
-     * Get all MCP servers with project-level disabled tracking
-     * @param projectPath Project path for reading project-level disabled list
-     */
     public List<JsonObject> getMcpServersWithProjectPath(String projectPath) throws IOException {
         List<JsonObject> result = new ArrayList<>();
 
-        // 1. Try reading from ~/.claude.json (Claude CLI standard location)
         try {
             String homeDir = System.getProperty("user.home");
             Path claudeJsonPath = Paths.get(homeDir, ".claude.json");
@@ -73,7 +59,6 @@ public class McpServerManager {
                     if (claudeJson.has("mcpServers") && claudeJson.get("mcpServers").isJsonObject()) {
                         JsonObject mcpServers = claudeJson.getAsJsonObject("mcpServers");
 
-                        // Read global disabled servers list
                         Set<String> disabledServers = new HashSet<>();
                         if (claudeJson.has("disabledMcpServers") && claudeJson.get("disabledMcpServers").isJsonArray()) {
                             JsonArray disabledArray = claudeJson.getAsJsonArray("disabledMcpServers");
@@ -84,7 +69,6 @@ public class McpServerManager {
                             }
                         }
 
-                        // Read project-level disabled servers (if project path provided)
                         if (projectPath != null && claudeJson.has("projects")) {
                             JsonObject projects = claudeJson.getAsJsonObject("projects");
                             if (projects.has(projectPath)) {
@@ -102,13 +86,11 @@ public class McpServerManager {
                             }
                         }
 
-                        // Convert object format to list format
                         for (String serverId : mcpServers.keySet()) {
                             JsonElement serverElem = mcpServers.get(serverId);
                             if (serverElem.isJsonObject()) {
                                 JsonObject server = serverElem.getAsJsonObject();
 
-                                // Ensure id and name fields exist
                                 if (!server.has("id")) {
                                     server.addProperty("id", serverId);
                                 }
@@ -116,11 +98,9 @@ public class McpServerManager {
                                     server.addProperty("name", serverId);
                                 }
 
-                                // Wrap type, command, args, env into server field
                                 if (!server.has("server")) {
                                     JsonObject serverSpec = new JsonObject();
 
-                                    // Copy relevant fields to server spec
                                     if (server.has("type")) {
                                         serverSpec.add("type", server.get("type"));
                                     }
@@ -140,7 +120,6 @@ public class McpServerManager {
                                     server.add("server", serverSpec);
                                 }
 
-                                // Set enabled/disabled state (merged global + project level)
                                 boolean isEnabled = !disabledServers.contains(serverId);
                                 server.addProperty("enabled", isEnabled);
 
@@ -160,7 +139,6 @@ public class McpServerManager {
             LOG.warn("[McpServerManager] Error accessing ~/.claude.json: " + e.getMessage());
         }
 
-        // 2. Fall back to ~/.codemoss/config.json (array format)
         JsonObject config = configReader.apply(null);
         if (config.has("mcpServers")) {
             JsonArray servers = config.getAsJsonArray("mcpServers");
@@ -171,21 +149,14 @@ public class McpServerManager {
             }
         }
 
-        LOG.info("[McpServerManager] Loaded " + result.size() + " MCP servers from ~/.codemoss/config.json");
+        LOG.info("[McpServerManager] Loaded " + result.size() + " MCP servers from ~/.claude-gui/config.json");
         return result;
     }
 
-    /**
-     * Update or insert MCP server (without project path)
-     */
     public void upsertMcpServer(JsonObject server) throws IOException {
         upsertMcpServer(server, null);
     }
 
-    /**
-     * Update or insert MCP server with project-level disabled tracking
-     * @param projectPath Project path for updating project-level disabledMcpServers
-     */
     public void upsertMcpServer(JsonObject server, String projectPath) throws IOException {
         if (!server.has("id")) {
             throw new IllegalArgumentException("Server must have an id");
@@ -194,7 +165,6 @@ public class McpServerManager {
         String serverId = server.get("id").getAsString();
         boolean isEnabled = !server.has("enabled") || server.get("enabled").getAsBoolean();
 
-        // 1. Try updating ~/.claude.json
         try {
             String homeDir = System.getProperty("user.home");
             Path claudeJsonPath = Paths.get(homeDir, ".claude.json");
@@ -204,13 +174,11 @@ public class McpServerManager {
                 try (FileReader reader = new FileReader(claudeJsonFile)) {
                     JsonObject claudeJson = JsonParser.parseReader(reader).getAsJsonObject();
 
-                    // Ensure mcpServers object exists
                     if (!claudeJson.has("mcpServers") || !claudeJson.get("mcpServers").isJsonObject()) {
                         claudeJson.add("mcpServers", new JsonObject());
                     }
                     JsonObject mcpServers = claudeJson.getAsJsonObject("mcpServers");
 
-                    // Extract server spec
                     JsonObject serverSpec;
                     if (server.has("server") && server.get("server").isJsonObject()) {
                         serverSpec = server.getAsJsonObject("server").deepCopy();
@@ -218,18 +186,14 @@ public class McpServerManager {
                         serverSpec = new JsonObject();
                     }
 
-                    // Update or add server
                     mcpServers.add(serverId, serverSpec);
 
-                    // Update global disabledMcpServers list
                     if (!claudeJson.has("disabledMcpServers") || !claudeJson.get("disabledMcpServers").isJsonArray()) {
                         claudeJson.add("disabledMcpServers", new JsonArray());
                     }
                     JsonArray disabledArray = claudeJson.getAsJsonArray("disabledMcpServers");
 
-                    // Handle global disabled list
                     if (projectPath == null) {
-                        // No project path - update global disabled list
                         JsonArray newDisabled = new JsonArray();
                         for (JsonElement elem : disabledArray) {
                             if (!elem.getAsString().equals(serverId)) {
@@ -241,7 +205,6 @@ public class McpServerManager {
                         }
                         claudeJson.add("disabledMcpServers", newDisabled);
                     } else if (isEnabled) {
-                        // Enabling - remove from global disabled list if present
                         JsonArray newDisabled = new JsonArray();
                         for (JsonElement elem : disabledArray) {
                             if (!elem.getAsString().equals(serverId)) {
@@ -251,7 +214,6 @@ public class McpServerManager {
                         claudeJson.add("disabledMcpServers", newDisabled);
                     }
 
-                    // Handle project-level disabled list
                     if (projectPath != null) {
                         if (!claudeJson.has("projects") || !claudeJson.get("projects").isJsonObject()) {
                             claudeJson.add("projects", new JsonObject());
@@ -278,16 +240,14 @@ public class McpServerManager {
                         projectConfig.add("disabledMcpServers", newProjectDisabled);
                     }
 
-                    // Write back file with flush
                     try (FileWriter writer = new FileWriter(claudeJsonFile)) {
                         gson.toJson(claudeJson, writer);
-                        writer.flush();  // Ensure data is fully written to disk
+                        writer.flush();
                     }
 
                     LOG.info("[McpServerManager] Upserted MCP server in ~/.claude.json: " + serverId
                         + " (enabled: " + isEnabled + ", projectPath: " + (projectPath != null ? projectPath : "(global)") + ")");
 
-                    // Sync to settings.json (after file write complete)
                     try {
                         claudeSettingsManager.syncMcpToClaudeSettings();
                     } catch (Exception syncError) {
@@ -301,7 +261,6 @@ public class McpServerManager {
             LOG.warn("[McpServerManager] Error updating ~/.claude.json: " + e.getMessage());
         }
 
-        // 2. Fall back to ~/.codemoss/config.json
         JsonObject config = configReader.apply(null);
         JsonArray servers;
 
@@ -314,7 +273,6 @@ public class McpServerManager {
 
         boolean found = false;
 
-        // Find and update
         for (int i = 0; i < servers.size(); i++) {
             JsonObject s = servers.get(i).getAsJsonObject();
             if (s.has("id") && s.get("id").getAsString().equals(serverId)) {
@@ -329,18 +287,12 @@ public class McpServerManager {
         }
 
         configWriter.accept(config);
-        LOG.info("[McpServerManager] Upserted MCP server in ~/.codemoss/config.json: " + serverId);
+        LOG.info("[McpServerManager] Upserted MCP server in ~/.claude-gui/config.json: " + serverId);
     }
 
-    /**
-     * 删除 MCP 服务器
-     * 优先从 ~/.claude.json 删除(Claude CLI 标准位置)
-     * 回退到 ~/.codemoss/config.json
-     */
     public boolean deleteMcpServer(String serverId) throws IOException {
         boolean removed = false;
 
-        // 1. 尝试从 ~/.claude.json 删除
         try {
             String homeDir = System.getProperty("user.home");
             Path claudeJsonPath = Paths.get(homeDir, ".claude.json");
@@ -354,10 +306,8 @@ public class McpServerManager {
                         JsonObject mcpServers = claudeJson.getAsJsonObject("mcpServers");
 
                         if (mcpServers.has(serverId)) {
-                            // 删除服务器
                             mcpServers.remove(serverId);
 
-                            // 同时从 disabledMcpServers 中移除(如果存在)
                             if (claudeJson.has("disabledMcpServers") && claudeJson.get("disabledMcpServers").isJsonArray()) {
                                 JsonArray disabledServers = claudeJson.getAsJsonArray("disabledMcpServers");
                                 JsonArray newDisabled = new JsonArray();
@@ -369,15 +319,13 @@ public class McpServerManager {
                                 claudeJson.add("disabledMcpServers", newDisabled);
                             }
 
-                            // 写回文件
                             try (FileWriter writer = new FileWriter(claudeJsonFile)) {
                                 gson.toJson(claudeJson, writer);
-                                writer.flush();  // 确保数据完全写入磁盘
+                                writer.flush();
                             }
 
                             LOG.info("[McpServerManager] Deleted MCP server from ~/.claude.json: " + serverId);
 
-                            // 同步到 settings.json（在文件写入完成后）
                             try {
                                 claudeSettingsManager.syncMcpToClaudeSettings();
                             } catch (Exception syncError) {
@@ -394,7 +342,6 @@ public class McpServerManager {
             LOG.warn("[McpServerManager] Error deleting from ~/.claude.json: " + e.getMessage());
         }
 
-        // 2. 回退到 ~/.codemoss/config.json
         JsonObject config = configReader.apply(null);
         if (config.has("mcpServers")) {
             JsonArray servers = config.getAsJsonArray("mcpServers");
@@ -412,16 +359,13 @@ public class McpServerManager {
             if (removed) {
                 config.add("mcpServers", newServers);
                 configWriter.accept(config);
-                LOG.info("[McpServerManager] Deleted MCP server from ~/.codemoss/config.json: " + serverId);
+                LOG.info("[McpServerManager] Deleted MCP server from ~/.claude-gui/config.json: " + serverId);
             }
         }
 
         return removed;
     }
 
-    /**
-     * 验证 MCP 服务器配置
-     */
     public Map<String, Object> validateMcpServer(JsonObject server) {
         List<String> errors = new ArrayList<>();
 

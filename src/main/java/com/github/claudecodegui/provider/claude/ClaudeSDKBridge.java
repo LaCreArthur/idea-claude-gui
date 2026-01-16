@@ -1489,23 +1489,30 @@ public class ClaudeSDKBridge extends BaseSDKBridge {
                                         String reqId = msg.has("id") ? String.valueOf(msg.get("id").getAsInt()) : "0";
                                         JsonArray questions = msg.has("questions") ? msg.getAsJsonArray("questions") : new JsonArray();
 
-                                        LOG.info("[Bridge] AskUserQuestion request");
+                                        LOG.info("[Bridge] AskUserQuestion request received, id=" + reqId);
 
                                         CompletableFuture<JsonObject> responseFuture = askUserCallback.onAskUserQuestion(reqId, questions);
+                                        LOG.info("[Bridge] AskUserQuestion waiting for user response...");
                                         JsonObject response = responseFuture.get();
+                                        LOG.info("[Bridge] AskUserQuestion got response: " + response);
 
                                         JsonObject responseMsg = new JsonObject();
                                         responseMsg.addProperty("type", "response");
                                         responseMsg.addProperty("id", Integer.parseInt(reqId));
-                                        responseMsg.addProperty("allow", response.has("allow") && response.get("allow").getAsBoolean());
-                                        if (response.has("answers")) {
+                                        boolean allow = response != null && response.has("allow") && response.get("allow").getAsBoolean();
+                                        responseMsg.addProperty("allow", allow);
+                                        if (response != null && response.has("answers")) {
                                             responseMsg.add("answers", response.get("answers"));
                                         }
 
-                                        stdinWriter.write(gson.toJson(responseMsg));
+                                        String responseMsgStr = gson.toJson(responseMsg);
+                                        LOG.info("[Bridge] AskUserQuestion sending to bridge: " + responseMsgStr);
+                                        stdinWriter.write(responseMsgStr);
                                         stdinWriter.newLine();
                                         stdinWriter.flush();
-                                        LOG.info("[Bridge] AskUserQuestion response sent");
+                                        LOG.info("[Bridge] AskUserQuestion response sent successfully");
+                                    } else {
+                                        LOG.warn("[Bridge] AskUserQuestion received but no callback registered!");
                                     }
                                     break;
 

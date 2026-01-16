@@ -70,21 +70,29 @@ const rl = createInterface({
   terminal: false
 });
 
+// Debug logging to stderr (won't interfere with JSON protocol on stdout)
+const debug = (msg) => process.stderr.write(`[bridge-debug] ${msg}\n`);
+
 // Handle incoming responses from Java
 rl.on('line', (line) => {
   if (!line.trim()) return;
 
   try {
     const msg = JSON.parse(line);
+    debug(`Received from Java: type=${msg.type}, id=${msg.id}, keys=${Object.keys(msg).join(',')}`);
 
     // Handle permission responses
     if (msg.type === 'response' && pendingResponses.has(msg.id)) {
+      debug(`Found pending response for id=${msg.id}, resolving...`);
       const resolve = pendingResponses.get(msg.id);
       pendingResponses.delete(msg.id);
       resolve(msg);
+    } else if (msg.type === 'response') {
+      debug(`WARNING: No pending response for id=${msg.id}, pending keys: [${[...pendingResponses.keys()].join(',')}]`);
     }
   } catch (e) {
     // Silently ignore parse errors for non-JSON lines (e.g., the initial command)
+    debug(`Parse error for line: ${line.substring(0, 100)}... Error: ${e.message}`);
   }
 });
 
@@ -199,18 +207,24 @@ const ACCEPT_EDITS_TOOLS = new Set([
 ]);
 
 async function canUseTool(toolName, toolInput, permissionMode) {
+  debug(`[E2E DEBUG] canUseTool called: tool="${toolName}", permissionMode="${permissionMode}"`);
+
   // AskUserQuestion - special handling
   if (toolName === 'AskUserQuestion') {
     const id = ++responseId;
+    debug(`AskUserQuestion: sending request with id=${id}`);
     send({
       type: 'ask_user_question',
       id,
       questions: toolInput.questions || []
     });
 
+    debug(`AskUserQuestion: waiting for response id=${id}`);
     const response = await waitForResponse(id);
+    debug(`AskUserQuestion: got response for id=${id}, allow=${response.allow}, hasAnswers=${!!response.answers}`);
 
     if (response.allow && response.answers) {
+      debug(`AskUserQuestion: returning allow with updatedInput`);
       return {
         behavior: 'allow',
         updatedInput: {
@@ -219,6 +233,7 @@ async function canUseTool(toolName, toolInput, permissionMode) {
         }
       };
     }
+    debug(`AskUserQuestion: returning deny`);
     return { behavior: 'deny', message: response.message || 'User did not provide answers' };
   }
 
@@ -273,8 +288,7 @@ async function loadClaudeSdk() {
     errors.push(`${SDK_PACKAGE}: ${e.message}`);
   }
 
-  // 2. Try loading from ~/.codemoss/dependencies/ (plugin's SDK directory)
-  const sdkPath = join(homedir(), '.codemoss', 'dependencies', 'claude-sdk', 'node_modules', '@anthropic-ai', 'claude-agent-sdk');
+  const sdkPath = join(homedir(), '.claude-gui', 'dependencies', 'claude-sdk', 'node_modules', '@anthropic-ai', 'claude-agent-sdk');
 
   try {
     if (existsSync(sdkPath)) {
@@ -344,6 +358,11 @@ async function main() {
       agentPrompt,
       streaming = false
     } = input;
+
+    // Debug: log the permissionMode being used
+    debug(`[E2E DEBUG] permissionMode received: "${permissionMode}" (raw input.permissionMode: "${input.permissionMode}")`);
+    // Also send to frontend for visibility
+    send({ type: 'console.log', args: [`[Bridge] permissionMode: ${permissionMode}`] });
 
     // Change to working directory
     const workingDirectory = cwd || process.cwd();
@@ -449,6 +468,9 @@ async function main() {
 
     // Query complete
     send({ type: 'done', sessionId: currentSessionId });
+
+    // Exit explicitly - SDK may keep handles open (MCP servers, etc.)
+    process.exit(0);
 
   } catch (error) {
     sendError(error.message || String(error));

@@ -106,7 +106,7 @@ public class EnvironmentConfigurator {
         }
 
         // 5. Set NODE_PATH to find SDK packages
-        // Look in: ~/.codemoss/dependencies/node_modules, global npm node_modules
+        // Look in: ~/.claude-gui/dependencies/node_modules, global npm node_modules
         configureNodePath(env, nodeExecutable);
 
         configurePermissionEnv(env);
@@ -120,9 +120,9 @@ public class EnvironmentConfigurator {
         String separator = File.pathSeparator;
         String home = System.getProperty("user.home");
 
-        // 1. Add ~/.codemoss/dependencies/node_modules (plugin's SDK install location)
+        // 1. Add ~/.claude-gui/dependencies/node_modules (plugin's SDK install location)
         if (home != null) {
-            String codemossDeps = home + File.separator + ".codemoss" + File.separator + "dependencies" + File.separator + "node_modules";
+            String codemossDeps = home + File.separator + ".claude-gui" + File.separator + "dependencies" + File.separator + "node_modules";
             nodePath.append(codemossDeps);
         }
 

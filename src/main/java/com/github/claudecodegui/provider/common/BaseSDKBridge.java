@@ -14,16 +14,11 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
-/**
- * Base SDK bridge class.
- * Contains common logic for the Claude SDK bridge.
- */
 public abstract class BaseSDKBridge {
 
     protected static final String CHANNEL_SCRIPT = "bridge.js";
@@ -34,10 +29,6 @@ public abstract class BaseSDKBridge {
     protected final ProcessManager processManager = new ProcessManager();
     protected final EnvironmentConfigurator envConfigurator = new EnvironmentConfigurator();
 
-    /**
-     * Get the shared BridgeDirectoryResolver from BridgePreloader.
-     * This ensures consistent extraction state across all components.
-     */
     protected BridgeDirectoryResolver getDirectoryResolver() {
         return BridgePreloader.getSharedResolver();
     }
@@ -46,33 +37,10 @@ public abstract class BaseSDKBridge {
         this.LOG = Logger.getInstance(loggerClass);
     }
 
-    // ============================================================================
-    // Abstract methods - to be implemented by subclasses
-    // ============================================================================
-
-    /**
-     * Get the provider name.
-     */
     protected abstract String getProviderName();
 
-    /**
-     * Configure provider-specific environment variables.
-     *
-     * @param env       Environment map
-     * @param stdinJson The JSON input that will be sent via stdin
-     */
     protected abstract void configureProviderEnv(Map<String, String> env, String stdinJson);
 
-    /**
-     * Process a single line of output from the Node.js process.
-     *
-     * @param line             The output line
-     * @param callback         Message callback
-     * @param result           SDK result being built
-     * @param assistantContent StringBuilder for accumulating assistant content
-     * @param hadSendError     Flag array indicating if send error occurred
-     * @param lastNodeError    Array to store the last Node.js error
-     */
     protected abstract void processOutputLine(
             String line,
             MessageCallback callback,
@@ -82,56 +50,26 @@ public abstract class BaseSDKBridge {
             String[] lastNodeError
     );
 
-    // ============================================================================
-    // Process management methods (common)
-    // ============================================================================
-
-    /**
-     * Clean up all active child processes.
-     */
     public void cleanupAllProcesses() {
         processManager.cleanupAllProcesses();
     }
 
-    /**
-     * Get the count of active processes.
-     */
     public int getActiveProcessCount() {
         return processManager.getActiveProcessCount();
     }
 
-    /**
-     * Interrupt a channel.
-     */
     public void interruptChannel(String channelId) {
         processManager.interruptChannel(channelId);
     }
 
-    // ============================================================================
-    // Node.js detection methods (common)
-    // ============================================================================
-
-    /**
-     * Set Node.js executable path manually.
-     */
     public void setNodeExecutable(String path) {
         nodeDetector.setNodeExecutable(path);
     }
 
-    /**
-     * Get the current Node.js executable path.
-     */
     public String getNodeExecutable() {
         return nodeDetector.getNodeExecutable();
     }
 
-    // ============================================================================
-    // Channel management (common)
-    // ============================================================================
-
-    /**
-     * Launch a new channel (auto-launch on first send).
-     */
     public JsonObject launchChannel(String channelId, String sessionId, String cwd) {
         JsonObject result = new JsonObject();
         result.addProperty("success", true);
@@ -143,13 +81,6 @@ public abstract class BaseSDKBridge {
         return result;
     }
 
-    // ============================================================================
-    // Environment check (common)
-    // ============================================================================
-
-    /**
-     * Check if the environment is ready.
-     */
     public boolean checkEnvironment() {
         try {
             String node = nodeDetector.findNodeExecutable();
@@ -168,10 +99,8 @@ public abstract class BaseSDKBridge {
                 return false;
             }
 
-            // Check bridge directory
             File bridgeDir = getDirectoryResolver().findSdkDir();
             if (bridgeDir == null) {
-                // Bridge extraction is in progress (EDT thread scenario)
                 LOG.info("Bridge directory not ready yet (extraction in progress)");
                 return false;
             }
@@ -190,21 +119,6 @@ public abstract class BaseSDKBridge {
         }
     }
 
-    // ============================================================================
-    // Common message sending infrastructure
-    // ============================================================================
-
-    /**
-     * Execute a command and process streaming output.
-     * This is the core method that handles process lifecycle.
-     *
-     * @param channelId Channel identifier
-     * @param command   Command arguments (node script provider action)
-     * @param stdinJson JSON to write to stdin
-     * @param cwd       Working directory
-     * @param callback  Message callback
-     * @return CompletableFuture with the result
-     */
     protected CompletableFuture<SDKResult> executeStreamingCommand(
             String channelId,
             List<String> command,
@@ -221,7 +135,6 @@ public abstract class BaseSDKBridge {
             try {
                 File bridgeDir = getDirectoryResolver().findSdkDir();
                 if (bridgeDir == null) {
-                    // Bridge extraction is in progress
                     result.success = false;
                     result.error = "Bridge directory not ready yet (extraction in progress)";
                     callback.onError(result.error);
@@ -233,7 +146,6 @@ public abstract class BaseSDKBridge {
 
                 ProcessBuilder pb = new ProcessBuilder(command);
 
-                // Set working directory
                 if (cwd != null && !cwd.isEmpty() && !"undefined".equals(cwd) && !"null".equals(cwd)) {
                     File userWorkDir = new File(cwd);
                     if (userWorkDir.exists() && userWorkDir.isDirectory()) {
@@ -245,7 +157,6 @@ public abstract class BaseSDKBridge {
                     pb.directory(bridgeDir);
                 }
 
-                // Configure environment
                 Map<String, String> env = pb.environment();
                 envConfigurator.configureTempDir(env, processTempDir);
                 configureProviderEnv(env, stdinJson);
@@ -261,7 +172,6 @@ public abstract class BaseSDKBridge {
                     process = pb.start();
                     processManager.registerProcess(channelId, process);
 
-                    // Write to stdin
                     try (java.io.OutputStream stdin = process.getOutputStream()) {
                         stdin.write(stdinJson.getBytes(StandardCharsets.UTF_8));
                         stdin.flush();
@@ -269,14 +179,11 @@ public abstract class BaseSDKBridge {
                         LOG.warn("Failed to write stdin: " + e.getMessage());
                     }
 
-                    // Read output
                     try (BufferedReader reader = new BufferedReader(
                             new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
 
                         String line;
                         while ((line = reader.readLine()) != null) {
-
-                            // Capture Node.js error logs
                             if (line.startsWith("[UNCAUGHT_ERROR]")
                                     || line.startsWith("[UNHANDLED_REJECTION]")
                                     || line.startsWith("[COMMAND_ERROR]")
@@ -286,7 +193,6 @@ public abstract class BaseSDKBridge {
                                 lastNodeError[0] = line;
                             }
 
-                            // Delegate to subclass for provider-specific processing
                             processOutputLine(line, callback, result, assistantContent, hadSendError, lastNodeError);
                         }
                     }
@@ -316,7 +222,6 @@ public abstract class BaseSDKBridge {
                             callback.onError(errorMsg);
                         }
                     } else {
-                        // 发送阶段已处理错误，不再附加 Recent Output
                         if (exitCode != 0 && result.error != null) {
                             callback.onError(result.error);
                         }
@@ -342,31 +247,5 @@ public abstract class BaseSDKBridge {
             callback.onError(errorResult.error);
             return errorResult;
         });
-    }
-
-    /**
-     * Build the base command for invoking channel-manager.js.
-     *
-     * @param action The action to perform (e.g., "send", "sendWithAttachments")
-     * @return Command list
-     */
-    protected List<String> buildBaseCommand(String action) {
-        List<String> command = new ArrayList<>();
-        try {
-            String node = nodeDetector.findNodeExecutable();
-            File bridgeDir = getDirectoryResolver().findSdkDir();
-            if (bridgeDir == null) {
-                LOG.warn("Bridge directory not ready yet (extraction in progress), cannot build command");
-                return command;
-            }
-
-            command.add(node);
-            command.add(new File(bridgeDir, CHANNEL_SCRIPT).getAbsolutePath());
-            command.add(getProviderName());
-            command.add(action);
-        } catch (Exception e) {
-            LOG.error("Failed to build command: " + e.getMessage());
-        }
-        return command;
     }
 }

@@ -42,7 +42,7 @@
 
     <extensions defaultExtensionNs="com.intellij">
         <!-- Claude Code GUI Tool Window (includes history) -->
-        <toolWindow id="CCG"
+        <toolWindow id="Claude GUI"
                     anchor="right"
                     factoryClass="com.github.claudecodegui.ClaudeSDKToolWindow"
                     icon="/icons/cc-gui-icon.svg"
@@ -86,5 +86,11 @@
                 icon="AllIcons.General.Add"
                 text="New Chat Tab"
                 description="Create a new chat tab in Claude Code GUI tool window"/>
+
+        <!-- Test Action for E2E testing (only visible in test mode) -->
+        <action id="ClaudeCodeGUI.TestSendMessageAction"
+                class="com.github.claudecodegui.TestSendMessageAction"
+                text="Claude GUI Test Command"
+                description="Execute test command from /tmp/claude-gui-test-command.txt (test mode only)"/>
     </actions>
 </idea-plugin>

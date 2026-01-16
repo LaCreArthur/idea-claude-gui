@@ -303,6 +303,7 @@ main();
 
 ## Future Work (Low Priority)
 
-- [ ] Rename `.codemoss` directory to `.claude-gui` or similar (upstream legacy name)
+- [x] Rename `.codemoss` directory to `.claude-gui` (upstream legacy name)
+- [x] Remove unused `buildBaseCommand` method from BaseSDKBridge.java
+- [x] Rename `CodemossSettingsService` to `PluginSettingsService`
 - [ ] Convert remaining Chinese comments to English in Java files
-- [ ] Remove unused `buildBaseCommand` method from BaseSDKBridge.java

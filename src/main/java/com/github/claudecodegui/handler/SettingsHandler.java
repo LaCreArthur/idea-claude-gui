@@ -607,8 +607,8 @@ public class SettingsHandler extends BaseMessageHandler {
                 return;
             }
 
-            com.github.claudecodegui.CodemossSettingsService settingsService =
-                new com.github.claudecodegui.CodemossSettingsService();
+            com.github.claudecodegui.PluginSettingsService settingsService =
+                new com.github.claudecodegui.PluginSettingsService();
             String customWorkingDir = settingsService.getCustomWorkingDirectory(projectPath);
 
             Gson gson = new Gson();
@@ -665,8 +665,8 @@ public class SettingsHandler extends BaseMessageHandler {
                 }
             }
 
-            com.github.claudecodegui.CodemossSettingsService settingsService =
-                new com.github.claudecodegui.CodemossSettingsService();
+            com.github.claudecodegui.PluginSettingsService settingsService =
+                new com.github.claudecodegui.PluginSettingsService();
             settingsService.setCustomWorkingDirectory(projectPath, customWorkingDir);
 
             ApplicationManager.getApplication().invokeLater(() -> {
@@ -713,8 +713,8 @@ public class SettingsHandler extends BaseMessageHandler {
                 return;
             }
 
-            com.github.claudecodegui.CodemossSettingsService settingsService =
-                new com.github.claudecodegui.CodemossSettingsService();
+            com.github.claudecodegui.PluginSettingsService settingsService =
+                new com.github.claudecodegui.PluginSettingsService();
             boolean streamingEnabled = settingsService.getStreamingEnabled(projectPath);
 
             ApplicationManager.getApplication().invokeLater(() -> {
@@ -753,8 +753,8 @@ public class SettingsHandler extends BaseMessageHandler {
                 streamingEnabled = json.get("streamingEnabled").getAsBoolean();
             }
 
-            com.github.claudecodegui.CodemossSettingsService settingsService =
-                new com.github.claudecodegui.CodemossSettingsService();
+            com.github.claudecodegui.PluginSettingsService settingsService =
+                new com.github.claudecodegui.PluginSettingsService();
             settingsService.setStreamingEnabled(projectPath, streamingEnabled);
 
             LOG.info("[SettingsHandler] Set streaming enabled: " + streamingEnabled);
@@ -783,8 +783,8 @@ public class SettingsHandler extends BaseMessageHandler {
      */
     private String resolveActualModelName(String baseModel) {
         try {
-            com.github.claudecodegui.CodemossSettingsService settingsService =
-                new com.github.claudecodegui.CodemossSettingsService();
+            com.github.claudecodegui.PluginSettingsService settingsService =
+                new com.github.claudecodegui.PluginSettingsService();
             com.google.gson.JsonObject config = settingsService.readConfig();
 
             if (config == null || !config.has("activeProvider")) {
