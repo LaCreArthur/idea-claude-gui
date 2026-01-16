@@ -264,11 +264,14 @@ DEBUG=1 node tests/e2e/test-permissions.mjs
 | Error Handling | 2026-01-16 | PASS | Empty msg prevention, interrupt recovery, UI stability |
 | Favorites | 2026-01-16 | PASS | Star toggle and state persistence |
 | Session Titles | 2026-01-16 | PASS | Title display and edit functionality |
+| Settings | 2026-01-16 | PASS | Theme, font size, send shortcuts |
+| MCP Settings | 2026-01-16 | PASS | Server list, add dropdown, toggle |
+| Skills | 2026-01-16 | PASS | Filter tabs, import dropdown |
 
 **Run all tests:**
 ```bash
 node tests/e2e/run-all.mjs
-# Expected: Passed: 10/10
+# Expected: Passed: 13/13
 ```
 
 **Architecture:**

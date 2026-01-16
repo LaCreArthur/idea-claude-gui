@@ -25,6 +25,9 @@ const TESTS = [
   'test-error-handling.mjs',      // US-14: Error handling
   'test-favorites.mjs',           // US-11: Favorites
   'test-session-titles.mjs',      // US-12: Session titles
+  'test-settings.mjs',            // US-13: Settings
+  'test-mcp-settings.mjs',        // US-9: MCP servers
+  'test-skills.mjs',              // US-10: Skills/Agents
 ];
 
 async function runTest(testFile) {
