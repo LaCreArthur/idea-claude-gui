@@ -199,7 +199,7 @@ Node.js → stdout JSON → Java shows dialog → stdin JSON → Node.js returns
 
 ```javascript
 #!/usr/bin/env node
-import { Claude } from '@anthropic-ai/claude-code';
+import { query } from '@anthropic-ai/claude-agent-sdk';
 import { createInterface } from 'readline';
 
 // Simple JSON line protocol
@@ -231,27 +231,27 @@ async function main() {
     rl.once('line', (line) => resolve(JSON.parse(line)));
   });
 
-  const claude = new Claude();
-
   try {
-    for await (const event of claude.sendMessage(input.message, {
-      cwd: input.cwd,
-      sessionId: input.sessionId,
-      permissionMode: input.permissionMode,
-      model: input.model,
+    for await (const msg of query({
+      prompt: input.message,
+      options: {
+        cwd: input.cwd,
+        permissionMode: input.permissionMode,
+        model: input.model,
+        ...(input.sessionId && { resume: input.sessionId }),
+        canUseTool: async (toolName, toolInput) => {
+          const id = ++responseId;
+          send({ type: 'permission_request', id, toolName, toolInput });
+          const response = await waitForResponse(id);
 
-      canUseTool: async (toolName, toolInput) => {
-        const id = ++responseId;
-        send({ type: 'permission_request', id, toolName, toolInput });
-        const response = await waitForResponse(id);
-
-        if (response.allow) {
-          return { behavior: 'allow', updatedInput: response.updatedInput };
+          if (response.allow) {
+            return { behavior: 'allow', updatedInput: response.updatedInput };
+          }
+          return { behavior: 'deny', message: response.message };
         }
-        return { behavior: 'deny', message: response.message };
       }
     })) {
-      send({ type: 'event', event });
+      send({ type: 'event', event: msg });
     }
     send({ type: 'done' });
   } catch (error) {

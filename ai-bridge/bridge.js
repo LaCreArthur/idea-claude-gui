@@ -263,52 +263,38 @@ async function canUseTool(toolName, toolInput, permissionMode) {
 
 async function loadClaudeSdk() {
   const errors = [];
+  const SDK_PACKAGE = '@anthropic-ai/claude-agent-sdk';
 
   // 1. Try standard import (works if in local node_modules or NODE_PATH)
-  const packageNames = [
-    '@anthropic-ai/claude-code',      // New package name
-    '@anthropic-ai/claude-agent-sdk', // Old package name
-  ];
-
-  for (const pkgName of packageNames) {
-    try {
-      const sdk = await import(pkgName);
-      return sdk;
-    } catch (e) {
-      errors.push(`${pkgName}: ${e.message}`);
-    }
+  try {
+    const sdk = await import(SDK_PACKAGE);
+    return sdk;
+  } catch (e) {
+    errors.push(`${SDK_PACKAGE}: ${e.message}`);
   }
 
   // 2. Try loading from ~/.codemoss/dependencies/ (plugin's SDK directory)
-  const codemossBase = join(homedir(), '.codemoss', 'dependencies', 'claude-sdk', 'node_modules');
-  const codemossPaths = [
-    join(codemossBase, '@anthropic-ai', 'claude-code'),
-    join(codemossBase, '@anthropic-ai', 'claude-agent-sdk'),
-  ];
+  const sdkPath = join(homedir(), '.codemoss', 'dependencies', 'claude-sdk', 'node_modules', '@anthropic-ai', 'claude-agent-sdk');
 
-  for (const sdkPath of codemossPaths) {
-    try {
-      if (existsSync(sdkPath)) {
-        // Find the entry point from package.json
-        const pkgJsonPath = join(sdkPath, 'package.json');
-        if (existsSync(pkgJsonPath)) {
-          const pkg = JSON.parse(readFileSync(pkgJsonPath, 'utf8'));
-          // Try various entry point fields
-          const entry = pkg.exports?.['.']?.import || pkg.exports?.import || pkg.module || pkg.main || 'sdk.mjs' || 'index.js';
-          const entryPath = join(sdkPath, entry);
-          if (existsSync(entryPath)) {
-            const { pathToFileURL } = await import('url');
-            const sdk = await import(pathToFileURL(entryPath).href);
-            return sdk;
-          }
+  try {
+    if (existsSync(sdkPath)) {
+      const pkgJsonPath = join(sdkPath, 'package.json');
+      if (existsSync(pkgJsonPath)) {
+        const pkg = JSON.parse(readFileSync(pkgJsonPath, 'utf8'));
+        const entry = pkg.exports?.['.']?.import || pkg.exports?.import || pkg.module || pkg.main || 'sdk.mjs' || 'index.js';
+        const entryPath = join(sdkPath, entry);
+        if (existsSync(entryPath)) {
+          const { pathToFileURL } = await import('url');
+          const sdk = await import(pathToFileURL(entryPath).href);
+          return sdk;
         }
       }
-    } catch (e) {
-      errors.push(`${sdkPath}: ${e.message}`);
     }
+  } catch (e) {
+    errors.push(`${sdkPath}: ${e.message}`);
   }
 
-  throw new Error(`Claude Code SDK not installed. Tried:\n${errors.join('\n')}\n\nInstall with: npm install -g @anthropic-ai/claude-code`);
+  throw new Error(`Claude Agent SDK not installed. Tried:\n${errors.join('\n')}\n\nInstall with: npm install -g @anthropic-ai/claude-agent-sdk`);
 }
 
 // ============================================================================
