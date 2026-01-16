@@ -51,7 +51,7 @@ Autonomous improvement loop for Claude GUI plugin testing and development.
 - [ ] **US-10**: Skills/Agents execution
 
 ### P2 - Secondary Features
-- [ ] **US-11**: Favorites (star sessions)
+- [x] **US-11**: Favorites (star sessions) (TESTED)
 - [ ] **US-12**: Session titles (auto-generated)
 - [ ] **US-13**: Settings persistence
 - [x] **US-14**: Error handling (TESTED - empty msg, interrupt, UI stability)
@@ -120,14 +120,15 @@ Autonomous improvement loop for Claude GUI plugin testing and development.
 
 **Tasks:**
 - [x] 3.1 Test US-3 (Resume existing session)
-- [ ] 3.2 Test US-11 (Favorites)
+- [x] 3.2 Test US-11 (Favorites)
 - [ ] 3.3 Test US-9 (MCP server configuration)
 - [ ] 3.4 Test US-10 (Skills/Agents execution)
 
 **Results:**
-- 8 tests now passing (up from 7)
-- Session resume test validates navigation and view switching
-- Message loading after resume varies (async loading)
+- 9 tests now passing (up from 8)
+- Session resume validates history navigation
+- Favorites toggle and state persistence work
+- All P0 and most P2 stories now covered
 
 **Status:** In Progress
 

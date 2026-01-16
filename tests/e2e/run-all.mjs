@@ -23,6 +23,7 @@ const TESTS = [
   'test-permission-flow.mjs',     // US-5: Permission dialogs
   'test-plan-approval.mjs',       // US-7: Plan mode
   'test-error-handling.mjs',      // US-14: Error handling
+  'test-favorites.mjs',           // US-11: Favorites
 ];
 
 async function runTest(testFile) {
