@@ -241,6 +241,10 @@ Permission dialog is unreadable because it shows full path and raw diff.
 | 8 | 2026-01-16 | Path Rewriting | ✅ Already done | Was removed when CLAUDE_CODE_TMPDIR was implemented |
 | 9 | 2026-01-16 | File Link Click | ✅ Verified | FileHandler parses file:line format, jumps to line |
 | 10 | 2026-01-16 | Permissions Tab | ✅ Removed | Was only placeholder; permissions handled via dialogs |
+| 11 | 2026-01-16 | US-8 Test | ✅ Already exists | test-askuser-custom.mjs implements AskUserQuestion test |
+| 12 | 2026-01-16 | settingSources | ✅ Already done | bridge.js:400 has ['user', 'project', 'local'] |
+| 13 | 2026-01-16 | Zod v4 | ✅ Not needed | SDK 0.2.9 from dependencies folder works fine |
+| 14 | 2026-01-16 | PermissionRequest | ⏸️ Deferred | canUseTool works; refactor is risk without benefit |
 
 ### Metrics to Track
 
@@ -248,8 +252,9 @@ Permission dialog is unreadable because it shows full path and raw diff.
 |--------|-------|---------|--------|
 | Open bugs | 4 | 0 | 0 ✅ |
 | SDK version | 0.2.9 | 0.2.9 | 0.2.9 (latest) ✅ |
-| E2E tests | 13 | 13 | 15+ |
-| Code complexity | - | - | Lower |
+| E2E tests | 13 | 14 | 15+ |
+| Code complexity | - | Lower | Lower ✅ |
+| Settings tabs | 8 | 7 | Cleaner ✅ |
 
 **SDK Status:** Already at v0.2.9. Task 2 (SDK Upgrade) can be skipped.
 
