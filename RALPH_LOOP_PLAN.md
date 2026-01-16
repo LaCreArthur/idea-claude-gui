@@ -381,3 +381,103 @@ If continuing architecture work:
 - `ai-bridge/services/claude/message-service.js` - SDK integration
 - `ai-bridge/permission-handler.js` - File-based IPC for permissions
 - `src/main/java/.../ClaudeSDKBridge.java` - Java-side process management
+
+---
+
+## Next Session: E2E Test Resilience
+
+**Problem:** Current E2E tests are brittle because they assume deterministic AI responses.
+
+### Issues Observed (2026-01-16)
+
+1. **AI response variability** - Same prompt may or may not trigger AskUserQuestion
+2. **Cascade failures** - One test crash breaks all subsequent tests
+3. **Timeout = failure** - Tests fail if expected dialog doesn't appear
+4. **No recovery** - App stays crashed, no reload between tests
+
+### Proposed Solutions
+
+#### 1. Multi-Outcome Test Pattern
+```javascript
+// Instead of waiting for ONE specific dialog:
+await page.waitForSelector('.plan-approval-dialog', { timeout: 90000 });
+
+// Wait for ANY valid outcome:
+const outcome = await Promise.race([
+  page.waitForSelector('.plan-approval-dialog').then(() => 'plan'),
+  page.waitForSelector('.ask-user-question-dialog').then(() => 'question'),
+  page.waitForSelector('.permission-dialog-v3').then(() => 'permission'),
+  page.waitForSelector('.assistant-message').then(() => 'response'),
+  sleep(30000).then(() => 'timeout')
+]);
+
+// Handle each outcome as valid
+switch (outcome) {
+  case 'question': handleQuestion(); break;
+  case 'permission': handlePermission(); break;
+  case 'response': /* AI responded directly */ break;
+  case 'timeout': /* inconclusive, not failure */ break;
+}
+```
+
+#### 2. App Recovery Between Tests
+```javascript
+// In run-all.mjs, after each test:
+async function resetAppState(page) {
+  // Check for error boundary
+  const hasError = await page.$('.error-boundary, [class*="error"]');
+  if (hasError) {
+    await page.click('text=Reload Application');
+    await page.waitForSelector('.chat-input', { timeout: 10000 });
+  }
+
+  // Start fresh session
+  await page.click('[data-tooltip="New Session"]');
+  await page.click('text=Confirm');
+}
+```
+
+#### 3. Test Classification
+| Test Type | AI Dependent | Deterministic |
+|-----------|--------------|---------------|
+| Message flow | Yes | No - AI response varies |
+| Model switching | No | Yes - UI only |
+| Mode switching | No | Yes - UI only |
+| Permission dialog | Partial | Yes if we control the prompt |
+| Settings navigation | No | Yes - UI only |
+| Session management | Partial | Mostly yes |
+
+#### 4. Prompts That Minimize Variability
+```javascript
+// BAD - AI might ask questions
+"Create a TypeScript file that prints the date"
+
+// BETTER - Explicit, no ambiguity
+"Without asking any questions, create a file called hello.ts in the current directory with: console.log('hello')"
+
+// BEST for permission tests - Use known commands
+"Run: echo 'test'"  // Always triggers Bash permission
+```
+
+#### 5. Test Result Categories
+- **PASS** - Expected behavior observed
+- **PASS (alternate)** - Valid alternate behavior (e.g., question instead of direct action)
+- **INCONCLUSIVE** - Timeout, but app still functional
+- **FAIL** - App crashed or incorrect behavior
+
+### Implementation Tasks
+
+| # | Task | Priority |
+|---|------|----------|
+| 1 | Add app recovery in run-all.mjs | High |
+| 2 | Refactor test-plan-approval for multi-outcome | High |
+| 3 | Add INCONCLUSIVE result type | Medium |
+| 4 | Update prompts to minimize AI variability | Medium |
+| 5 | Separate deterministic vs AI-dependent tests | Low |
+| 6 | Add retry logic for flaky tests | Low |
+
+### Test Files to Update
+- `tests/e2e/run-all.mjs` - Add recovery between tests
+- `tests/e2e/test-plan-approval.mjs` - Multi-outcome pattern
+- `tests/e2e/test-message-flow.mjs` - Handle response variability
+- `tests/e2e/test-error-handling.mjs` - Better error detection
