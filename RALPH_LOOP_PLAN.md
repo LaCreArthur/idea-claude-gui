@@ -312,3 +312,72 @@ node tests/e2e/run-all.mjs
 - If blocked for >30 min, step back and research
 - Always commit working state before experimenting
 - Document failures as learnings, not just successes
+
+---
+
+## Next Session: Architecture Focus
+
+**Status:** Phase 1-3 complete. All bugs fixed. Plugin at v0.2.7.
+
+### Deferred Architecture Tasks (Phase 4)
+
+| Task | Description | Why Deferred | When to Revisit |
+|------|-------------|--------------|-----------------|
+| V2 Interface | New SDK interface with `send()`/`receive()` | Still in preview | When SDK v2 stabilizes |
+| SessionStart/End Hooks | Better lifecycle management | Current approach works | If lifecycle issues emerge |
+| PermissionRequest Hook | Cleaner than PreToolUse | canUseTool works fine | If permission logic grows |
+
+### Architecture Topics to Explore
+
+1. **Message Flow Simplification**
+   - Current: Java → stdin/stdout → Node bridge → SDK → Permission files → Java
+   - Question: Can we simplify without losing functionality?
+   - Research: Does SDK V2 eliminate need for complex IPC?
+
+2. **File-Based IPC Replacement**
+   - Current: JSON files in temp directory for permission dialogs
+   - Options: Unix sockets, named pipes, WebSocket
+   - Tradeoff: Complexity vs latency
+
+3. **Code Structure**
+   - `ai-bridge/` has grown organically
+   - Consider: Service layer extraction, better separation of concerns
+   - Watch for: Over-engineering, premature abstraction
+
+### Recommended Starting Point
+
+If continuing architecture work:
+1. Read SDK V2 Preview docs (when stable)
+2. Profile actual permission dialog latency
+3. Only refactor if there's a concrete problem to solve
+
+### Current Architecture Summary
+
+```
+┌─────────────────────────────────────────────────────────┐
+│ IntelliJ Plugin (Java)                                  │
+│  - ClaudeSDKToolWindow.java (entry point)               │
+│  - handler/*.java (message routing)                     │
+│  - permission/PermissionService.java                    │
+└─────────────────┬───────────────────────────────────────┘
+                  │ stdin/stdout JSON
+                  ▼
+┌─────────────────────────────────────────────────────────┐
+│ ai-bridge (Node.js)                                     │
+│  - bridge.js (main entry)                               │
+│  - services/claude/message-service.js (SDK integration) │
+│  - permission-handler.js (file-based IPC)               │
+└─────────────────┬───────────────────────────────────────┘
+                  │ Claude Agent SDK
+                  ▼
+┌─────────────────────────────────────────────────────────┐
+│ Claude API                                              │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Key Files for Architecture Work
+
+- `ai-bridge/bridge.js` - Main bridge entry (400 lines)
+- `ai-bridge/services/claude/message-service.js` - SDK integration
+- `ai-bridge/permission-handler.js` - File-based IPC for permissions
+- `src/main/java/.../ClaudeSDKBridge.java` - Java-side process management

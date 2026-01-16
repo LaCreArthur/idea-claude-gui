@@ -2,6 +2,29 @@
 > Agentic hindsight - reverse chronological
 ---
 
+## 2026-01-16: v0.2.7 Released - Ralph Loop Complete
+
+**Summary:** Completed 16 Ralph Loop iterations. All bugs fixed. Ready for architecture focus.
+
+**What Changed:**
+- Fixed BUG-005 (Shift+Enter) - track modifier key via ref
+- Fixed BUG-006 (cursor jumping) - save/restore cursor position in renderFileTags
+- Fixed BUG-003 (permission UX) - filename prominent, path truncated
+- Replaced WeChat QR with GitHub links
+- Removed Permissions settings tab placeholder
+- Added TestSendMessageAction for E2E testing
+
+**Metrics:**
+- Open bugs: 4 → 0
+- Settings tabs: 8 → 7
+- E2E tests: 13 → 14
+
+**Tests:** 14 pass (12 webview + 2 ai-bridge). Java tests are placeholders.
+
+**Next Session:** Architecture focus. See RALPH_LOOP_PLAN.md "Next Session" section.
+
+---
+
 ## 2026-01-16: Ralph Loop Iterations 8-10 - Cleanup & Verification
 
 **Iteration 8:** Path rewriting already simplified (verified CLAUDE_CODE_TMPDIR implementation)
