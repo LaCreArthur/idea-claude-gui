@@ -1,6 +1,7 @@
 package com.github.claudecodegui.e2e
 
 import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
 import java.io.File
@@ -25,7 +26,7 @@ class BuildVerificationTest {
     @Test
     @Timeout(value = 30, unit = TimeUnit.SECONDS)
     fun pluginZip_exists() {
-        assertNotNull(PLUGIN_PATH, "Plugin path must be set via -Dpath.to.build.plugin")
+        assumeTrue(PLUGIN_PATH != null, "Skipping: -Dpath.to.build.plugin not set (run after buildPlugin)")
         val pluginFile = File(PLUGIN_PATH!!)
         assertTrue(pluginFile.exists(), "Plugin ZIP must exist: $PLUGIN_PATH")
         assertTrue(pluginFile.name.endsWith(".zip"), "Plugin must be a ZIP file")
@@ -35,7 +36,7 @@ class BuildVerificationTest {
     @Test
     @Timeout(value = 30, unit = TimeUnit.SECONDS)
     fun pluginZip_containsMainJar() {
-        assertNotNull(PLUGIN_PATH, "Plugin path must be set")
+        assumeTrue(PLUGIN_PATH != null, "Skipping: -Dpath.to.build.plugin not set")
         val pluginZip = ZipFile(File(PLUGIN_PATH!!))
         val entries = pluginZip.entries().toList().map { it.name }
         pluginZip.close()
@@ -50,7 +51,7 @@ class BuildVerificationTest {
     @Test
     @Timeout(value = 30, unit = TimeUnit.SECONDS)
     fun pluginZip_containsAiBridge() {
-        assertNotNull(PLUGIN_PATH, "Plugin path must be set")
+        assumeTrue(PLUGIN_PATH != null, "Skipping: -Dpath.to.build.plugin not set")
         val pluginZip = ZipFile(File(PLUGIN_PATH!!))
         val entries = pluginZip.entries().toList().map { it.name }
         pluginZip.close()
@@ -63,7 +64,7 @@ class BuildVerificationTest {
     @Test
     @Timeout(value = 60, unit = TimeUnit.SECONDS)
     fun aiBridge_containsBridgeJs() {
-        assertNotNull(PLUGIN_PATH, "Plugin path must be set")
+        assumeTrue(PLUGIN_PATH != null, "Skipping: -Dpath.to.build.plugin not set")
         val pluginZip = ZipFile(File(PLUGIN_PATH!!))
 
         val aiBridgeEntry = pluginZip.entries().toList().find { it.name.contains("ai-bridge.zip") }
@@ -95,7 +96,7 @@ class BuildVerificationTest {
     @Test
     @Timeout(value = 60, unit = TimeUnit.SECONDS)
     fun pluginJar_containsWebviewHtml() {
-        assertNotNull(PLUGIN_PATH, "Plugin path must be set")
+        assumeTrue(PLUGIN_PATH != null, "Skipping: -Dpath.to.build.plugin not set")
         val pluginZip = ZipFile(File(PLUGIN_PATH!!))
 
         val mainJarEntry = pluginZip.entries().toList().find {
