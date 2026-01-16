@@ -2,8 +2,8 @@ name: Build Plugin
 
 on:
   push:
-    branches: [ '**' ]
-    tags: [ '**' ]
+    tags:
+      - 'v*'
 
 jobs:
   build:
