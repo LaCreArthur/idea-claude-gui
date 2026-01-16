@@ -177,3 +177,48 @@ Direct UI automation of JCEF webviews requires either:
 - Modifying the plugin to expose test hooks
 - Using browser automation protocols (Playwright/Puppeteer-like)
 - Testing at the API level instead of UI level
+
+---
+
+## Plugin Test Mode (Discovered Solution!)
+
+**Date:** 2026-01-16
+
+The plugin already has a test mode that can be enabled!
+
+### Enabling Test Mode
+Start Rider/IDE with system property:
+```
+-Dclaude.test.mode=true
+```
+
+### What Test Mode Provides
+When enabled, the plugin injects these helpers into the webview:
+
+```javascript
+window.__testMode = true;
+window.__testMessageLog = [];  // Logs all messages
+window.__testCallbackRegistry = new Map();
+window.__originalSendToJava = window.sendToJava;
+
+// Wrapped sendToJava logs outgoing messages
+window.sendToJava = function(msg) {
+  window.__testMessageLog.push({ ts: Date.now(), dir: 'out', msg: msg });
+  return window.__originalSendToJava(msg);
+};
+```
+
+### Using Test Mode for E2E
+Instead of clicking/typing, we could:
+1. Start IDE with `-Dclaude.test.mode=true`
+2. Use the plugin's `executeJavaScript` to send test commands
+3. Read `window.__testMessageLog` to verify behavior
+
+### Key Files
+- `ClaudeSDKToolWindow.java:740-751` - Test mode injection
+- `HandlerContext.java:116` - `executeJavaScriptOnEDT()` method
+
+### Next Steps
+- Investigate how to call `executeJavaScript` from outside
+- Or: Add more test mode helpers for E2E automation
+- Or: Expose a test API endpoint
