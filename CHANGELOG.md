@@ -1,3 +1,28 @@
+##### **v0.2.6** (2026-01-16)
+
+**E2E Testing & Cleanup Release**
+
+- Add comprehensive E2E test suite with 13 passing tests
+- Add Page Object Model (POM) architecture for tests
+- Test coverage for: message flow, sessions, models, modes, permissions, settings, MCP, skills
+- Major code simplification: removed 1900+ lines of dead code
+- Clean up obsolete documentation
+- Fix default permission mode (was bypassPermissions, now default)
+- Fix model selector to exclude mode buttons
+
+---
+
+##### **v0.2.5** (2026-01-15)
+
+**Simplification Release**
+
+- Remove unused provider code (Codex, multi-provider support)
+- Remove i18n complexity (English-only)
+- Simplify settings and configuration
+- Code cleanup and dead code removal
+
+---
+
 ##### **v0.2.4** (2026-01-15)
 
 **Upstream Sync Release** - Merged 88 commits from upstream in 11 batches.
