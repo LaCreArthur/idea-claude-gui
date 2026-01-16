@@ -24,6 +24,7 @@ const TESTS = [
   'test-plan-approval.mjs',       // US-7: Plan mode
   'test-error-handling.mjs',      // US-14: Error handling
   'test-favorites.mjs',           // US-11: Favorites
+  'test-session-titles.mjs',      // US-12: Session titles
 ];
 
 async function runTest(testFile) {

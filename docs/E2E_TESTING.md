@@ -263,11 +263,12 @@ DEBUG=1 node tests/e2e/test-permissions.mjs
 | AskUserQuestion | 2026-01-16 | PASS | Dialog interaction validated |
 | Error Handling | 2026-01-16 | PASS | Empty msg prevention, interrupt recovery, UI stability |
 | Favorites | 2026-01-16 | PASS | Star toggle and state persistence |
+| Session Titles | 2026-01-16 | PASS | Title display and edit functionality |
 
 **Run all tests:**
 ```bash
 node tests/e2e/run-all.mjs
-# Expected: Passed: 9/9
+# Expected: Passed: 10/10
 ```
 
 **Architecture:**

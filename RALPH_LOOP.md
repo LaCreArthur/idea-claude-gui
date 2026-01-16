@@ -52,7 +52,7 @@ Autonomous improvement loop for Claude GUI plugin testing and development.
 
 ### P2 - Secondary Features
 - [x] **US-11**: Favorites (star sessions) (TESTED)
-- [ ] **US-12**: Session titles (auto-generated)
+- [x] **US-12**: Session titles (TESTED - display and edit)
 - [ ] **US-13**: Settings persistence
 - [x] **US-14**: Error handling (TESTED - empty msg, interrupt, UI stability)
 
@@ -115,26 +115,55 @@ Autonomous improvement loop for Claude GUI plugin testing and development.
 
 **Status:** Complete
 
-### Iteration 3: Session Resume and Favorites (In Progress)
+### Iteration 3: Session Features ✅
 **Goal:** Test session lifecycle and secondary features
 
 **Tasks:**
 - [x] 3.1 Test US-3 (Resume existing session)
 - [x] 3.2 Test US-11 (Favorites)
-- [ ] 3.3 Test US-9 (MCP server configuration)
-- [ ] 3.4 Test US-10 (Skills/Agents execution)
+- [x] 3.3 Test US-12 (Session titles)
 
 **Results:**
-- 9 tests now passing (up from 8)
+- 10 tests now passing (up from 9)
 - Session resume validates history navigation
 - Favorites toggle and state persistence work
-- All P0 and most P2 stories now covered
+- Session titles display and editing work
+- All P0 and P2 session features covered
 
-**Status:** In Progress
+**Status:** Complete
+
+### Iteration 4: P1 Features (Next)
+**Goal:** Test remaining P1 user stories
+
+**Tasks:**
+- [ ] 4.1 Test US-9 (MCP server configuration)
+- [ ] 4.2 Test US-10 (Skills/Agents execution)
+- [ ] 4.3 Test US-13 (Settings persistence)
+
+**Status:** Pending
 
 ---
 
 ## Learnings Log
+
+### Entry 4: Iteration 3 Complete (2026-01-16)
+**Tests: 7 → 10 passing**
+
+New tests added:
+- `test-session-resume.mjs` (US-3) - History navigation and session loading
+- `test-favorites.mjs` (US-11) - Star toggle and persistence
+- `test-session-titles.mjs` (US-12) - Title display and editing
+
+Key learnings:
+1. **History view structure** - Sessions in .history-item with meta info
+2. **Edit mode detection** - Look for .history-title-input when editing
+3. **Favorite toggle** - Button has .favorited class and codicon-star-full/empty
+4. **Cancel edit** - Use cancel button or Escape key
+
+Coverage progress:
+- All P0 stories: 4/4 tested
+- All P2 session features: 3/3 tested
+- Remaining: US-8, US-9, US-10, US-13
 
 ### Entry 3: Iteration 2 Complete (2026-01-16)
 **Tests: 6 → 7 passing**
