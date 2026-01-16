@@ -2,26 +2,15 @@
 
 IntelliJ IDEA plugin providing a GUI for Claude Code. React/TypeScript webview + Java plugin + Node.js ai-bridge.
 
-## CRITICAL: Fork Identity (NEVER OVERWRITE)
+## Plugin Identity
 
-This is a fork. The following values define the fork's identity and **MUST NEVER be changed during upstream merges or any other operation**:
-
-| File | Field | Required Value |
-|------|-------|----------------|
+| File | Field | Value |
+|------|-------|-------|
 | `build.gradle` | `group` | `com.lacrearthur.idea-claude-gui` |
-| `build.gradle` | `version` | Current fork version (e.g., `0.2.4`) |
 | `plugin.xml` | `<id>` | `com.lacrearthur.idea-claude-gui` |
 | `plugin.xml` | `<name>` | `Claude GUI` |
 | `plugin.xml` | `<vendor>` | `Arthur Scheidel` |
-| `BridgeDirectoryResolver.java` | `PLUGIN_ID` | `com.lacrearthur.idea-claude-gui` |
-| `PluginUpdateListener.java` | `PLUGIN_ID` | `com.lacrearthur.idea-claude-gui` |
-| `README.md` | Title | `Claude GUI` |
 | `README.md` | JetBrains link | `https://plugins.jetbrains.com/plugin/29599-claude-gui` |
-
-**During upstream merges:**
-1. ALWAYS reject upstream changes to these fields
-2. If accidentally overwritten, revert immediately before any commit
-3. Verify these values after every merge operation
 
 ## Design Philosophy
 
@@ -86,20 +75,16 @@ it('calls sendToJava when clicked', async () => {
 ## Key Files
 
 - `webview/src/App.tsx` - Main React app
-- `ai-bridge/permission-handler.js` - File-based IPC
+- `ai-bridge/bridge.js` - Node.js Claude SDK bridge (stdin/stdout JSON protocol)
 - `src/main/java/.../ClaudeSDKToolWindow.java` - Plugin entry
 - `src/main/java/.../handler/` - Message handlers
 - `src/main/java/.../permission/PermissionService.java` - Permission handling
 
-## Upstream Sync
+## Fork History
 
-This is a fork of [zhukunpenglinyutong/idea-claude-code-gui](https://github.com/zhukunpenglinyutong/idea-claude-code-gui).
+Originally forked from [zhukunpenglinyutong/idea-claude-code-gui](https://github.com/zhukunpenglinyutong/idea-claude-code-gui). Upstream sync abandoned January 2026.
 
-See [docs/FORK_STRATEGY.md](docs/FORK_STRATEGY.md) for merge strategy and feature adoption guidelines.
-
-**Key learnings from v0.2.2 merge:**
-- Git merge is practical (~18% manual conflict rate)
-- Watch for duplicate code artifacts after merge (methods, imports, state declarations)
-- Run full test suite after merge to catch compilation issues
-
-**Note:** This fork has removed i18n support (English-only) and non-Claude LLM support (Codex removed).
+**Key differences from upstream:**
+- English-only (removed i18n)
+- Claude-only (removed Codex/multi-provider)
+- Simplified architecture
