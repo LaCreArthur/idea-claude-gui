@@ -1,3 +1,24 @@
+##### **v0.2.8** (2026-01-19)
+
+**Auth Detection & E2E Testing**
+
+Features:
+- Add macOS Keychain auth detection for CLI session (`claude login`)
+- Simplify provider dialog to API key only (remove complex model config)
+- Rename "Add" button to "Add API Key" for clarity
+
+E2E Tests:
+- Add auth state detection tests (verifies UI displays correct auth status)
+- Add auth validation tests (Haiku/Sonnet/Opus via subscription, API key workflow)
+- New helpers: credentials.mjs, auth-state.mjs for safe settings manipulation
+- ClaudeGUIPage: add openSettings(), closeSettings(), openProvidersTab(), getAuthStatus()
+
+Fixes:
+- Fix E2E screenshot paths (was creating in wrong directory)
+- Fix install-rider.sh pgrep to be case-insensitive
+
+---
+
 ##### **v0.2.7** (2026-01-16)
 
 **Ralph Loop Bug Fixes & UX Improvements**

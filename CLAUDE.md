@@ -80,6 +80,17 @@ it('calls sendToJava when clicked', async () => {
 - `src/main/java/.../handler/` - Message handlers
 - `src/main/java/.../permission/PermissionService.java` - Permission handling
 
+## Release Checklist
+
+1. Update version in `build.gradle`
+2. Update `CHANGELOG.md` with release notes (format: `##### **vX.Y.Z** (YYYY-MM-DD)`)
+3. Commit: `chore: Bump version to X.Y.Z`
+4. Tag: `git tag vX.Y.Z`
+5. Push: `git push && git push --tags`
+6. CI builds and publishes to JetBrains Marketplace automatically on version tags
+
+Note: `build.gradle` auto-generates `<change-notes>` from CHANGELOG.md
+
 ## Fork History
 
 Originally forked from [zhukunpenglinyutong/idea-claude-code-gui](https://github.com/zhukunpenglinyutong/idea-claude-code-gui). Upstream sync abandoned January 2026.
