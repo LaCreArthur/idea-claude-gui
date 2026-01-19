@@ -5,6 +5,13 @@
  * Uses resilient selectors with fallback strategies for self-healing.
  */
 
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const SCREENSHOTS_DIR = join(__dirname, '..', 'screenshots');
+
 export class ClaudeGUIPage {
   constructor(page) {
     this.page = page;
@@ -568,7 +575,7 @@ export class ClaudeGUIPage {
    * Take screenshot
    */
   async screenshot(name) {
-    const path = `tests/e2e/screenshots/${name}-${Date.now()}.png`;
+    const path = join(SCREENSHOTS_DIR, `${name}-${Date.now()}.png`);
     await this.page.screenshot({ path });
     return path;
   }

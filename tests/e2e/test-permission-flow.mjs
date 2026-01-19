@@ -9,6 +9,7 @@
  */
 
 import { chromium } from 'playwright';
+import { getScreenshotPath } from './helpers/webview.mjs';
 
 async function sleep(ms) {
   return new Promise(r => setTimeout(r, ms));
@@ -204,7 +205,7 @@ async function testPermissionFlow() {
       }
 
       // Take final screenshot
-      await page.screenshot({ path: 'tests/e2e/screenshots/permission-flow-final.png' });
+      await page.screenshot({ path: getScreenshotPath('permission-flow-final.png') });
       break;
     }
   }

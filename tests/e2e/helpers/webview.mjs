@@ -6,6 +6,12 @@
  */
 
 import { chromium } from 'playwright';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const SCREENSHOTS_DIR = join(__dirname, '..', 'screenshots');
 
 let cachedBrowser = null;
 let cachedPage = null;
@@ -114,10 +120,22 @@ export async function isDialogVisible(dialogSelector) {
 }
 
 /**
- * Take a screenshot
+ * Get absolute path for a screenshot file
+ * @param {string} name - Screenshot name (without path, with or without extension)
  */
-export async function screenshot(path) {
+export function getScreenshotPath(name) {
+  const filename = name.endsWith('.png') ? name : `${name}-${Date.now()}.png`;
+  return join(SCREENSHOTS_DIR, filename);
+}
+
+/**
+ * Take a screenshot
+ * @param {string} nameOrPath - Either a simple name (will use screenshots dir) or full path
+ */
+export async function screenshot(nameOrPath) {
   const { page } = await getPage();
+  // If it looks like a relative path with directories, convert to absolute
+  const path = nameOrPath.includes('/') ? nameOrPath : getScreenshotPath(nameOrPath);
   await page.screenshot({ path, fullPage: true });
   return path;
 }

@@ -9,6 +9,7 @@
  */
 
 import { chromium } from 'playwright';
+import { getScreenshotPath } from './helpers/webview.mjs';
 
 async function sleep(ms) {
   return new Promise(r => setTimeout(r, ms));
@@ -156,7 +157,7 @@ async function testPlanApproval() {
           }
 
           // Take screenshot
-          await page.screenshot({ path: 'tests/e2e/screenshots/plan-approval.png' });
+          await page.screenshot({ path: getScreenshotPath('plan-approval.png') });
 
           // Click Execute Plan
           console.log('9. Clicking "Execute Plan"...');
@@ -177,7 +178,7 @@ async function testPlanApproval() {
         console.log('7. No dialog appeared within timeout');
         console.log('   (Claude may still be generating or SDK limitation)');
         // Take screenshot for debugging
-        await page.screenshot({ path: 'tests/e2e/screenshots/plan-no-dialog.png' });
+        await page.screenshot({ path: getScreenshotPath('plan-no-dialog.png') });
       }
 
       // Check log for plan-related messages
