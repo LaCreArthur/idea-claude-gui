@@ -45,6 +45,8 @@ const TESTS = [
   'test-settings.mjs',            // US-13: Settings
   'test-mcp-settings.mjs',        // US-9: MCP servers
   'test-skills.mjs',              // US-10: Skills/Agents
+  'test-auth-states.mjs',         // Auth state detection
+  'test-auth-validation.mjs',     // Auth validation with API calls
 ];
 
 async function runTest(testFile) {

@@ -416,6 +416,152 @@ export class ClaudeGUIPage {
     return true;
   }
 
+  // ==================== Settings & Auth Actions ====================
+
+  /**
+   * Open settings view
+   */
+  async openSettings() {
+    // Check if already in settings
+    const alreadyInSettings = await this.page.evaluate(() => {
+      return document.body.innerText.includes('Basic Configuration') ||
+             document.body.innerText.includes('Provider Management');
+    });
+
+    if (alreadyInSettings) {
+      return true;
+    }
+
+    await this.page.evaluate(() => {
+      // Try tooltip-based selector
+      const settingsBtn = document.querySelector('.icon-button[data-tooltip="Settings"]');
+      if (settingsBtn) {
+        settingsBtn.click();
+        return true;
+      }
+      // Try CSS module class names for icon buttons
+      const allBtns = document.querySelectorAll('[class*="iconButton"], .icon-button');
+      for (const btn of allBtns) {
+        if (btn.querySelector('.codicon-gear, .codicon-settings')) {
+          btn.click();
+          return true;
+        }
+      }
+      return false;
+    });
+
+    await this.page.waitForTimeout(500);
+    return true;
+  }
+
+  /**
+   * Close settings view (return to chat)
+   */
+  async closeSettings() {
+    await this.page.evaluate(() => {
+      // Handle CSS module class names
+      const backBtn = document.querySelector('.back-button, [class*="backBtn"], [class*="backButton"]');
+      if (backBtn) backBtn.click();
+    });
+
+    await this.page.waitForTimeout(500);
+    return true;
+  }
+
+  /**
+   * Navigate to providers tab in settings
+   */
+  async openProvidersTab() {
+    // First open settings if not already open
+    const hasSettingsOpen = await this.page.evaluate(() => {
+      return !!document.querySelector('[class*="settings-container"], [class*="SettingsView"]') ||
+             document.body.innerText.includes('Basic Configuration');
+    });
+
+    if (!hasSettingsOpen) {
+      await this.openSettings();
+    }
+
+    // Click providers tab
+    await this.page.evaluate(() => {
+      const sidebarItems = document.querySelectorAll('[class*="sidebarItem"]');
+      for (const item of sidebarItems) {
+        if (item.textContent?.includes('Provider')) {
+          item.click();
+          return true;
+        }
+      }
+      return false;
+    });
+
+    await this.page.waitForTimeout(300);
+    return true;
+  }
+
+  /**
+   * Get current authentication status from the UI
+   * @returns {Promise<{authType: string, authenticated: boolean, providerName: string|null}>}
+   */
+  async getAuthStatus() {
+    // Navigate to providers tab to see auth info
+    const wasInSettings = await this.page.evaluate(() => {
+      return !!document.querySelector('[class*="settings-container"], [class*="SettingsView"]') ||
+             document.body.innerText.includes('Basic Configuration');
+    });
+
+    if (!wasInSettings) {
+      await this.openSettings();
+    }
+
+    await this.openProvidersTab();
+
+    // Wait for config to load (may take time to fetch from backend)
+    await this.page.waitForTimeout(1500);
+
+    // Check if still loading
+    const isLoading = await this.page.evaluate(() => {
+      return document.body.innerText.includes('Loading...');
+    });
+
+    if (isLoading) {
+      await this.page.waitForTimeout(2000);
+    }
+
+    const authInfo = await this.page.evaluate(() => {
+      const pageText = document.body.innerText;
+
+      // Check for no auth message
+      if (pageText.includes('No authentication configured')) {
+        return { authType: 'none', authenticated: false, providerName: null };
+      }
+
+      // Check for CLI session (exact text from ConfigInfoDisplay)
+      if (pageText.includes('CLI Session') || pageText.includes('logged in via claude login')) {
+        return { authType: 'cli_session', authenticated: true, providerName: 'CLI Session' };
+      }
+
+      // Check for API key (masked display with bullets)
+      const hasMaskedKey = /•{4,}/.test(pageText) || pageText.includes('sk-ant-');
+      if (hasMaskedKey && pageText.includes('Current ClaudeCode Configuration')) {
+        return { authType: 'api_key', authenticated: true, providerName: 'API Key' };
+      }
+
+      // Check if config section exists (some auth is present)
+      if (pageText.includes('Current ClaudeCode Configuration')) {
+        return { authType: 'detected', authenticated: true, providerName: null };
+      }
+
+      return { authType: 'unknown', authenticated: false, providerName: null };
+    });
+
+    // Return to chat if we opened settings
+    if (!wasInSettings) {
+      await this.closeSettings();
+    }
+
+    return authInfo;
+  }
+
   // ==================== Utility ====================
 
   /**
