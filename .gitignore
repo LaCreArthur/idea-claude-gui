@@ -69,4 +69,7 @@ logs/*.log
 docs-plan
 firebase-debug.log
 .ace-tool/
-.workflow
+.workflowtests/e2e/screenshots/
+tests/e2e/screenshots/
+tests/tests/
+*.hprof

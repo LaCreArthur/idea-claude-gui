@@ -422,7 +422,7 @@ export class ClaudeGUIPage {
    * Take screenshot
    */
   async screenshot(name) {
-    const path = `tests/e2e/screenshots/${name}-${Date.now()}.png`;
+    const path = `e2e/screenshots/${name}-${Date.now()}.png`;
     await this.page.screenshot({ path });
     return path;
   }

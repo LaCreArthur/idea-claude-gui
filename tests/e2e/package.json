@@ -1,0 +1,16 @@
+{
+  "name": "e2e",
+  "version": "1.0.0",
+  "description": "This directory contains E2E test specifications written in natural language markdown. These tests are designed to be executed by Claude Code (or similar AI assistants) that can interact with the running IDE via screenshots, mouse, and keyboard.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "playwright": "^1.57.0"
+  }
+}

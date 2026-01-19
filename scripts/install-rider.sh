@@ -2,18 +2,36 @@
 # Install Claude GUI plugin to Rider for E2E testing
 #
 # Usage:
-#   ./scripts/install-rider.sh              # Auto-detect Rider version
+#   ./scripts/install-rider.sh              # Build if needed, install
+#   ./scripts/install-rider.sh --rebuild    # Force rebuild, install, restart Rider
 #   ./scripts/install-rider.sh 2024.3       # Specify version
 #   RIDER_PLUGINS=/custom/path ./scripts/install-rider.sh
 #
 # Prerequisites:
-#   - Plugin will be built automatically if not present
 #   - Rider must be installed
 
 set -e
 
+FORCE_REBUILD=false
+RESTART_RIDER=false
+
+# Parse flags
+while [[ "$1" == -* ]]; do
+    case "$1" in
+        --rebuild|-r)
+            FORCE_REBUILD=true
+            RESTART_RIDER=true
+            shift
+            ;;
+        *)
+            echo "Unknown option: $1"
+            exit 1
+            ;;
+    esac
+done
+
 RIDER_VERSION="${1:-2025.3}"
-PLUGIN_NAME="idea-claude-code-gui"
+PLUGIN_NAME="idea-claude-gui"
 
 cd "$(dirname "$0")/.."
 
@@ -44,9 +62,9 @@ echo ""
 
 # Build plugin if not present or force rebuild
 PLUGIN_ZIP=$(ls build/distributions/$PLUGIN_NAME-*.zip 2>/dev/null | head -1)
-if [ -z "$PLUGIN_ZIP" ] || [ ! -f "$PLUGIN_ZIP" ]; then
+if [ "$FORCE_REBUILD" = true ] || [ -z "$PLUGIN_ZIP" ] || [ ! -f "$PLUGIN_ZIP" ]; then
     echo "Building plugin..."
-    ./gradlew buildPlugin -q
+    ./gradlew clean buildPlugin -q
     PLUGIN_ZIP=$(ls build/distributions/$PLUGIN_NAME-*.zip 2>/dev/null | head -1)
 fi
 
@@ -70,14 +88,26 @@ unzip -q -o "$PLUGIN_ZIP" -d "$RIDER_PLUGINS/"
 
 echo ""
 echo "=== Installation Complete ==="
-echo "Restart Rider to load the plugin."
+
+# Restart Rider if requested
+if [ "$RESTART_RIDER" = true ]; then
+    echo "Restarting Rider..."
+    # Gracefully quit Rider using AppleScript (allows saving state)
+    osascript -e 'tell application "Rider" to quit' 2>/dev/null || true
+    # Wait for Rider to fully close
+    while pgrep -x "Rider" > /dev/null; do
+        sleep 0.5
+    done
+    sleep 1
+    # Reopen Rider
+    open -a "Rider"
+    echo "Rider restarted."
+else
+    echo "Restart Rider to load the plugin."
+fi
+
 echo ""
 echo "To verify:"
 echo "  1. Open Rider"
 echo "  2. Settings > Plugins > Installed"
 echo "  3. Look for 'Claude GUI'"
-echo ""
-echo "To test E2E:"
-echo "  1. Open Claude tool window (View > Tool Windows > Claude)"
-echo "  2. Send a test message"
-echo "  3. Verify response is received"

@@ -178,7 +178,7 @@ async function testModeSwitching() {
       }
 
       // Take screenshot
-      await page.screenshot({ path: 'tests/e2e/screenshots/mode-switching.png' });
+      await page.screenshot({ path: 'e2e/screenshots/mode-switching.png' });
 
       // Cleanup: ensure mode is Default for next test
       const finalMode = await getCurrentMode();

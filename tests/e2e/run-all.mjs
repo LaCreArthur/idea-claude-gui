@@ -10,8 +10,25 @@
 import { spawn } from 'child_process';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { rmSync, mkdirSync, existsSync, readdirSync } from 'fs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const SCREENSHOTS_DIR = join(__dirname, 'screenshots');
+
+/**
+ * Clean up test artifacts (screenshots) from previous runs
+ */
+function cleanupArtifacts() {
+  if (existsSync(SCREENSHOTS_DIR)) {
+    const files = readdirSync(SCREENSHOTS_DIR);
+    if (files.length > 0) {
+      console.log(`Cleaning up ${files.length} artifact(s) from previous run...`);
+      rmSync(SCREENSHOTS_DIR, { recursive: true, force: true });
+    }
+  }
+  // Recreate empty directory for this run
+  mkdirSync(SCREENSHOTS_DIR, { recursive: true });
+}
 
 // List of validated tests to run (in order)
 const TESTS = [
@@ -58,6 +75,10 @@ async function main() {
   console.log('║           Claude GUI E2E Test Suite                        ║');
   console.log('╚════════════════════════════════════════════════════════════╝');
   console.log('');
+
+  // Clean up artifacts from previous runs
+  cleanupArtifacts();
+
   console.log('Prerequisites:');
   console.log('  - Rider running with Claude GUI panel open');
   console.log('  - CDP port 9222 accessible');
@@ -97,6 +118,18 @@ async function main() {
   console.log(`Passed: ${passed}/${results.length}`);
   console.log(`Failed: ${failed}/${results.length}`);
   console.log('='.repeat(60));
+
+  // Clean up screenshots after successful run
+  // Keep them on failure for debugging
+  if (failed === 0 && existsSync(SCREENSHOTS_DIR)) {
+    const files = readdirSync(SCREENSHOTS_DIR);
+    if (files.length > 0) {
+      rmSync(SCREENSHOTS_DIR, { recursive: true, force: true });
+      console.log(`\nCleaned up ${files.length} screenshot(s)`);
+    }
+  } else if (failed > 0) {
+    console.log(`\nScreenshots preserved in: ${SCREENSHOTS_DIR}`);
+  }
 
   process.exit(failed > 0 ? 1 : 0);
 }

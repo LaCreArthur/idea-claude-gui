@@ -204,7 +204,7 @@ async function testPermissionFlow() {
       }
 
       // Take final screenshot
-      await page.screenshot({ path: 'tests/e2e/screenshots/permission-flow-final.png' });
+      await page.screenshot({ path: 'e2e/screenshots/permission-flow-final.png' });
       break;
     }
   }
