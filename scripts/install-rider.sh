@@ -95,7 +95,7 @@ if [ "$RESTART_RIDER" = true ]; then
     # Gracefully quit Rider using AppleScript (allows saving state)
     osascript -e 'tell application "Rider" to quit' 2>/dev/null || true
     # Wait for Rider to fully close
-    while pgrep -x "Rider" > /dev/null; do
+    while pgrep -xi "rider" > /dev/null; do
         sleep 0.5
     done
     sleep 1

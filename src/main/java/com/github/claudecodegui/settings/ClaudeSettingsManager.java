@@ -115,6 +115,14 @@ public class ClaudeSettingsManager {
     }
 
     public boolean hasCliSessionAuth() {
+        // On macOS, check Keychain first (where `claude login` stores credentials)
+        if (System.getProperty("os.name").toLowerCase().contains("mac")) {
+            if (hasKeychainCredentials()) {
+                return true;
+            }
+        }
+
+        // Fall back to file-based credentials
         try {
             Path credentialsPath = Paths.get(System.getProperty("user.home"), ".claude", ".credentials.json");
             if (!Files.exists(credentialsPath)) {
@@ -134,6 +142,36 @@ public class ClaudeSettingsManager {
             LOG.warn("[ClaudeSettingsManager] Failed to check CLI session auth: " + e.getMessage());
             return false;
         }
+    }
+
+    private boolean hasKeychainCredentials() {
+        String[] serviceNames = {"Claude Code-credentials", "Claude Code"};
+        for (String serviceName : serviceNames) {
+            try {
+                ProcessBuilder pb = new ProcessBuilder(
+                    "security", "find-generic-password", "-s", serviceName, "-w"
+                );
+                pb.redirectErrorStream(true);
+                Process process = pb.start();
+                String output = new String(process.getInputStream().readAllBytes()).trim();
+                int exitCode = process.waitFor();
+
+                if (exitCode == 0 && !output.isEmpty()) {
+                    // Parse the JSON to verify it has OAuth token
+                    JsonObject credentials = JsonParser.parseString(output).getAsJsonObject();
+                    if (credentials.has("claudeAiOauth")) {
+                        JsonObject oauth = credentials.getAsJsonObject("claudeAiOauth");
+                        if (oauth.has("accessToken")) {
+                            String token = oauth.get("accessToken").getAsString();
+                            return token != null && !token.isEmpty();
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                // Try next service name
+            }
+        }
+        return false;
     }
 
     public JsonObject getCurrentClaudeConfig() throws IOException {

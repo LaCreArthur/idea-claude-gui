@@ -31,8 +31,8 @@ export default function ProviderList({
             className={styles.btnPrimary}
             onClick={onAdd}
           >
-            <span className="codicon codicon-add" />
-            Add
+            <span className="codicon codicon-key" />
+            Add API Key
           </button>
         </div>
       </div>
