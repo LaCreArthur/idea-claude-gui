@@ -1,10 +1,34 @@
-##### **v0.2.9** (2026-01-20)
+##### **v0.2.10** (2026-01-20)
 
-**Image Attachment Bug Fix**
+**Code Cleanup & Bug Fixes**
 
 Bug Fixes:
-- Fix image attachments not working (dragging an image would send but Claude's response never appeared)
+- Fix image attachments not working (base64 encoding issue in ai-bridge)
 - Fix permission dialogs appearing for wrong project when multiple IDE windows open
+
+Code Cleanup:
+- Remove 3100+ lines of comments across 135 files
+- Translate remaining Chinese comments to English
+
+---
+
+##### **v0.2.9** (2026-01-20)
+
+**Code Cleanup & Refactoring**
+
+Bug Fixes:
+- Fix image attachments not working (base64 encoding issue in ai-bridge)
+- Fix permission dialogs appearing for wrong project when multiple IDE windows open
+
+Refactoring:
+- Extract UI components and SDK operations into focused modules
+- Reduce file sizes: ClaudeSDKToolWindow 2000→200 lines, App.tsx 2400→600 lines
+- Remove 3100+ lines of comments, translate remaining Chinese to English
+
+E2E Testing:
+- Auto-open Claude GUI panel for autonomous test runs
+- Add image attachment E2E test
+- Fix screenshot paths to use absolute paths
 
 ---
 
