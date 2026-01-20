@@ -25,7 +25,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class RewindOperations {
     private static final Logger LOG = Logger.getInstance(RewindOperations.class);
-    private static final String CHANNEL_SCRIPT = "channel-manager.js";
+    private static final String CHANNEL_SCRIPT = "bridge.js";
 
     private final Gson gson;
     private final NodeDetector nodeDetector;
@@ -75,7 +75,7 @@ public class RewindOperations {
                 stdinInput.addProperty("cwd", cwd != null ? cwd : "");
                 String stdinJson = gson.toJson(stdinInput);
 
-                // Build command: node channel-manager.js claude rewindFiles
+                // Build command: node bridge.js claude rewindFiles
                 List<String> command = new ArrayList<>();
                 command.add(node);
                 command.add(new File(workDir, CHANNEL_SCRIPT).getAbsolutePath());

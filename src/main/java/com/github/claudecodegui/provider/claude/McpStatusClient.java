@@ -24,7 +24,7 @@ import java.util.concurrent.CompletableFuture;
  */
 public class McpStatusClient {
     private static final Logger LOG = Logger.getInstance(McpStatusClient.class);
-    private static final String CHANNEL_SCRIPT = "channel-manager.js";
+    private static final String CHANNEL_SCRIPT = "bridge.js";
     private static final String MCP_STATUS_CHANNEL_ID = "__mcp_status__";
 
     private final Gson gson;

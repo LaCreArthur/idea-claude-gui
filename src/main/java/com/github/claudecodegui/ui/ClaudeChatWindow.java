@@ -186,7 +186,7 @@ public class ClaudeChatWindow {
                 String basePath = project.getBasePath();
                 if (basePath == null) return;
                 File bridgeDir = new File(basePath, "ai-bridge");
-                File channelManager = new File(bridgeDir, "channel-manager.js");
+                File channelManager = new File(bridgeDir, "bridge.js");
                 if (bridgeDir.exists() && bridgeDir.isDirectory() && channelManager.exists()) {
                     claudeSDKBridge.setSdkTestDir(bridgeDir.getAbsolutePath());
                     LOG.info("Overriding ai-bridge path to project directory: " + bridgeDir.getAbsolutePath());

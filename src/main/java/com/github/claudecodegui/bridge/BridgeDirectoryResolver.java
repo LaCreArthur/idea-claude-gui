@@ -40,7 +40,7 @@ public class BridgeDirectoryResolver {
 
     private static final Logger LOG = Logger.getInstance(BridgeDirectoryResolver.class);
     private static final String SDK_DIR_NAME = "ai-bridge";
-    private static final String NODE_SCRIPT = "channel-manager.js";
+    private static final String NODE_SCRIPT = "bridge.js";
     private static final String SDK_ARCHIVE_NAME = "ai-bridge.zip";
     private static final String SDK_HASH_FILE_NAME = "ai-bridge.hash";
     private static final String BRIDGE_VERSION_FILE = ".bridge-version";

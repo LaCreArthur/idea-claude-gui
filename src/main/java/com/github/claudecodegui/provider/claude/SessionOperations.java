@@ -21,7 +21,7 @@ import java.util.List;
  */
 public class SessionOperations {
     private static final Logger LOG = Logger.getInstance(SessionOperations.class);
-    private static final String CHANNEL_SCRIPT = "channel-manager.js";
+    private static final String CHANNEL_SCRIPT = "bridge.js";
 
     private final Gson gson;
     private final NodeDetector nodeDetector;
