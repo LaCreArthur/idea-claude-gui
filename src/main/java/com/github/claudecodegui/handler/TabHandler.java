@@ -1,6 +1,7 @@
 package com.github.claudecodegui.handler;
 
 import com.github.claudecodegui.ClaudeSDKToolWindow;
+import com.github.claudecodegui.ui.ClaudeChatWindow;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.Project;
@@ -59,7 +60,7 @@ public class TabHandler extends BaseMessageHandler {
                 }
 
                 // Create a new chat window instance with skipRegister=true (don't replace the main instance)
-                ClaudeSDKToolWindow.ClaudeChatWindow newChatWindow = new ClaudeSDKToolWindow.ClaudeChatWindow(project, true);
+                ClaudeChatWindow newChatWindow = new ClaudeChatWindow(project, true);
 
                 // Create a tab name in the format "AIN"
                 String tabName = ClaudeSDKToolWindow.getNextTabName(toolWindow);

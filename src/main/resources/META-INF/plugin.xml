@@ -4,36 +4,31 @@
     <vendor>Arthur Scheidel</vendor>
 
     <description><![CDATA[
-        <p><strong>Claude GUI</strong> - A powerful visual interface plugin that brings <strong>Claude Code</strong> directly into IntelliJ IDEA, making AI-assisted programming more efficient and intuitive.</p>
-
-        <h2>Claude Code Support</h2>
-        <ul>
-            <li><strong>Claude Code</strong> - Anthropic's official AI programming assistant (Opus 4.5 and more)</li>
-        </ul>
+        <p><strong>Claude GUI</strong> - A visual interface for <strong>Claude Code</strong> in JetBrains IDEs. Brings Anthropic's AI programming assistant directly into your workflow.</p>
 
         <h2>Key Features</h2>
         <ul>
-            <li><strong>Context-aware AI Assistant</strong>: Intelligent coding assistant with @file reference support</li>
-            <li><strong>Image Support</strong>: Send images for visual requirement description</li>
+            <li><strong>Flexible Authentication</strong>: Works with Claude subscription (Pro/Max) or API key</li>
+            <li><strong>Model Selection</strong>: Switch between Opus 4.5, Sonnet 4, and other Claude models</li>
+            <li><strong>Plan Mode</strong>: Let Claude analyze and plan before making changes</li>
+            <li><strong>Context-aware</strong>: @file references and image support for precise context</li>
             <li><strong>Agent System</strong>: Built-in agents for automated complex tasks</li>
             <li><strong>Skills Commands</strong>: Slash command system (/init, /review, etc.)</li>
-            <li><strong>MCP Server</strong>: Extend AI capabilities with MCP protocol</li>
+            <li><strong>MCP Server</strong>: Extend AI capabilities with Model Context Protocol</li>
             <li><strong>Code DIFF</strong>: Visual code comparison and file navigation</li>
             <li><strong>Conversation Rewind</strong>: Flexible history adjustment</li>
             <li><strong>Session Management</strong>: History, favorites, search, and export</li>
             <li><strong>Theme Support</strong>: Dark/Light themes with IDE font sync</li>
             <li><strong>Permission Control</strong>: Comprehensive security management</li>
-            <li><strong>Provider Management</strong>: cc-switch compatible</li>
         </ul>
 
         <h2>How to Use</h2>
         <ul>
-            <li>Open the Claude Code GUI tool window from the right sidebar</li>
-            <li>Select code and use <kbd>Ctrl+Alt+K</kbd> (Win/Linux) or <kbd>Cmd+Alt+K</kbd> (Mac) to send to AI</li>
-            <li>Get instant AI-powered code assistance and intelligent suggestions</li>
+            <li>Open Claude GUI from the right sidebar</li>
+            <li>Select code and press <kbd>Ctrl+Alt+K</kbd> (Win/Linux) or <kbd>Cmd+Alt+K</kbd> (Mac)</li>
         </ul>
 
-        <p><em>Keywords: Claude, Claude Code, Codex, OpenCode, Gemini, AI Assistant, Code Generation, AI Coding, Productivity, Intelligent Code Assistant</em></p>
+        <p><em>Keywords: Claude, Claude Code, AI Assistant, Code Generation, AI Coding, Anthropic</em></p>
     ]]></description>
 
     <depends>com.intellij.modules.platform</depends>

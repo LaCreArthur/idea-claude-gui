@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { Attachment, ChatInputBoxProps, CommandItem, FileItem, PermissionMode } from './types';
+import type { ChatInputBoxProps, CommandItem, FileItem, PermissionMode, Attachment } from './types';
 import { ButtonArea } from './ButtonArea';
 import { AttachmentList } from './AttachmentList';
 import { ContextBar } from './ContextBar';
 import { CompletionDropdown } from './Dropdown';
-import { useCompletionDropdown, useTriggerDetection } from './hooks';
-import { setCursorAtCharOffset } from './hooks/useTriggerDetection';
+import { useCompletionDropdown, useTriggerDetection, useKeyboardHandlers, useAttachmentManagement, useFileTagRendering, useTooltip } from './hooks';
 import {
   commandToDropdownItem,
   fileReferenceProvider,
@@ -15,11 +14,9 @@ import {
   agentToDropdownItem,
   type AgentItem,
 } from './providers';
-import { getFileIcon } from '../../utils/fileIcons';
-import { icon_folder } from '../../utils/icons';
 import './styles.css';
 
-// 防抖函数工具
+// Debounce utility function
 function debounce<T extends (...args: any[]) => void>(
   func: T,
   wait: number
@@ -83,22 +80,85 @@ export const ChatInputBox = ({
   // 输入框引用和状态
   const containerRef = useRef<HTMLDivElement>(null);
   const editableRef = useRef<HTMLDivElement>(null);
-  const submittedOnEnterRef = useRef(false);
-  const completionSelectedRef = useRef(false);
-  const justRenderedTagRef = useRef(false); // 标记是否刚刚渲染了文件标签 // 标记补全菜单刚选中项目，防止回车同时发送消息
-  const shiftKeyPressedRef = useRef(false); // Track if Shift was pressed during keydown (for Shift+Enter newline)
+  const justRenderedTagRef = useRef(false); // 标记是否刚刚渲染了文件标签
   const [isComposing, setIsComposing] = useState(false);
   const isComposingRef = useRef(false); // 同步的 IME 状态 ref，比 React state 更快响应
   const [hasContent, setHasContent] = useState(false);
   const compositionTimeoutRef = useRef<number | null>(null);
   const lastCompositionEndTimeRef = useRef<number>(0);
 
-  // 路径映射：存储文件名/相对路径 -> 完整绝对路径的映射
-  // 用于在 tooltip 中显示完整路径
-  const pathMappingRef = useRef<Map<string, string>>(new Map());
+  // Ref for completion close functions (set after completion hooks are created)
+  const closeCompletionsRef = useRef<{ file: () => void; command: () => void } | null>(null);
 
   // 触发检测 Hook
   const { detectTrigger, getTriggerPosition, getCursorPosition } = useTriggerDetection();
+
+  /**
+   * 获取输入框纯文本内容（优化版，带缓存）
+   * 保留用户输入的原始格式，包括换行符和空白字符
+   */
+  const getTextContent = useCallback(() => {
+    if (!editableRef.current) return '';
+
+    // 从 DOM 中提取纯文本，包括文件标签的原始引用格式
+    let text = '';
+
+    // 使用递归遍历，但遇到 file-tag 时只读取 data-file-path 并不再深入
+    const walk = (node: Node) => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        text += node.textContent || '';
+      } else if (node.nodeType === Node.ELEMENT_NODE) {
+        const element = node as HTMLElement;
+        const tagName = element.tagName.toLowerCase();
+
+        // 处理换行元素
+        if (tagName === 'br') {
+          text += '\n';
+        } else if (tagName === 'div' || tagName === 'p') {
+          // div 和 p 元素前添加换行（如果不是第一个元素）
+          if (text.length > 0 && !text.endsWith('\n')) {
+            text += '\n';
+          }
+          node.childNodes.forEach(walk);
+        } else if (element.classList.contains('file-tag')) {
+          const filePath = element.getAttribute('data-file-path') || '';
+          text += `@${filePath}`;
+          // 不遍历 file-tag 的子节点，避免重复读取文件名和关闭按钮文本
+        } else {
+          // 继续遍历子节点
+          node.childNodes.forEach(walk);
+        }
+      }
+    };
+
+    editableRef.current.childNodes.forEach(walk);
+
+    // 只移除 JCEF 环境可能添加的末尾单个换行符（不影响用户输入的换行）
+    // 如果末尾有多个换行，只移除最后一个（JCEF 添加的）
+    if (text.endsWith('\n') && editableRef.current.childNodes.length > 0) {
+      const lastChild = editableRef.current.lastChild;
+      // 只有当最后一个节点不是 br 标签时，才移除末尾换行（说明是 JCEF 添加的）
+      if (lastChild?.nodeType !== Node.ELEMENT_NODE ||
+          (lastChild as HTMLElement).tagName?.toLowerCase() !== 'br') {
+        text = text.slice(0, -1);
+      }
+    }
+
+    return text;
+  }, []);
+
+  // File tag rendering hook
+  const {
+    pathMappingRef,
+    renderFileTags,
+    handleKeyDownForTagRendering,
+  } = useFileTagRendering({
+    editableRef,
+    getTextContent,
+    getCursorPosition,
+    closeCompletionsRef,
+    justRenderedTagRef,
+  });
 
   // 文件引用补全 Hook
   const fileCompletion = useCompletionDropdown<FileItem>({
@@ -223,308 +283,14 @@ export const ChatInputBox = ({
     },
   });
 
-  /**
-   * 获取输入框纯文本内容（优化版，带缓存）
-   * 保留用户输入的原始格式，包括换行符和空白字符
-   */
-  const getTextContent = useCallback(() => {
-    if (!editableRef.current) return '';
+  // Set close completions ref after hooks are created
+  closeCompletionsRef.current = {
+    file: fileCompletion.close,
+    command: commandCompletion.close,
+  };
 
-    // 从 DOM 中提取纯文本，包括文件标签的原始引用格式
-    let text = '';
-
-    // 使用递归遍历，但遇到 file-tag 时只读取 data-file-path 并不再深入
-    const walk = (node: Node) => {
-      if (node.nodeType === Node.TEXT_NODE) {
-        text += node.textContent || '';
-      } else if (node.nodeType === Node.ELEMENT_NODE) {
-        const element = node as HTMLElement;
-        const tagName = element.tagName.toLowerCase();
-
-        // 处理换行元素
-        if (tagName === 'br') {
-          text += '\n';
-        } else if (tagName === 'div' || tagName === 'p') {
-          // div 和 p 元素前添加换行（如果不是第一个元素）
-          if (text.length > 0 && !text.endsWith('\n')) {
-            text += '\n';
-          }
-          node.childNodes.forEach(walk);
-        } else if (element.classList.contains('file-tag')) {
-          const filePath = element.getAttribute('data-file-path') || '';
-          text += `@${filePath}`;
-          // 不遍历 file-tag 的子节点，避免重复读取文件名和关闭按钮文本
-        } else {
-          // 继续遍历子节点
-          node.childNodes.forEach(walk);
-        }
-      }
-    };
-
-    editableRef.current.childNodes.forEach(walk);
-
-    // 只移除 JCEF 环境可能添加的末尾单个换行符（不影响用户输入的换行）
-    // 如果末尾有多个换行，只移除最后一个（JCEF 添加的）
-    if (text.endsWith('\n') && editableRef.current.childNodes.length > 0) {
-      const lastChild = editableRef.current.lastChild;
-      // 只有当最后一个节点不是 br 标签时，才移除末尾换行（说明是 JCEF 添加的）
-      if (lastChild?.nodeType !== Node.ELEMENT_NODE ||
-          (lastChild as HTMLElement).tagName?.toLowerCase() !== 'br') {
-        text = text.slice(0, -1);
-      }
-    }
-
-    return text;
-  }, []);
-
-  /**
-   * 转义 HTML 属性值
-   * 确保特殊字符（包括引号、<、>、&等）被正确处理
-   * 注意：反斜杠不需要转义，因为它在 HTML 属性中是合法字符
-   */
-  const escapeHtmlAttr = useCallback((str: string): string => {
-    return str
-      .replace(/&/g, '&amp;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
-  }, []);
-
-  /**
-   * 渲染文件标签
-   * 将输入框中的 @文件路径 格式文本转换为文件标签
-   */
-  const renderFileTags = useCallback(() => {
-    if (!editableRef.current) return;
-
-    // 正则：匹配 @文件路径 (以空格结束或字符串结束)
-    // 支持文件和目录：扩展名可选
-    // 支持 Windows 路径 (反斜杠) 和 Unix 路径 (正斜杠)
-    // 匹配除空格和@之外的所有字符（包括反斜杠、正斜杠、冒号等）
-    const fileRefRegex = /@([^\s@]+?)(\s|$)/g;
-
-    const currentText = getTextContent();
-    const matches = Array.from(currentText.matchAll(fileRefRegex));
-
-    if (matches.length === 0) {
-      // 没有文件引用，保持原样
-      return;
-    }
-
-    // 检查DOM中是否有纯文本的 @文件路径 需要转换
-    // 遍历所有文本节点，查找包含 @ 的文本
-    let hasUnrenderedReferences = false;
-    const walk = (node: Node) => {
-      if (node.nodeType === Node.TEXT_NODE) {
-        const text = node.textContent || '';
-        if (text.includes('@')) {
-          hasUnrenderedReferences = true;
-        }
-      } else if (node.nodeType === Node.ELEMENT_NODE) {
-        const element = node as HTMLElement;
-        // 跳过已渲染的文件标签
-        if (!element.classList.contains('file-tag')) {
-          node.childNodes.forEach(walk);
-        }
-      }
-    };
-    editableRef.current.childNodes.forEach(walk);
-
-    // 如果没有未渲染的引用，不需要重新渲染
-    if (!hasUnrenderedReferences) {
-      return;
-    }
-
-    // Save cursor position before modifying innerHTML (BUG-006 fix)
-    const savedCursorPos = getCursorPosition(editableRef.current);
-
-    // 构建新的 HTML 内容
-    let newHTML = '';
-    let lastIndex = 0;
-
-    matches.forEach((match) => {
-      const fullMatch = match[0];
-      const filePath = match[1];
-      const matchIndex = match.index || 0;
-
-      // 添加匹配前的文本
-      if (matchIndex > lastIndex) {
-        const textBefore = currentText.substring(lastIndex, matchIndex);
-        newHTML += textBefore;
-      }
-
-      // 分离路径和行号部分（例如：src/file.ts#L10-20 -> src/file.ts）
-      const hashIndex = filePath.indexOf('#');
-      const pureFilePath = hashIndex !== -1 ? filePath.substring(0, hashIndex) : filePath;
-
-      // 获取纯文件名（不含行号，用于获取 ICON）
-      const pureFileName = pureFilePath.split(/[/\\]/).pop() || pureFilePath;
-
-      // 验证路径是否为有效引用（必须在 pathMappingRef 中存在）
-      // 只有用户从下拉列表中选择的文件才会被记录到 pathMappingRef
-      const isValidReference =
-        pathMappingRef.current.has(pureFilePath) ||
-        pathMappingRef.current.has(pureFileName) ||
-        pathMappingRef.current.has(filePath);
-
-      // 如果不是有效引用，保留原始文本，不渲染为标签
-      if (!isValidReference) {
-        newHTML += fullMatch;
-        lastIndex = matchIndex + fullMatch.length;
-        return;
-      }
-
-      // 获取显示文件名（包含行号，用于显示）
-      const displayFileName = filePath.split(/[/\\]/).pop() || filePath;
-
-      // 判断是文件还是目录（使用纯文件名）
-      const isDirectory = !pureFileName.includes('.');
-
-      let iconSvg = '';
-      if (isDirectory) {
-        iconSvg = icon_folder;
-      } else {
-        const extension = pureFileName.indexOf('.') !== -1 ? pureFileName.split('.').pop() : '';
-        iconSvg = getFileIcon(extension, pureFileName);
-      }
-
-      // 转义文件路径以安全地放入 HTML 属性
-      const escapedPath = escapeHtmlAttr(filePath);
-
-      // 尝试从路径映射中获取完整路径（用于 tooltip 显示）
-      const fullPath =
-        pathMappingRef.current.get(pureFilePath) ||
-        pathMappingRef.current.get(pureFileName) ||
-        filePath;
-      const escapedFullPath = escapeHtmlAttr(fullPath);
-
-      // 创建文件标签 HTML
-      newHTML += `<span class="file-tag has-tooltip" contenteditable="false" data-file-path="${escapedPath}" data-tooltip="${escapedFullPath}">`;
-      newHTML += `<span class="file-tag-icon">${iconSvg}</span>`;
-      newHTML += `<span class="file-tag-text">${displayFileName}</span>`;
-      newHTML += `<span class="file-tag-close">×</span>`;
-      newHTML += `</span>`;
-
-      // 添加空格
-      newHTML += ' ';
-
-      lastIndex = matchIndex + fullMatch.length;
-    });
-
-    // 添加剩余文本
-    if (lastIndex < currentText.length) {
-      newHTML += currentText.substring(lastIndex);
-    }
-
-    // 在更新 innerHTML 之前设置标志，防止触发补全检测
-    justRenderedTagRef.current = true;
-    fileCompletion.close();
-    commandCompletion.close();
-
-    // 更新内容
-    editableRef.current.innerHTML = newHTML;
-
-    // 为文件标签的删除按钮添加事件监听
-    const tags = editableRef.current.querySelectorAll('.file-tag-close');
-    tags.forEach((closeBtn) => {
-      closeBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const tag = (e.target as HTMLElement).closest('.file-tag');
-        if (tag) {
-          tag.remove();
-          // 不要在这里调用 handleInput，避免循环
-        }
-      });
-    });
-
-    // Restore cursor to saved position (BUG-006 fix)
-    // Previously always moved cursor to end, causing jumping when typing before file references
-    setCursorAtCharOffset(editableRef.current, savedCursorPos);
-
-    // 渲染完成后，立即重置标志，允许后续的补全检测
-    // 使用 setTimeout 0 确保在当前事件循环后重置
-    setTimeout(() => {
-      justRenderedTagRef.current = false;
-    }, 0);
-  }, [fileCompletion, commandCompletion, escapeHtmlAttr, getTextContent]);
-
-  // Tooltip 状态
-  const [tooltip, setTooltip] = useState<{
-    visible: boolean;
-    text: string;
-    top: number;
-    left: number;
-    tx?: string; // transform-x value
-    arrowLeft?: string; // arrow left position
-    width?: number; // width of the tooltip
-    isBar?: boolean; // whether to show as a bar
-  } | null>(null);
-
-  /**
-   * 处理鼠标悬停显示 Tooltip（小浮动弹窗样式，和上面 context-item 一致）
-   */
-  const handleMouseOver = useCallback((e: React.MouseEvent) => {
-    const target = e.target as HTMLElement;
-    const fileTag = target.closest('.file-tag.has-tooltip');
-
-    if (fileTag) {
-      const text = fileTag.getAttribute('data-tooltip');
-      if (text) {
-        // 使用小浮动 tooltip（和 context-item 一样的效果）
-        const rect = fileTag.getBoundingClientRect();
-        const viewportWidth = window.innerWidth;
-        const tagCenterX = rect.left + rect.width / 2; // 文件标签的中心X坐标
-
-        // 估算 tooltip 的宽度（根据文本长度）
-        const estimatedTooltipWidth = Math.min(text.length * 7 + 24, 400);
-        const tooltipHalfWidth = estimatedTooltipWidth / 2;
-
-        let tooltipLeft = tagCenterX; // tooltip 的基准点（默认居中）
-        let tx = '-50%'; // tooltip 的水平偏移（默认居中）
-        let arrowLeft = '50%'; // 箭头的位置（相对于 tooltip，默认在中间）
-
-        // 边界检测：防止 tooltip 左侧溢出
-        if (tagCenterX - tooltipHalfWidth < 10) {
-          // 靠左边界：tooltip 左对齐
-          tooltipLeft = 10; // tooltip 左边距离视口 10px
-          tx = '0'; // tooltip 不偏移
-          arrowLeft = `${tagCenterX - 10}px`; // 箭头指向文件标签中心
-        }
-        // 边界检测：防止 tooltip 右侧溢出
-        else if (tagCenterX + tooltipHalfWidth > viewportWidth - 10) {
-          // 靠右边界：tooltip 右对齐
-          tooltipLeft = viewportWidth - 10; // tooltip 右边距离视口 10px
-          tx = '-100%'; // tooltip 向左偏移整个宽度
-          arrowLeft = `${tagCenterX - (viewportWidth - 10) + estimatedTooltipWidth}px`; // 箭头指向文件标签中心
-        }
-        // 正常情况：tooltip 居中
-        else {
-          arrowLeft = '50%'; // 箭头在 tooltip 中间
-        }
-
-        setTooltip({
-          visible: true,
-          text,
-          top: rect.top,
-          left: tooltipLeft,
-          tx,
-          arrowLeft,
-          isBar: false
-        });
-      }
-    } else {
-      setTooltip(null);
-    }
-  }, []);
-
-  /**
-   * 处理鼠标离开隐藏 Tooltip
-   */
-  const handleMouseLeave = useCallback(() => {
-    setTooltip(null);
-  }, []);
+  // Tooltip hook
+  const { tooltip, handleMouseOver, handleMouseLeave } = useTooltip();
 
   /**
    * 清空输入框
@@ -645,12 +411,6 @@ export const ChatInputBox = ({
     isComposing,
   ]);
 
-  // 创建防抖版本的 renderFileTags（延迟 300ms）
-  const debouncedRenderFileTags = useMemo(
-    () => debounce(renderFileTags, 300),
-    [renderFileTags]
-  );
-
   // 创建防抖版本的 detectAndTriggerCompletion（延迟 150ms）
   const debouncedDetectCompletion = useMemo(
     () => debounce(detectAndTriggerCompletion, 150),
@@ -696,17 +456,6 @@ export const ChatInputBox = ({
     // 如果判定为空（只有零宽字符），传递空字符串给父组件，防止父组件回传脏数据导致 DOM 重置从而隐藏 placeholder
     onInput?.(isEmpty ? '' : text);
   }, [getTextContent, adjustHeight, debouncedDetectCompletion, onInput, isComposing]);
-
-  /**
-   * 处理键盘按下事件（用于检测空格触发文件标签渲染）
-   * 优化：使用防抖延迟渲染
-   */
-  const handleKeyDownForTagRendering = useCallback((e: KeyboardEvent) => {
-    // 如果按下空格键，使用防抖延迟渲染文件标签
-    if (e.key === ' ') {
-      debouncedRenderFileTags();
-    }
-  }, [debouncedRenderFileTags]);
 
   /**
    * 处理提交
@@ -769,319 +518,29 @@ export const ChatInputBox = ({
     currentProvider,
   ]);
 
-  /**
-   * 处理 Mac 风格的光标移动、文本选择和删除操作
-   */
-  const handleMacCursorMovement = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (!editableRef.current) return false;
-
-    const selection = window.getSelection();
-    if (!selection || !selection.rangeCount) return false;
-
-    const range = selection.getRangeAt(0);
-    const isShift = e.shiftKey;
-
-    // Cmd + Backspace：删除从光标到行首的内容
-    if (e.key === 'Backspace' && e.metaKey) {
-      e.preventDefault();
-
-      const node = range.startContainer;
-      const offset = range.startOffset;
-
-      // 如果有选中内容，直接使用 execCommand 删除（支持撤销）
-      if (!range.collapsed) {
-        document.execCommand('delete', false);
-        handleInput();
-        return true;
-      }
-
-      // 没有选中内容，先选择从光标到行首的内容，再删除
-      // 找到当前行的开始位置
-      let lineStartOffset = 0;
-      if (node.nodeType === Node.TEXT_NODE) {
-        const text = node.textContent || '';
-        // 从当前位置向前查找换行符
-        for (let i = offset - 1; i >= 0; i--) {
-          if (text[i] === '\n') {
-            lineStartOffset = i + 1;
-            break;
-          }
-        }
-      }
-
-      // 如果光标已经在行首，不做任何操作
-      if (lineStartOffset === offset) {
-        return true;
-      }
-
-      // 选择从行首到当前光标的内容
-      const newRange = document.createRange();
-      newRange.setStart(node, lineStartOffset);
-      newRange.setEnd(node, offset);
-      selection.removeAllRanges();
-      selection.addRange(newRange);
-
-      // 使用 execCommand 删除选中内容（支持撤销）
-      document.execCommand('delete', false);
-
-      // 触发 input 事件以更新状态
-      handleInput();
-      return true;
-    }
-
-    // Cmd + 左箭头：移动到行首（或选择到行首）
-    if (e.key === 'ArrowLeft' && e.metaKey) {
-      e.preventDefault();
-
-      const node = range.startContainer;
-      const offset = range.startOffset;
-
-      // 找到当前行的开始位置
-      let lineStartOffset = 0;
-      if (node.nodeType === Node.TEXT_NODE) {
-        const text = node.textContent || '';
-        // 从当前位置向前查找换行符
-        for (let i = offset - 1; i >= 0; i--) {
-          if (text[i] === '\n') {
-            lineStartOffset = i + 1;
-            break;
-          }
-        }
-      }
-
-      const newRange = document.createRange();
-      newRange.setStart(node, lineStartOffset);
-
-      if (isShift) {
-        // Shift: 选择到行首
-        newRange.setEnd(range.endContainer, range.endOffset);
-      } else {
-        // 无 Shift: 移动光标到行首
-        newRange.collapse(true);
-      }
-
-      selection.removeAllRanges();
-      selection.addRange(newRange);
-      return true;
-    }
-
-    // Cmd + 右箭头：移动到行尾（或选择到行尾）
-    if (e.key === 'ArrowRight' && e.metaKey) {
-      e.preventDefault();
-
-      const node = range.endContainer;
-      const offset = range.endOffset;
-
-      // 找到当前行的结束位置
-      let lineEndOffset = node.textContent?.length || 0;
-      if (node.nodeType === Node.TEXT_NODE) {
-        const text = node.textContent || '';
-        // 从当前位置向后查找换行符
-        for (let i = offset; i < text.length; i++) {
-          if (text[i] === '\n') {
-            lineEndOffset = i;
-            break;
-          }
-        }
-      }
-
-      const newRange = document.createRange();
-
-      if (isShift) {
-        // Shift: 选择到行尾
-        newRange.setStart(range.startContainer, range.startOffset);
-        newRange.setEnd(node, lineEndOffset);
-      } else {
-        // 无 Shift: 移动光标到行尾
-        newRange.setStart(node, lineEndOffset);
-        newRange.collapse(true);
-      }
-
-      selection.removeAllRanges();
-      selection.addRange(newRange);
-      return true;
-    }
-
-    // Cmd + 上箭头：移动到文本开头（或选择到开头）
-    if (e.key === 'ArrowUp' && e.metaKey) {
-      e.preventDefault();
-
-      const firstNode = editableRef.current.firstChild || editableRef.current;
-      const newRange = document.createRange();
-
-      if (isShift) {
-        // Shift: 选择到开头
-        newRange.setStart(firstNode, 0);
-        newRange.setEnd(range.endContainer, range.endOffset);
-      } else {
-        // 无 Shift: 移动光标到开头
-        newRange.setStart(firstNode, 0);
-        newRange.collapse(true);
-      }
-
-      selection.removeAllRanges();
-      selection.addRange(newRange);
-      return true;
-    }
-
-    // Cmd + 下箭头：移动到文本末尾（或选择到末尾）
-    if (e.key === 'ArrowDown' && e.metaKey) {
-      e.preventDefault();
-
-      const lastNode = editableRef.current.lastChild || editableRef.current;
-      const lastOffset = lastNode.nodeType === Node.TEXT_NODE
-        ? (lastNode.textContent?.length || 0)
-        : lastNode.childNodes.length;
-
-      const newRange = document.createRange();
-
-      if (isShift) {
-        // Shift: 选择到末尾
-        newRange.setStart(range.startContainer, range.startOffset);
-        newRange.setEnd(lastNode, lastOffset);
-      } else {
-        // 无 Shift: 移动光标到末尾
-        newRange.setStart(lastNode, lastOffset);
-        newRange.collapse(true);
-      }
-
-      selection.removeAllRanges();
-      selection.addRange(newRange);
-      return true;
-    }
-
-    return false;
-  }, []);
-
-  /**
-   * 处理键盘事件
-   */
-  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
-    // Track Shift key state for Shift+Enter newline handling in beforeinput
-    shiftKeyPressedRef.current = e.shiftKey;
-
-    // 检测 IME 组合状态（多种方式）
-    // keyCode 229 是 IME 输入时的特殊代码
-    // nativeEvent.isComposing 是原生事件的组合状态
-    const isIMEComposing = isComposing || e.nativeEvent.isComposing;
-
-    const isEnterKey =
-      e.key === 'Enter' ||
-      (e as unknown as { keyCode?: number }).keyCode === 13 ||
-      (e.nativeEvent as unknown as { keyCode?: number }).keyCode === 13 ||
-      (e as unknown as { which?: number }).which === 13;
-
-    // 优先处理 Mac 风格的光标移动和文本选择
-    if (handleMacCursorMovement(e)) {
-      return;
-    }
-
-    // 允许其他光标移动快捷键（Home/End/Ctrl+A/Ctrl+E）
-    const isCursorMovementKey =
-      e.key === 'Home' ||
-      e.key === 'End' ||
-      ((e.key === 'a' || e.key === 'A') && e.ctrlKey && !e.metaKey) || // Ctrl+A (Linux/Windows)
-      ((e.key === 'e' || e.key === 'E') && e.ctrlKey && !e.metaKey);   // Ctrl+E (Linux/Windows)
-
-    if (isCursorMovementKey) {
-      // 允许默认的光标移动行为
-      return;
-    }
-
-    // 优先处理补全菜单的键盘事件
-    if (fileCompletion.isOpen) {
-      const handled = fileCompletion.handleKeyDown(e.nativeEvent);
-      if (handled) {
-        e.preventDefault();
-        e.stopPropagation();
-        // 如果是回车键选中，标记防止后续发送消息
-        if (e.key === 'Enter') {
-          completionSelectedRef.current = true;
-        }
-        return;
-      }
-    }
-
-    if (commandCompletion.isOpen) {
-      const handled = commandCompletion.handleKeyDown(e.nativeEvent);
-      if (handled) {
-        e.preventDefault();
-        e.stopPropagation();
-        // 如果是回车键选中，标记防止后续发送消息
-        if (e.key === 'Enter') {
-          completionSelectedRef.current = true;
-        }
-        return;
-      }
-    }
-
-    if (agentCompletion.isOpen) {
-      const handled = agentCompletion.handleKeyDown(e.nativeEvent);
-      if (handled) {
-        e.preventDefault();
-        e.stopPropagation();
-        // 如果是回车键选中，标记防止后续发送消息
-        if (e.key === 'Enter') {
-          completionSelectedRef.current = true;
-        }
-        return;
-      }
-    }
-
-    // 检查是否刚刚结束组合输入（防止 IME 确认时的回车误触）
-    // 如果 compositionend 和 keydown 间隔很短，说明这个 keydown 可能是 IME 确认的回车
-    const isRecentlyComposing = Date.now() - lastCompositionEndTimeRef.current < 100;
-
-    // 根据 sendShortcut 设置决定发送行为
-    // sendShortcut === 'enter': Enter 发送，Shift+Enter 换行
-    // sendShortcut === 'cmdEnter': Cmd/Ctrl+Enter 发送，Enter 换行
-    const isSendKey = sendShortcut === 'cmdEnter'
-      ? (isEnterKey && (e.metaKey || e.ctrlKey) && !isIMEComposing)
-      : (isEnterKey && !e.shiftKey && !isIMEComposing && !isRecentlyComposing);
-
-    if (isSendKey) {
-      e.preventDefault();
-      if (sdkStatusLoading || !sdkInstalled) {
-        // SDK 状态加载中或未安装时，回车不发送
-        return;
-      }
-      submittedOnEnterRef.current = true;
-      handleSubmit();
-      return;
-    }
-
-    // 对于 cmdEnter 模式，允许普通 Enter 换行（默认行为）
-    // 对于 enter 模式，Shift+Enter 允许换行（默认行为）
-  }, [isComposing, handleSubmit, fileCompletion, commandCompletion, agentCompletion, sdkStatusLoading, sdkInstalled, sendShortcut]);
-
-  const handleKeyUp = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
-    const isEnterKey =
-      e.key === 'Enter' ||
-      (e as unknown as { keyCode?: number }).keyCode === 13 ||
-      (e.nativeEvent as unknown as { keyCode?: number }).keyCode === 13 ||
-      (e as unknown as { which?: number }).which === 13;
-
-    // 根据 sendShortcut 设置判断是否是发送按键
-    const isSendKey = sendShortcut === 'cmdEnter'
-      ? (isEnterKey && (e.metaKey || e.ctrlKey))
-      : (isEnterKey && !e.shiftKey);
-
-    if (isSendKey) {
-      e.preventDefault();
-      // 如果刚刚在补全菜单中选中了项目，不发送消息
-      if (completionSelectedRef.current) {
-        completionSelectedRef.current = false;
-        return;
-      }
-      if (submittedOnEnterRef.current) {
-        submittedOnEnterRef.current = false;
-        return;
-      }
-      if (!fileCompletion.isOpen && !commandCompletion.isOpen && !agentCompletion.isOpen) {
-        // 不在 keyup 中处理发送逻辑，统一由 keydown 处理，避免 IME 状态下的误发送
-      }
-    }
-  }, [isComposing, handleSubmit, fileCompletion, commandCompletion, agentCompletion, sendShortcut]);
+  // Keyboard handling hook (extracted from ChatInputBox)
+  const {
+    handleKeyDown,
+    handleKeyUp,
+    shiftKeyPressedRef,
+    completionSelectedRef,
+  } = useKeyboardHandlers({
+    editableRef,
+    isComposing,
+    isComposingRef,
+    lastCompositionEndTimeRef,
+    fileCompletionIsOpen: fileCompletion.isOpen,
+    commandCompletionIsOpen: commandCompletion.isOpen,
+    agentCompletionIsOpen: agentCompletion.isOpen,
+    fileCompletionHandleKeyDown: fileCompletion.handleKeyDown,
+    commandCompletionHandleKeyDown: commandCompletion.handleKeyDown,
+    agentCompletionHandleKeyDown: agentCompletion.handleKeyDown,
+    handleSubmit,
+    handleInput,
+    sdkStatusLoading,
+    sdkInstalled,
+    sendShortcut,
+  });
 
   // 受控模式：当外部 value 改变时更新输入框内容
   useEffect(() => {
@@ -1109,145 +568,6 @@ export const ChatInputBox = ({
       }
     }
   }, [value, getTextContent, adjustHeight]);
-
-  // 原生事件捕获，兼容 JCEF/IME 的特殊行为
-  useEffect(() => {
-    const el = editableRef.current;
-    if (!el) return;
-
-    const nativeKeyDown = (ev: KeyboardEvent) => {
-      // Track Shift key state for Shift+Enter newline handling in beforeinput
-      shiftKeyPressedRef.current = ev.shiftKey;
-
-      // 检测 IME 输入：keyCode 229 表示 IME 正在处理按键
-      // 这比 compositionStart 事件更早，可以更早地设置 composing 状态
-      const isIMEProcessing = (ev as unknown as { keyCode?: number }).keyCode === 229 || ev.isComposing;
-      if (isIMEProcessing) {
-        isComposingRef.current = true;
-      }
-
-      const isEnterKey =
-        ev.key === 'Enter' ||
-        (ev as unknown as { keyCode?: number }).keyCode === 13 ||
-        (ev as unknown as { which?: number }).which === 13;
-
-      // Mac 风格的光标移动快捷键和删除操作（已在 React 事件中处理，这里不需要处理）
-      const isMacCursorMovementOrDelete =
-        (ev.key === 'ArrowLeft' && ev.metaKey) ||
-        (ev.key === 'ArrowRight' && ev.metaKey) ||
-        (ev.key === 'ArrowUp' && ev.metaKey) ||
-        (ev.key === 'ArrowDown' && ev.metaKey) ||
-        (ev.key === 'Backspace' && ev.metaKey);
-
-      if (isMacCursorMovementOrDelete) {
-        // Mac 快捷键已在 React 事件中处理
-        return;
-      }
-
-      // 允许其他光标移动快捷键（Home/End/Ctrl+A/Ctrl+E）
-      const isCursorMovementKey =
-        ev.key === 'Home' ||
-        ev.key === 'End' ||
-        ((ev.key === 'a' || ev.key === 'A') && ev.ctrlKey && !ev.metaKey) ||
-        ((ev.key === 'e' || ev.key === 'E') && ev.ctrlKey && !ev.metaKey);
-
-      if (isCursorMovementKey) {
-        // 允许默认的光标移动行为
-        return;
-      }
-
-      // 补全菜单打开时，不在原生事件中处理（React onKeyDown 已处理，避免重复）
-      if (fileCompletion.isOpen || commandCompletion.isOpen || agentCompletion.isOpen) {
-        return;
-      }
-
-      // 检查是否刚刚结束组合输入
-      const isRecentlyComposing = Date.now() - lastCompositionEndTimeRef.current < 100;
-
-      // 根据 sendShortcut 设置决定发送行为
-      const shift = (ev as KeyboardEvent).shiftKey === true;
-      const metaOrCtrl = ev.metaKey || ev.ctrlKey;
-      const isSendKey = sendShortcut === 'cmdEnter'
-        ? (isEnterKey && metaOrCtrl && !isComposingRef.current && !isComposing)
-        : (isEnterKey && !shift && !isComposingRef.current && !isComposing && !isRecentlyComposing);
-
-      // 使用 ref 而不是 state 来检查 composing 状态，因为 ref 是同步的
-      if (isSendKey) {
-        ev.preventDefault();
-        submittedOnEnterRef.current = true;
-        handleSubmit();
-      }
-    };
-
-    const nativeKeyUp = (ev: KeyboardEvent) => {
-      const isEnterKey =
-        ev.key === 'Enter' ||
-        (ev as unknown as { keyCode?: number }).keyCode === 13 ||
-        (ev as unknown as { which?: number }).which === 13;
-      const shift = (ev as KeyboardEvent).shiftKey === true;
-      const metaOrCtrl = ev.metaKey || ev.ctrlKey;
-
-      // 根据 sendShortcut 设置判断是否是发送按键
-      const isSendKey = sendShortcut === 'cmdEnter'
-        ? (isEnterKey && metaOrCtrl)
-        : (isEnterKey && !shift);
-
-      if (isSendKey) {
-        ev.preventDefault();
-        // 如果刚刚在补全菜单中选中了项目，不发送消息
-        if (completionSelectedRef.current) {
-          completionSelectedRef.current = false;
-          return;
-        }
-        if (submittedOnEnterRef.current) {
-          submittedOnEnterRef.current = false;
-          return;
-        }
-        if (!fileCompletion.isOpen && !commandCompletion.isOpen && !agentCompletion.isOpen) {
-          // 不在 keyup 中处理发送逻辑，统一由 keydown 处理
-        }
-      }
-    };
-
-    const nativeBeforeInput = (ev: InputEvent) => {
-      const type = (ev as InputEvent).inputType;
-      if (type === 'insertParagraph') {
-        // 对于 cmdEnter 模式，普通 Enter 应该允许换行
-        if (sendShortcut === 'cmdEnter') {
-          // 允许默认的换行行为
-          return;
-        }
-
-        // For enter mode: Shift+Enter should insert newline (allow default behavior)
-        if (shiftKeyPressedRef.current) {
-          // Allow default newline insertion
-          return;
-        }
-
-        ev.preventDefault();
-        // 如果刚刚在补全菜单中用回车选择了项目，则不发送消息
-        if (completionSelectedRef.current) {
-          completionSelectedRef.current = false;
-          return;
-        }
-        // 补全菜单打开时不发送消息
-        if (fileCompletion.isOpen || commandCompletion.isOpen || agentCompletion.isOpen) {
-          return;
-        }
-        handleSubmit();
-      }
-    };
-
-    el.addEventListener('keydown', nativeKeyDown, { capture: true });
-    el.addEventListener('keyup', nativeKeyUp, { capture: true });
-    el.addEventListener('beforeinput', nativeBeforeInput as EventListener, { capture: true });
-
-    return () => {
-      el.removeEventListener('keydown', nativeKeyDown, { capture: true } as any);
-      el.removeEventListener('keyup', nativeKeyUp, { capture: true } as any);
-      el.removeEventListener('beforeinput', nativeBeforeInput as EventListener, { capture: true } as any);
-    };
-  }, [isComposing, handleSubmit, fileCompletion, commandCompletion, agentCompletion, sendShortcut]);
 
   /**
    * 处理 IME 组合开始
@@ -1285,278 +605,28 @@ export const ChatInputBox = ({
     }, 40);
   }, [handleInput, renderFileTags]);
 
-  /**
-   * 生成唯一 ID（兼容 JCEF）
-   */
-  const generateId = useCallback(() => {
-    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-      return crypto.randomUUID();
-    }
-    // 后备方案：使用时间戳 + 随机数
-    return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
-  }, []);
-
-  /**
-   * 处理粘贴事件 - 检测图片和纯文本
-   */
-  const handlePaste = useCallback((e: React.ClipboardEvent) => {
-    const items = e.clipboardData?.items;
-
-    if (!items) {
-      return;
-    }
-
-    // 检查是否有真正的图片（type 为 image/*）
-    let hasImage = false;
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i];
-
-      // 只处理真正的图片类型（type 以 image/ 开头）
-      if (item.type.startsWith('image/')) {
-        hasImage = true;
-        e.preventDefault();
-
-        const blob = item.getAsFile();
-
-        if (blob) {
-          // 读取图片为 Base64
-          const reader = new FileReader();
-          reader.onload = () => {
-            const base64 = (reader.result as string).split(',')[1];
-            const mediaType = blob.type || item.type || 'image/png';
-            const ext = (() => {
-              if (mediaType && mediaType.includes('/')) {
-                return mediaType.split('/')[1];
-              }
-              const name = blob.name || '';
-              const m = name.match(/\.([a-zA-Z0-9]+)$/);
-              return m ? m[1] : 'png';
-            })();
-            const attachment: Attachment = {
-              id: generateId(),
-              fileName: `pasted-image-${Date.now()}.${ext}`,
-              mediaType,
-              data: base64,
-            };
-
-            setInternalAttachments(prev => [...prev, attachment]);
-          };
-          reader.readAsDataURL(blob);
-        }
-
-        return;
-      }
-    }
-
-    // 如果没有图片，尝试获取文本或文件路径
-    if (!hasImage) {
-      e.preventDefault();
-
-      // 尝试多种方式获取文本
-      let text = e.clipboardData.getData('text/plain') ||
-        e.clipboardData.getData('text/uri-list') ||
-        e.clipboardData.getData('text/html');
-
-      // 如果还是没有文本，尝试从 file 类型的 item 中获取文件名/路径
-      if (!text) {
-        // 检查是否有文件类型的 item
-        let hasFileItem = false;
-        for (let i = 0; i < items.length; i++) {
-          const item = items[i];
-          if (item.kind === 'file') {
-            hasFileItem = true;
-            break;
-          }
-        }
-
-        // 如果有文件类型的 item，尝试通过 Java 端获取完整路径
-        if (hasFileItem && (window as any).getClipboardFilePath) {
-          (window as any).getClipboardFilePath().then((fullPath: string) => {
-            if (fullPath && fullPath.trim()) {
-              // 插入完整路径
-              document.execCommand('insertText', false, fullPath);
-              handleInput();
-            }
-          }).catch(() => {
-            // 忽略错误
-          });
-          return;
-        }
-      }
-
-      if (text && text.trim()) {
-        // 使用 document.execCommand 插入纯文本（保持光标位置）
-        document.execCommand('insertText', false, text);
-
-        // 触发 input 事件以更新状态
-        handleInput();
-      }
-    }
-  }, [generateId, handleInput]);
-
-  /**
-   * 处理拖拽进入事件
-   */
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    // 设置拖拽效果为复制
-    e.dataTransfer.dropEffect = 'copy';
-  }, []);
-
-  /**
-   * 处理拖拽释放事件 - 检测图片和文件路径
-   */
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    // 先获取文本内容（文件路径）
-    const text = e.dataTransfer?.getData('text/plain');
-
-    // 再检查文件对象
-    const files = e.dataTransfer?.files;
-
-    // 检查是否有实际的图片文件对象
-    let hasImageFile = false;
-    if (files && files.length > 0) {
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-
-        // 只处理图片文件
-        if (file.type.startsWith('image/')) {
-          hasImageFile = true;
-          const reader = new FileReader();
-          reader.onload = () => {
-            const base64 = (reader.result as string).split(',')[1];
-            const ext = (() => {
-              if (file.type && file.type.includes('/')) {
-                return file.type.split('/')[1];
-              }
-              const m = file.name.match(/\.([a-zA-Z0-9]+)$/);
-              return m ? m[1] : 'png';
-            })();
-            const attachment: Attachment = {
-              id: generateId(),
-              fileName: file.name || `dropped-image-${Date.now()}.${ext}`,
-              mediaType: file.type || 'image/png',
-              data: base64,
-            };
-
-            setInternalAttachments(prev => [...prev, attachment]);
-          };
-          reader.readAsDataURL(file);
-        }
-      }
-    }
-
-    // 如果有图片文件，不处理文本
-    if (hasImageFile) {
-      return;
-    }
-
-    // 没有图片文件，处理文本（文件路径或其他文本）
-    if (text && text.trim()) {
-      // 提取文件路径并添加到路径映射中
-      const filePath = text.trim();
-      const fileName = filePath.split(/[/\\]/).pop() || filePath;
-
-      // 将路径添加到 pathMappingRef，使其成为"有效引用"
-      pathMappingRef.current.set(fileName, filePath);
-      pathMappingRef.current.set(filePath, filePath);
-
-      // 自动添加 @ 前缀（如果还没有），并添加空格以触发渲染
-      const textToInsert = (text.startsWith('@') ? text : `@${text}`) + ' ';
-
-      // 获取当前光标位置
-      const selection = window.getSelection();
-      if (selection && selection.rangeCount > 0 && editableRef.current) {
-        // 确保光标在输入框内
-        if (editableRef.current.contains(selection.anchorNode)) {
-          // 使用现代 API 插入文本
-          const range = selection.getRangeAt(0);
-          range.deleteContents();
-          const textNode = document.createTextNode(textToInsert);
-          range.insertNode(textNode);
-
-          // 将光标移到插入文本后
-          range.setStartAfter(textNode);
-          range.collapse(true);
-          selection.removeAllRanges();
-          selection.addRange(range);
-        } else {
-          // 光标不在输入框内，追加到末尾
-          // 使用 appendChild 而不是 innerText，避免破坏已有的文件标签
-          const textNode = document.createTextNode(textToInsert);
-          editableRef.current.appendChild(textNode);
-
-          // 将光标移到末尾
-          const range = document.createRange();
-          range.setStartAfter(textNode);
-          range.collapse(true);
-          selection.removeAllRanges();
-          selection.addRange(range);
-        }
-      } else {
-        // 没有选区，追加到末尾
-        if (editableRef.current) {
-          const textNode = document.createTextNode(textToInsert);
-          editableRef.current.appendChild(textNode);
-        }
-      }
-
-      // 关闭补全菜单
-      fileCompletion.close();
-      commandCompletion.close();
-
-      // 直接触发状态更新，不调用 handleInput（避免重新检测补全）
-      const newText = getTextContent();
-      setHasContent(!!newText.trim());
-      adjustHeight();
-      onInput?.(newText);
-
-      // 立即渲染文件标签（不需要等待空格）
-      setTimeout(() => {
-        renderFileTags();
-      }, 50);
-    }
-  }, [generateId, getTextContent, renderFileTags, fileCompletion, commandCompletion, adjustHeight, onInput]);
-
-  /**
-   * 处理添加附件
-   */
-  const handleAddAttachment = useCallback((files: FileList) => {
-    if (externalAttachments !== undefined) {
-      onAddAttachment?.(files);
-    } else {
-      // 使用内部状态
-      Array.from(files).forEach(file => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const base64 = (reader.result as string).split(',')[1];
-          const attachment: Attachment = {
-            id: generateId(),
-            fileName: file.name,
-            mediaType: file.type || 'application/octet-stream',
-            data: base64,
-          };
-          setInternalAttachments(prev => [...prev, attachment]);
-        };
-        reader.readAsDataURL(file);
-      });
-    }
-  }, [externalAttachments, onAddAttachment, generateId]);
-
-  /**
-   * 处理移除附件
-   */
-  const handleRemoveAttachment = useCallback((id: string) => {
-    if (externalAttachments !== undefined) {
-      onRemoveAttachment?.(id);
-    } else {
-      setInternalAttachments(prev => prev.filter(a => a.id !== id));
-    }
-  }, [externalAttachments, onRemoveAttachment]);
+  // Attachment management hook
+  const {
+    handlePaste,
+    handleDragOver,
+    handleDrop,
+    handleAddAttachment,
+    handleRemoveAttachment,
+  } = useAttachmentManagement({
+    externalAttachments,
+    onAddAttachment,
+    onRemoveAttachment,
+    pathMappingRef,
+    editableRef,
+    getTextContent,
+    renderFileTags,
+    handleInput,
+    adjustHeight,
+    onInput,
+    fileCompletionClose: fileCompletion.close,
+    commandCompletionClose: commandCompletion.close,
+    setInternalAttachments,
+  });
 
   /**
    * 处理模式选择

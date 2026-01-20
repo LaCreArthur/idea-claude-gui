@@ -156,7 +156,7 @@ public class PermissionHandler extends BaseMessageHandler {
             }
 
             // Get the window instance for the target project
-            com.github.claudecodegui.ClaudeSDKToolWindow.ClaudeChatWindow targetWindow =
+            com.github.claudecodegui.ui.ClaudeChatWindow targetWindow =
                 com.github.claudecodegui.ClaudeSDKToolWindow.getChatWindow(targetProject);
 
             if (targetWindow == null) {

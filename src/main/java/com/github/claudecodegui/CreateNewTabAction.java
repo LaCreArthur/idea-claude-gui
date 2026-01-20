@@ -1,5 +1,6 @@
 package com.github.claudecodegui;
 
+import com.github.claudecodegui.ui.ClaudeChatWindow;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.diagnostic.Logger;
@@ -34,7 +35,7 @@ public class CreateNewTabAction extends AnAction {
         }
 
         // Create a new chat window instance with skipRegister=true (don't replace the main instance)
-        ClaudeSDKToolWindow.ClaudeChatWindow newChatWindow = new ClaudeSDKToolWindow.ClaudeChatWindow(project, true);
+        ClaudeChatWindow newChatWindow = new ClaudeChatWindow(project, true);
 
         // Create a tab name in the format "AIN"
         String tabName = ClaudeSDKToolWindow.getNextTabName(toolWindow);

@@ -1,5 +1,6 @@
 package com.github.claudecodegui;
 
+import com.github.claudecodegui.ui.ClaudeChatWindow;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.diagnostic.Logger;
@@ -44,7 +45,7 @@ public class TestSendMessageAction extends AnAction {
             return;
         }
 
-        ClaudeSDKToolWindow.ClaudeChatWindow chatWindow = ClaudeSDKToolWindow.getChatWindow(project);
+        ClaudeChatWindow chatWindow = ClaudeSDKToolWindow.getChatWindow(project);
         if (chatWindow == null) {
             LOG.error("[TestAction] Chat window not found");
             return;
@@ -96,7 +97,7 @@ public class TestSendMessageAction extends AnAction {
         }
     }
 
-    private void sendMessage(ClaudeSDKToolWindow.ClaudeChatWindow chatWindow, String message) {
+    private void sendMessage(ClaudeChatWindow chatWindow, String message) {
         // Escape message for JavaScript
         String escapedMessage = message.replace("\\", "\\\\")
                                        .replace("\"", "\\\"")
@@ -116,7 +117,7 @@ public class TestSendMessageAction extends AnAction {
         LOG.info("[TestAction] Sent message: " + message);
     }
 
-    private void clickOption(ClaudeSDKToolWindow.ClaudeChatWindow chatWindow, String optionIndex) {
+    private void clickOption(ClaudeChatWindow chatWindow, String optionIndex) {
         // Click on an option in AskUser dialog
         String js = String.format(
             "(() => { " +
@@ -136,7 +137,7 @@ public class TestSendMessageAction extends AnAction {
         LOG.info("[TestAction] Clicked option: " + optionIndex);
     }
 
-    private void getState(ClaudeSDKToolWindow.ClaudeChatWindow chatWindow) {
+    private void getState(ClaudeChatWindow chatWindow) {
         // Write current state to /tmp/claude-gui-test-state.json
         String js =
             "(() => { " +
