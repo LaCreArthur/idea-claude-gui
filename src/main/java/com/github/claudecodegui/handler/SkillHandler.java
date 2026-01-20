@@ -36,4 +36,186 @@ public class SkillHandler extends BaseMessageHandler {
         this.mainPanel = mainPanel;
     }
 
+    @Override
+    public String[] getSupportedTypes() {
+        return SUPPORTED_TYPES;
+    }
 
+    @Override
+    public boolean handle(String type, String content) {
+        switch (type) {
+            case "get_all_skills":
+                handleGetAllSkills();
+                return true;
+            case "import_skill":
+                handleImportSkill(content);
+                return true;
+            case "delete_skill":
+                handleDeleteSkill(content);
+                return true;
+            case "open_skill":
+                handleOpenSkill(content);
+                return true;
+            case "toggle_skill":
+                handleToggleSkill(content);
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    private void handleGetAllSkills() {
+        try {
+            String workspaceRoot = context.getProject().getBasePath();
+            JsonObject skills = SkillService.getAllSkills(workspaceRoot);
+            Gson gson = new Gson();
+            String skillsJson = gson.toJson(skills);
+
+            ApplicationManager.getApplication().invokeLater(() -> {
+                callJavaScript("window.updateSkills", escapeJs(skillsJson));
+            });
+        } catch (Exception e) {
+            LOG.error("[SkillHandler] Failed to get all skills: " + e.getMessage(), e);
+            ApplicationManager.getApplication().invokeLater(() -> {
+                callJavaScript("window.updateSkills", escapeJs("{\"global\":{},\"local\":{}}"));
+            });
+        }
+    }
+
+    private void handleImportSkill(String content) {
+        try {
+            Gson gson = new Gson();
+            JsonObject json = gson.fromJson(content, JsonObject.class);
+            String scope = json.has("scope") ? json.get("scope").getAsString() : "global";
+
+            ApplicationManager.getApplication().invokeLater(() -> {
+                JFileChooser chooser = new JFileChooser();
+                chooser.setDialogTitle("Select Skill File or Folder");
+                chooser.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
+                chooser.setMultiSelectionEnabled(true);
+
+                int result = chooser.showOpenDialog(mainPanel);
+                if (result == JFileChooser.APPROVE_OPTION) {
+                    File[] selectedFiles = chooser.getSelectedFiles();
+                    List<String> paths = new ArrayList<>();
+                    for (File file : selectedFiles) {
+                        paths.add(file.getAbsolutePath());
+                    }
+
+                    CompletableFuture.runAsync(() -> {
+                        try {
+                            String workspaceRoot = context.getProject().getBasePath();
+                            JsonObject importResult = SkillService.importSkills(paths, scope, workspaceRoot);
+                            String resultJson = new Gson().toJson(importResult);
+
+                            ApplicationManager.getApplication().invokeLater(() -> {
+                                callJavaScript("window.skillImportResult", escapeJs(resultJson));
+                            });
+                        } catch (Exception e) {
+                            LOG.error("[SkillHandler] Import skill failed: " + e.getMessage(), e);
+                            JsonObject errorResult = new JsonObject();
+                            errorResult.addProperty("success", false);
+                            errorResult.addProperty("error", e.getMessage());
+                            ApplicationManager.getApplication().invokeLater(() -> {
+                                callJavaScript("window.skillImportResult", escapeJs(new Gson().toJson(errorResult)));
+                            });
+                        }
+                    });
+                }
+            });
+        } catch (Exception e) {
+            LOG.error("[SkillHandler] Failed to handle import skill: " + e.getMessage(), e);
+        }
+    }
+
+    private void handleDeleteSkill(String content) {
+        try {
+            Gson gson = new Gson();
+            JsonObject json = gson.fromJson(content, JsonObject.class);
+            String skillName = json.get("name").getAsString();
+            String scope = json.has("scope") ? json.get("scope").getAsString() : "global";
+            boolean enabled = json.has("enabled") ? json.get("enabled").getAsBoolean() : true;
+            String workspaceRoot = context.getProject().getBasePath();
+
+            JsonObject result = SkillService.deleteSkill(skillName, scope, enabled, workspaceRoot);
+            String resultJson = gson.toJson(result);
+
+            ApplicationManager.getApplication().invokeLater(() -> {
+                callJavaScript("window.skillDeleteResult", escapeJs(resultJson));
+            });
+        } catch (Exception e) {
+            LOG.error("[SkillHandler] Failed to delete skill: " + e.getMessage(), e);
+            JsonObject errorResult = new JsonObject();
+            errorResult.addProperty("success", false);
+            errorResult.addProperty("error", e.getMessage());
+            ApplicationManager.getApplication().invokeLater(() -> {
+                callJavaScript("window.skillDeleteResult", escapeJs(new Gson().toJson(errorResult)));
+            });
+        }
+    }
+
+    private void handleToggleSkill(String content) {
+        try {
+            Gson gson = new Gson();
+            JsonObject json = gson.fromJson(content, JsonObject.class);
+            String skillName = json.get("name").getAsString();
+            String scope = json.has("scope") ? json.get("scope").getAsString() : "global";
+            boolean currentEnabled = json.has("enabled") ? json.get("enabled").getAsBoolean() : true;
+            String workspaceRoot = context.getProject().getBasePath();
+
+            JsonObject result = SkillService.toggleSkill(skillName, scope, currentEnabled, workspaceRoot);
+            String resultJson = gson.toJson(result);
+
+            ApplicationManager.getApplication().invokeLater(() -> {
+                callJavaScript("window.skillToggleResult", escapeJs(resultJson));
+            });
+        } catch (Exception e) {
+            LOG.error("[SkillHandler] Failed to toggle skill: " + e.getMessage(), e);
+            JsonObject errorResult = new JsonObject();
+            errorResult.addProperty("success", false);
+            errorResult.addProperty("error", e.getMessage());
+            ApplicationManager.getApplication().invokeLater(() -> {
+                callJavaScript("window.skillToggleResult", escapeJs(new Gson().toJson(errorResult)));
+            });
+        }
+    }
+
+    private void handleOpenSkill(String content) {
+        try {
+            Gson gson = new Gson();
+            JsonObject json = gson.fromJson(content, JsonObject.class);
+            String skillPath = json.get("path").getAsString();
+
+            File skillFile = new File(skillPath);
+            String targetPath = skillPath;
+
+            if (skillFile.isDirectory()) {
+                File skillMd = new File(skillFile, "skill.md");
+                if (!skillMd.exists()) {
+                    skillMd = new File(skillFile, "SKILL.md");
+                }
+                if (skillMd.exists()) {
+                    targetPath = skillMd.getAbsolutePath();
+                }
+            }
+
+            final String fileToOpen = targetPath;
+
+            ReadAction
+                .nonBlocking(() -> {
+                    return LocalFileSystem.getInstance().findFileByPath(fileToOpen);
+                })
+                .finishOnUiThread(com.intellij.openapi.application.ModalityState.defaultModalityState(), virtualFile -> {
+                    if (virtualFile != null) {
+                        FileEditorManager.getInstance(context.getProject()).openFile(virtualFile, true);
+                    } else {
+                        LOG.error("[SkillHandler] Cannot find file: " + fileToOpen);
+                    }
+                })
+                .submit(AppExecutorUtil.getAppExecutorService());
+
+        } catch (Exception e) {
+            LOG.error("[SkillHandler] Failed to open skill: " + e.getMessage(), e);
+        }
+    }
+}

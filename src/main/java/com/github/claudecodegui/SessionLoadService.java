@@ -53,4 +53,10 @@ public class SessionLoadService {
         }
     }
 
+    /**
+     * Clear the listener.
+     */
+    public void clearListener() {
+        this.listener = null;
+    }
 }
