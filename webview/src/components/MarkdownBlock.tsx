@@ -5,7 +5,6 @@ import hljs from 'highlight.js';
 import 'highlight.js/styles/github-dark.css';
 import { markedHighlight } from 'marked-highlight';
 
-// Configure marked to use syntax highlighting
 marked.use(
   markedHighlight({
     highlight(code: string, lang: string) {
@@ -35,7 +34,6 @@ const MarkdownBlock = ({ content = '' }: MarkdownBlockProps) => {
   const [previewSrc, setPreviewSrc] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Copy icon SVG
   const copyIconSvg = `
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M4 4l0 8a2 2 0 0 0 2 2l8 0a2 2 0 0 0 2 -2l0 -8a2 2 0 0 0 -2 -2l-8 0a2 2 0 0 0 -2 2zm2 0l8 0l0 8l-8 0l0 -8z" fill="currentColor" fill-opacity="0.9"/>
@@ -43,13 +41,11 @@ const MarkdownBlock = ({ content = '' }: MarkdownBlockProps) => {
     </svg>
   `;
 
-  // Copy to clipboard implementation
   const copyToClipboard = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
       return true;
     } catch (err) {
-      // Fallback method for environments where navigator.clipboard is not available
       try {
         const textarea = document.createElement('textarea');
         textarea.value = text;
@@ -71,9 +67,7 @@ const MarkdownBlock = ({ content = '' }: MarkdownBlockProps) => {
 
   const html = useMemo(() => {
     try {
-      // Remove trailing newlines to avoid extra whitespace
       const trimmedContent = content.replace(/[\r\n]+$/, '');
-      // marked.parse may return HTML with trailing newlines, remove them too
       const parsed = marked.parse(trimmedContent);
       const rawHtml = typeof parsed === 'string' ? parsed.trim() : String(parsed);
 

@@ -1,9 +1,5 @@
 import type { ClaudeMessage } from '../types';
 
-/**
- * Find the index of the last assistant message in the list.
- * Returns -1 if not found.
- */
 export const findLastAssistantIndex = (list: ClaudeMessage[]): number => {
   for (let i = list.length - 1; i >= 0; i -= 1) {
     if (list[i]?.type === 'assistant') return i;
@@ -11,10 +7,6 @@ export const findLastAssistantIndex = (list: ClaudeMessage[]): number => {
   return -1;
 };
 
-/**
- * Extract content blocks from a raw message object.
- * Handles both formats: raw.content and raw.message.content
- */
 export const extractRawBlocks = (raw: unknown): any[] => {
   if (!raw || typeof raw !== 'object') return [];
   const rawObj = raw as Record<string, unknown>;
@@ -23,9 +15,6 @@ export const extractRawBlocks = (raw: unknown): any[] => {
   return Array.isArray(blocks) ? blocks : [];
 };
 
-/**
- * Refs container for streaming state - passed to functions that need access
- */
 export interface StreamingRefs {
   streamingTextSegmentsRef: React.MutableRefObject<string[]>;
   streamingThinkingSegmentsRef: React.MutableRefObject<string[]>;
@@ -33,10 +22,6 @@ export interface StreamingRefs {
   streamingMessageIndexRef: React.MutableRefObject<number>;
 }
 
-/**
- * Build streaming blocks from segments.
- * Interleaves thinking and text segments with tool_use blocks.
- */
 export const buildStreamingBlocks = (
   existingBlocks: any[],
   refs: Pick<StreamingRefs, 'streamingTextSegmentsRef' | 'streamingThinkingSegmentsRef'>
@@ -54,12 +39,11 @@ export const buildStreamingBlocks = (
   for (let phase = 0; phase < phasesCount; phase += 1) {
     const thinking = thinkingSegments[phase];
     if (typeof thinking === 'string' && thinking.length > 0) {
-      // Clean up newlines: merge consecutive blank lines, trim whitespace
       const normalizedThinking = thinking
-        .replace(/\r\n?/g, '\n')          // Normalize line endings
-        .replace(/\n[ \t]*\n+/g, '\n')    // Remove blank lines (including whitespace-only)
-        .replace(/^\n+/, '')              // Trim leading newlines
-        .replace(/\n+$/, '');             // Trim trailing newlines
+        .replace(/\r\n?/g, '\n')
+        .replace(/\n[ \t]*\n+/g, '\n')
+        .replace(/^\n+/, '')
+        .replace(/\n+$/, '');
       if (normalizedThinking.length > 0) {
         blocks.push({ type: 'thinking', thinking: normalizedThinking });
       }
@@ -79,10 +63,6 @@ export const buildStreamingBlocks = (
   return blocks;
 };
 
-/**
- * Get the current streaming assistant message index, or create a new one if needed.
- * Mutates the list by appending a placeholder assistant message if none exists.
- */
 export const getOrCreateStreamingAssistantIndex = (
   list: ClaudeMessage[],
   refs: Pick<StreamingRefs, 'streamingMessageIndexRef'>
@@ -96,7 +76,6 @@ export const getOrCreateStreamingAssistantIndex = (
     refs.streamingMessageIndexRef.current = lastAssistantIdx;
     return lastAssistantIdx;
   }
-  // No assistant found: append a placeholder
   refs.streamingMessageIndexRef.current = list.length;
   list.push({
     type: 'assistant',
@@ -108,9 +87,6 @@ export const getOrCreateStreamingAssistantIndex = (
   return refs.streamingMessageIndexRef.current;
 };
 
-/**
- * Patch an assistant message for streaming by rebuilding its content blocks.
- */
 export const patchAssistantForStreaming = (
   assistant: ClaudeMessage,
   refs: StreamingRefs

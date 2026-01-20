@@ -15,7 +15,6 @@ interface PermissionDialogProps {
   onApproveAlways: (channelId: string) => void;
 }
 
-// Tool display names mapping
 const TOOL_TITLES: Record<string, string> = {
   Write: 'Write File',
   Edit: 'Edit File',
@@ -90,7 +89,6 @@ const PermissionDialog = ({
     return null;
   }
 
-  // Format input value for display
   const formatInputValue = (value: any): string => {
     if (value === null || value === undefined) {
       return '';
@@ -104,7 +102,6 @@ const PermissionDialog = ({
     return String(value);
   };
 
-  // Get command or main operation content
   const getCommandContent = (): string => {
     if (request.inputs.command) {
       return request.inputs.command;
@@ -120,7 +117,6 @@ const PermissionDialog = ({
       .join('\n');
   };
 
-  // Get working directory
   const getWorkingDirectory = (): string => {
     if (request.inputs.cwd) {
       return request.inputs.cwd;
@@ -134,37 +130,30 @@ const PermissionDialog = ({
     return '~';
   };
 
-  // Truncate path intelligently: show ...project/src/file.js
   const truncatePath = (path: string, maxLength = 60): string => {
     if (!path || path.length <= maxLength) return path;
 
-    // Split by path separator
     const parts = path.split(/[/\\]/);
     if (parts.length <= 3) return path;
 
-    // Keep filename and some context
     const fileName = parts[parts.length - 1];
     const parentDir = parts[parts.length - 2];
     const grandParentDir = parts[parts.length - 3];
 
-    // Try to fit: ...grandparent/parent/filename
     const truncated = `...${grandParentDir}/${parentDir}/${fileName}`;
     if (truncated.length <= maxLength) {
       return truncated;
     }
 
-    // Just show ...parent/filename
     return `...${parentDir}/${fileName}`;
   };
 
-  // Get just the filename from a path
   const getFileName = (path: string): string => {
     if (!path) return '';
     const parts = path.split(/[/\\]/);
     return parts[parts.length - 1] || path;
   };
 
-  // Get tool display title
   const getToolTitle = (toolName: string): string => {
     return TOOL_TITLES[toolName] || `Execute ${toolName}`;
   };

@@ -8,9 +8,6 @@ import { McpConfirmDialog } from './McpConfirmDialog';
 import { ToastContainer, type ToastMessage } from '../Toast';
 import { copyToClipboard } from '../../utils/copyUtils';
 
-/**
- * MCP Server Settings Component
- */
 export function McpSettingsSection() {
   const [servers, setServers] = useState<McpServer[]>([]);
   const [serverStatus, setServerStatus] = useState<Map<string, McpServerStatusInfo>>(new Map());

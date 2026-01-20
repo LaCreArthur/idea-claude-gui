@@ -5,36 +5,25 @@ import { SkillHelpDialog } from './SkillHelpDialog';
 import { SkillConfirmDialog } from './SkillConfirmDialog';
 import { ToastContainer, type ToastMessage } from '../Toast';
 
-/**
- * Skills Settings Component
- * Manages Claude Skills (global and local)
- * Supports enabling/disabling Skills (by moving files between active and managed directories)
- */
 export function SkillsSettingsSection() {
-  // Skills data
   const [skills, setSkills] = useState<SkillsConfig>({ global: {}, local: {} });
   const [loading, setLoading] = useState(true);
   const [expandedSkills, setExpandedSkills] = useState<Set<string>>(new Set());
 
-  // UI state
   const [showDropdown, setShowDropdown] = useState(false);
   const [currentFilter, setCurrentFilter] = useState<SkillFilter>('all');
   const [enabledFilter, setEnabledFilter] = useState<SkillEnabledFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Dialog state
   const [showHelpDialog, setShowHelpDialog] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [deletingSkill, setDeletingSkill] = useState<Skill | null>(null);
 
-  // Skills being toggled (to disable buttons and prevent double-clicks)
   const [togglingSkills, setTogglingSkills] = useState<Set<string>>(new Set());
 
-  // Toast state
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
-  // Toast helper functions
   const addToast = (message: string, type: ToastMessage['type'] = 'info') => {
     const id = `toast-${Date.now()}-${Math.random()}`;
     setToasts((prev) => [...prev, { id, message, type }]);
@@ -44,12 +33,10 @@ export function SkillsSettingsSection() {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
   };
 
-  // Calculate Skills lists
   const globalSkillList = useMemo(() => Object.values(skills.global), [skills.global]);
   const localSkillList = useMemo(() => Object.values(skills.local), [skills.local]);
   const allSkillList = useMemo(() => [...globalSkillList, ...localSkillList], [globalSkillList, localSkillList]);
 
-  // Filtered Skills list
   const filteredSkills = useMemo(() => {
     let list: Skill[] = [];
     if (currentFilter === 'all') {
@@ -60,7 +47,6 @@ export function SkillsSettingsSection() {
       list = localSkillList;
     }
 
-    // Enabled state filter
     if (enabledFilter === 'enabled') {
       list = list.filter(s => s.enabled);
     } else if (enabledFilter === 'disabled') {
@@ -76,21 +62,18 @@ export function SkillsSettingsSection() {
       );
     }
 
-    // Sort by enabled state: enabled first
     return list.sort((a, b) => {
       if (a.enabled === b.enabled) return 0;
       return a.enabled ? -1 : 1;
     });
   }, [currentFilter, enabledFilter, searchQuery, allSkillList, globalSkillList, localSkillList]);
 
-  // Counts
   const totalCount = allSkillList.length;
   const globalCount = globalSkillList.length;
   const localCount = localSkillList.length;
   const enabledCount = allSkillList.filter(s => s.enabled).length;
   const disabledCount = allSkillList.filter(s => !s.enabled).length;
 
-  // Icon colors
   const iconColors = [
     '#3B82F6', '#10B981', '#8B5CF6', '#F59E0B',
     '#EF4444', '#EC4899', '#06B6D4', '#6366F1',
@@ -104,9 +87,7 @@ export function SkillsSettingsSection() {
     return iconColors[Math.abs(hash) % iconColors.length];
   };
 
-  // Initialization
   useEffect(() => {
-    // Register callback: Java returns Skills list
     window.updateSkills = (jsonStr: string) => {
       try {
         const data: SkillsConfig = JSON.parse(jsonStr);
@@ -119,7 +100,6 @@ export function SkillsSettingsSection() {
       }
     };
 
-    // Register callback: Import result
     window.skillImportResult = (jsonStr: string) => {
       try {
         const result = JSON.parse(jsonStr);
@@ -133,7 +113,6 @@ export function SkillsSettingsSection() {
           } else if (count > 1) {
             addToast(`Successfully imported ${count} Skills`, 'success');
           }
-          // Reload
           loadSkills();
         } else {
           addToast(result.error || 'Failed to import Skill', 'error');
@@ -143,7 +122,6 @@ export function SkillsSettingsSection() {
       }
     };
 
-    // Register callback: Delete result
     window.skillDeleteResult = (jsonStr: string) => {
       try {
         const result = JSON.parse(jsonStr);
@@ -158,15 +136,12 @@ export function SkillsSettingsSection() {
       }
     };
 
-    // Register callback: Toggle result
     window.skillToggleResult = (jsonStr: string) => {
       try {
         const result = JSON.parse(jsonStr);
-        // Remove toggling state
         setTogglingSkills(prev => {
           const newSet = new Set(prev);
           if (result.name) {
-            // Try to remove possible ID variants
             newSet.forEach(id => {
               if (id.includes(result.name)) {
                 newSet.delete(id);
@@ -189,14 +164,12 @@ export function SkillsSettingsSection() {
         }
       } catch (error) {
         console.error('[SkillsSettings] Failed to parse toggle result:', error);
-        setTogglingSkills(new Set()); // Clear on error
+        setTogglingSkills(new Set());
       }
     };
 
-    // Load Skills
     loadSkills();
 
-    // Click outside to close dropdown
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setShowDropdown(false);
@@ -218,7 +191,6 @@ export function SkillsSettingsSection() {
     sendToJava('get_all_skills', {});
   };
 
-  // Toggle expand state (accordion effect)
   const toggleExpand = (skillId: string) => {
     const newExpanded = new Set<string>();
     if (!expandedSkills.has(skillId)) {
@@ -227,31 +199,25 @@ export function SkillsSettingsSection() {
     setExpandedSkills(newExpanded);
   };
 
-  // Refresh
   const handleRefresh = () => {
     loadSkills();
     addToast('Skills list refreshed', 'success');
   };
 
-  // Import Skill
   const handleImport = (scope: SkillScope) => {
     setShowDropdown(false);
-    // Send import request, Java side will show file selection dialog
     sendToJava('import_skill', { scope });
   };
 
-  // Open in editor
   const handleOpen = (skill: Skill) => {
     sendToJava('open_skill', { path: skill.path });
   };
 
-  // Delete Skill
   const handleDelete = (skill: Skill) => {
     setDeletingSkill(skill);
     setShowConfirmDialog(true);
   };
 
-  // Confirm delete
   const confirmDelete = () => {
     if (deletingSkill) {
       sendToJava('delete_skill', {
@@ -269,16 +235,14 @@ export function SkillsSettingsSection() {
     setDeletingSkill(null);
   };
 
-  // Cancel delete
   const cancelDelete = () => {
     setShowConfirmDialog(false);
     setDeletingSkill(null);
   };
 
-  // Enable/Disable Skill
   const handleToggle = (skill: Skill, e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent triggering card expand
-    if (togglingSkills.has(skill.id)) return; // Prevent double-click
+    e.stopPropagation();
+    if (togglingSkills.has(skill.id)) return;
 
     setTogglingSkills(prev => new Set(prev).add(skill.id));
     sendToJava('toggle_skill', {
@@ -290,9 +254,7 @@ export function SkillsSettingsSection() {
 
   return (
     <div className="skills-settings-section">
-      {/* Toolbar */}
       <div className="skills-toolbar">
-        {/* Filter tabs */}
         <div className="filter-tabs">
           <div
             className={`tab-item ${currentFilter === 'all' ? 'active' : ''}`}
@@ -312,7 +274,6 @@ export function SkillsSettingsSection() {
           >
             Local <span className="count-badge">{localCount}</span>
           </div>
-          {/* Enabled state filter */}
           <div className="filter-separator"></div>
           <div
             className={`tab-item enabled-filter ${enabledFilter === 'enabled' ? 'active' : ''}`}
@@ -332,9 +293,7 @@ export function SkillsSettingsSection() {
           </div>
         </div>
 
-        {/* Right side tools */}
         <div className="toolbar-right">
-          {/* Search box */}
           <div className="search-box">
             <span className="codicon codicon-search"></span>
             <input
@@ -346,7 +305,6 @@ export function SkillsSettingsSection() {
             />
           </div>
 
-          {/* Help button */}
           <button
             className="icon-btn"
             onClick={() => setShowHelpDialog(true)}
@@ -355,7 +313,6 @@ export function SkillsSettingsSection() {
             <span className="codicon codicon-question"></span>
           </button>
 
-          {/* Import button */}
           <div className="add-dropdown" ref={dropdownRef}>
             <button
               className="icon-btn primary"
@@ -378,7 +335,6 @@ export function SkillsSettingsSection() {
             )}
           </div>
 
-          {/* Refresh button */}
           <button
             className="icon-btn"
             onClick={handleRefresh}
@@ -390,16 +346,13 @@ export function SkillsSettingsSection() {
         </div>
       </div>
 
-      {/* Skills list */}
       <div className="skill-list">
         {filteredSkills.map((skill) => (
           <div
             key={skill.id}
             className={`skill-card ${expandedSkills.has(skill.id) ? 'expanded' : ''} ${!skill.enabled ? 'disabled' : ''}`}
           >
-            {/* Card header */}
             <div className="card-header" onClick={() => toggleExpand(skill.id)}>
-              {/* Enable/Disable toggle */}
               <button
                 className={`toggle-switch ${skill.enabled ? 'enabled' : 'disabled'} ${togglingSkills.has(skill.id) ? 'loading' : ''}`}
                 onClick={(e) => handleToggle(skill, e)}
@@ -440,7 +393,6 @@ export function SkillsSettingsSection() {
               </div>
             </div>
 
-            {/* Expanded content */}
             {expandedSkills.has(skill.id) && (
               <div className="card-content">
                 <div className="info-section">
@@ -467,7 +419,6 @@ export function SkillsSettingsSection() {
           </div>
         ))}
 
-        {/* Empty state */}
         {filteredSkills.length === 0 && !loading && (
           <div className="empty-state">
             <span className="codicon codicon-extensions"></span>
@@ -476,7 +427,6 @@ export function SkillsSettingsSection() {
           </div>
         )}
 
-        {/* Loading state */}
         {loading && filteredSkills.length === 0 && (
           <div className="loading-state">
             <span className="codicon codicon-loading codicon-modifier-spin"></span>
@@ -485,7 +435,6 @@ export function SkillsSettingsSection() {
         )}
       </div>
 
-      {/* Dialogs */}
       {showHelpDialog && (
         <SkillHelpDialog onClose={() => setShowHelpDialog(false)} />
       )}
@@ -501,7 +450,6 @@ export function SkillsSettingsSection() {
         />
       )}
 
-      {/* Toast notifications */}
       <ToastContainer messages={toasts} onDismiss={dismissToast} />
     </div>
   );

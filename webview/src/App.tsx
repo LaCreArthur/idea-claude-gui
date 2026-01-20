@@ -41,7 +41,7 @@ const DEFAULT_STATUS = 'ready';
 
 const App = () => {
   const [messages, setMessages] = useState<ClaudeMessage[]>([]);
-  const [_status, setStatus] = useState(DEFAULT_STATUS); // Internal state, displayed via toast
+  const [_status, setStatus] = useState(DEFAULT_STATUS);
   const [loading, setLoading] = useState(false);
   const [loadingStartTime, setLoadingStartTime] = useState<number | null>(null);
   const [isThinking, setIsThinking] = useState(false);
@@ -53,12 +53,9 @@ const App = () => {
   const [showInterruptConfirm, setShowInterruptConfirm] = useState(false);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
-  // 输入框草稿内容（页面切换时保持）
   const [draftInput, setDraftInput] = useState('');
-  // 标志位：是否抑制下一次 updateStatus 触发的 toast（用于删除当前会话后自动创建新会话的场景）
   const suppressNextStatusToastRef = useRef(false);
 
-  // Permission dialog hook
   const {
     isOpen: permissionDialogOpen,
     currentRequest: currentPermissionRequest,
@@ -68,7 +65,6 @@ const App = () => {
     queueRequest: queuePermissionRequest,
   } = usePermissionDialog();
 
-  // AskUserQuestion dialog hook
   const {
     isOpen: askUserQuestionDialogOpen,
     currentRequest: currentAskUserQuestionRequest,
@@ -77,7 +73,6 @@ const App = () => {
     queueRequest: queueAskUserQuestionRequest,
   } = useAskUserQuestion();
 
-  // Rewind dialog hook
   const {
     isRewindDialogOpen,
     currentRewindRequest,
@@ -91,7 +86,6 @@ const App = () => {
     handleRewindResult,
   } = useRewindDialog();
 
-  // Streaming state hook
   const {
     streamingActive,
     setStreamingActive,
@@ -112,7 +106,6 @@ const App = () => {
     autoExpandedThinkingKeysRef,
   } = useStreamingState();
 
-  // Provider/model configuration hook
   const {
     currentProvider,
     setCurrentProvider,
@@ -130,72 +123,55 @@ const App = () => {
     syncActiveProviderModelMapping,
   } = useProviderConfig();
 
-  // ChatInputBox 相关状态
   const [usagePercentage, setUsagePercentage] = useState(0);
   const [usageUsedTokens, setUsageUsedTokens] = useState<number | undefined>(undefined);
   const [usageMaxTokens, setUsageMaxTokens] = useState<number | undefined>(undefined);
   const [, setProviderConfigVersion] = useState(0);
   const [selectedAgent, setSelectedAgent] = useState<SelectedAgent | null>(null);
-  // 🔧 流式传输开关状态（同步设置页面）
   const [streamingEnabledSetting, setStreamingEnabledSetting] = useState(false);
-  // 发送快捷键设置
   const [sendShortcut, setSendShortcut] = useState<'enter' | 'cmdEnter'>('enter');
 
-  // 🔧 SDK 安装状态（用于在未安装时禁止提问）
   const [sdkStatus, setSdkStatus] = useState<Record<string, { installed?: boolean; status?: string }>>({});
-  const [sdkStatusLoaded, setSdkStatusLoaded] = useState(false); // 标记 SDK 状态是否已从后端加载
+  const [sdkStatusLoaded, setSdkStatusLoaded] = useState(false);
 
-  // Context state (active file and selection) - 保留用于 ContextBar 显示
   const [contextInfo, setContextInfo] = useState<{ file: string; startLine?: number; endLine?: number; raw: string } | null>(null);
 
-  // Current selected model (Claude only)
   const selectedModel = selectedClaudeModel;
 
-  // 🔧 根据当前提供商判断对应的 SDK 是否已安装
   const currentSdkInstalled = (() => {
-    // 状态未加载时，返回 false（显示加载中或未安装提示）
     if (!sdkStatusLoaded) return false;
-    // Provider -> SDK mapping (Claude only)
     const sdkId = 'claude-sdk';
     const status = sdkStatus[sdkId];
-    // Check status field (priority) or installed field
     return status?.status === 'installed' || status?.installed === true;
   })();
 
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const inputAreaRef = useRef<HTMLDivElement | null>(null);
-  // 追踪用户是否在底部（用于判断是否需要自动滚动）
   const isUserAtBottomRef = useRef(true);
-  // 追踪上次按下 ESC 的时间（用于双击 ESC 快捷键）
   const lastEscPressTimeRef = useRef<number>(0);
 
-  // 初始化主题和字体缩放
   useEffect(() => {
-    // 初始化主题
     const savedTheme = localStorage.getItem('theme');
     const theme = (savedTheme === 'light' || savedTheme === 'dark') ? savedTheme : 'dark';
     document.documentElement.setAttribute('data-theme', theme);
 
-    // 初始化字体缩放
     const savedLevel = localStorage.getItem('fontSizeLevel');
-    const level = savedLevel ? parseInt(savedLevel, 10) : 3; // 默认档位 3 (100%)
+    const level = savedLevel ? parseInt(savedLevel, 10) : 3;
     const fontSizeLevel = (level >= 1 && level <= 6) ? level : 3;
 
-    // 将档位映射到缩放比例
     const fontSizeMap: Record<number, number> = {
-      1: 0.8,   // 80%
-      2: 0.9,   // 90%
-      3: 1.0,   // 100% (默认)
-      4: 1.1,   // 110%
-      5: 1.2,   // 120%
-      6: 1.4,   // 140%
+      1: 0.8,
+      2: 0.9,
+      3: 1.0,
+      4: 1.1,
+      5: 1.2,
+      6: 1.4,
     };
     const scale = fontSizeMap[fontSizeLevel] || 1.0;
     document.documentElement.style.setProperty('--font-scale', scale.toString());
   }, []);
 
-  // Initialize E2E test bridge if in test mode (set by Java when claude.test.mode=true)
   useEffect(() => {
     if (!window.__testMode) return;
 
@@ -246,8 +222,6 @@ const App = () => {
     console.log('[TEST_MODE] Test bridge initialized');
   }, []);
 
-  // 从 LocalStorage 加载模型选择状态，并同步到后端
-  // Load model selection state from LocalStorage and sync to backend
   useEffect(() => {
     try {
       const saved = localStorage.getItem('model-selection-state');
@@ -257,7 +231,6 @@ const App = () => {
       if (saved) {
         const state = JSON.parse(saved);
 
-        // Restore Claude model if valid
         if (CLAUDE_MODELS.find(m => m.id === state.claudeModel)) {
           restoredClaudeModel = state.claudeModel;
           setSelectedClaudeModel(state.claudeModel);
@@ -266,7 +239,6 @@ const App = () => {
 
       setPermissionMode(initialPermissionMode);
 
-      // Sync model state to backend on init
       let syncRetryCount = 0;
       const MAX_SYNC_RETRIES = 30;
 
@@ -290,7 +262,6 @@ const App = () => {
     }
   }, []);
 
-  // Save model selection state to LocalStorage
   useEffect(() => {
     try {
       localStorage.setItem('model-selection-state', JSON.stringify({
@@ -302,10 +273,9 @@ const App = () => {
     }
   }, [currentProvider, selectedClaudeModel]);
 
-  // 加载选中的智能体
   useEffect(() => {
     let retryCount = 0;
-    const MAX_RETRIES = 10; // 减少到10次，总共1秒
+    const MAX_RETRIES = 10;
     let timeoutId: number | undefined;
 
     const loadSelectedAgent = () => {
@@ -317,12 +287,11 @@ const App = () => {
           timeoutId = window.setTimeout(loadSelectedAgent, 100);
         } else {
           console.warn('[Frontend] Failed to load selected agent: bridge not available after', MAX_RETRIES, 'retries');
-          // 即使加载失败，也不影响其他功能的使用
         }
       }
     };
 
-    timeoutId = window.setTimeout(loadSelectedAgent, 200); // 减少初始延迟到200ms
+    timeoutId = window.setTimeout(loadSelectedAgent, 200);
 
     return () => {
       if (timeoutId !== undefined) {
@@ -331,9 +300,7 @@ const App = () => {
     };
   }, []);
 
-  // Toast helper functions
   const addToast = (message: string, type: ToastMessage['type'] = 'info') => {
-    // Don't show toast for default status
     if (message === DEFAULT_STATUS || !message) return;
 
     const id = `toast-${Date.now()}-${Math.random()}`;
@@ -344,7 +311,6 @@ const App = () => {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
   };
 
-  // Session handlers hook
   const sessionHandlers = useSessionHandlers({
     loading,
     messages,
@@ -379,7 +345,6 @@ const App = () => {
     updateHistoryTitle,
   } = sessionHandlers;
 
-  // Chat handlers hook
   const {
     handleSubmit,
     handleModeSelect,
@@ -417,7 +382,6 @@ const App = () => {
     addToast,
   });
 
-  // Streaming callbacks hook (sets up window.onStreamStart, onContentDelta, etc.)
   useStreamingCallbacks({
     streamingContentRef,
     isStreamingRef,
@@ -441,7 +405,6 @@ const App = () => {
     isUserAtBottomRef,
   });
 
-  // Settings callbacks hook (SDK status, usage, mode, model, provider, streaming)
   useSettingsCallbacks({
     setSdkStatus,
     setSdkStatusLoaded,
@@ -459,7 +422,6 @@ const App = () => {
     setSendShortcut,
   });
 
-  // Message callbacks hook (updateMessages, updateStatus, dialog callbacks, agent callbacks, etc.)
   useMessageCallbacks({
     streamingContentRef,
     isStreamingRef,
@@ -487,7 +449,6 @@ const App = () => {
     addToast,
   });
 
-  // Rewind logic hook (mergedMessages, rewindable messages, rewind actions)
   const {
     mergedMessages,
     rewindableMessages,
@@ -503,7 +464,6 @@ const App = () => {
     addToast,
   });
 
-  // Rewind result callback (separate useEffect because it depends on handleRewindResult)
   useEffect(() => {
     window.onRewindResult = (json: string) => {
       try {
@@ -522,12 +482,11 @@ const App = () => {
     }
 
     let historyRetryCount = 0;
-    const MAX_HISTORY_RETRIES = 30; // 最多重试30次（3秒）
+    const MAX_HISTORY_RETRIES = 30;
     let currentTimer: number | null = null;
 
     const requestHistoryData = () => {
       if (window.sendToJava) {
-        // 传递 provider 参数给后端
         sendBridgeEvent('load_history_data', currentProvider);
       } else {
         historyRetryCount++;
@@ -546,21 +505,15 @@ const App = () => {
         clearTimeout(currentTimer);
       }
     };
-  }, [currentView, currentProvider]); // 添加 currentProvider 依赖，provider 切换时自动刷新历史记录
+  }, [currentView, currentProvider]);
 
-  // 监听滚动事件，检测用户是否在底部
-  // 原理：如果用户向上滚动查看历史，就标记为"不在底部"，不再自动滚动
-  // 依赖 currentView 是因为视图切换时容器会重新挂载，需要重新绑定监听器
   useEffect(() => {
     const container = messagesContainerRef.current;
     if (!container) return;
 
     const handleScroll = () => {
-      // 🔧 如果正在自动滚动，跳过判断（防止快速流式输出时误判）
       if (isAutoScrollingRef.current) return;
-      // 计算距离底部的距离
       const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
-      // 如果距离底部小于 100 像素，认为用户在底部
       isUserAtBottomRef.current = distanceFromBottom < 100;
     };
 
@@ -593,17 +546,14 @@ const App = () => {
     });
   }, []);
 
-  // 🔧 自动滚动：用户在底部时，跟随最新内容（包括流式/展开思考块/加载指示器等导致的高度变化）
   useLayoutEffect(() => {
     if (currentView !== 'chat') return;
     if (!isUserAtBottomRef.current) return;
     scrollToBottom();
   }, [currentView, messages, expandedThinking, loading, streamingActive, scrollToBottom]);
 
-  // 切换回聊天视图时，自动滚动到底部
   useEffect(() => {
     if (currentView === 'chat') {
-      // 使用 setTimeout 确保视图完全渲染后再滚动
       const timer = setTimeout(() => {
         scrollToBottom();
       }, 0);
@@ -611,17 +561,14 @@ const App = () => {
     }
   }, [currentView, scrollToBottom]);
 
-  // 双击 ESC 快捷键打开回滚弹窗
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
 
-      // 如果有其他弹窗打开，不处理双击 ESC
       if (permissionDialogOpen || askUserQuestionDialogOpen || isRewindDialogOpen || isRewindSelectDialogOpen) {
         return;
       }
 
-      // 只在 claude provider 且有消息时才触发
       if (currentProvider !== 'claude' || messages.length === 0) {
         return;
       }
@@ -629,11 +576,10 @@ const App = () => {
       const now = Date.now();
       const timeSinceLastEsc = now - lastEscPressTimeRef.current;
 
-      // 如果两次 ESC 间隔小于 400ms，触发回滚弹窗
       if (timeSinceLastEsc < 400) {
         e.preventDefault();
         openRewindSelectDialog();
-        lastEscPressTimeRef.current = 0; // 重置，避免连续触发
+        lastEscPressTimeRef.current = 0;
       } else {
         lastEscPressTimeRef.current = now;
       }
@@ -651,7 +597,6 @@ const App = () => {
     }));
   };
 
-  // Claude 流式：思考块在输出中自动展开，输出结束自动折叠（见 onStreamEnd）
   useEffect(() => {
     if (currentProvider !== 'claude') return;
     if (!streamingActive) return;
@@ -827,22 +772,10 @@ const App = () => {
             />
           ))}
 
-          {/* Thinking indicator */}
-          {/* {isThinking && !hasThinkingBlockInLastMessage && (
-            <div className="message assistant">
-              <div className="thinking-status">
-                <span className="thinking-status-icon">🤔</span>
-                <span className="thinking-status-text">{'Thinking'}</span>
-              </div>
-            </div>
-          )} */}
-
-          {/* Loading indicator */}
           {loading && <WaitingIndicator startTime={loadingStartTime ?? undefined} />}
           <div ref={messagesEndRef} />
         </div>
 
-        {/* 滚动控制按钮 */}
         <ScrollControl containerRef={messagesContainerRef} inputAreaRef={inputAreaRef} />
       </>
       ) : (

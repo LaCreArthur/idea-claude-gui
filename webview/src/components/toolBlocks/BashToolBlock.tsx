@@ -17,7 +17,6 @@ const BashToolBlock = ({ input, result }: BashToolBlockProps) => {
   const command = (input.command as string | undefined) ?? '';
   const description = (input.description as string | undefined) ?? '';
 
-  // Determine tool call status based on result
   const isCompleted = result !== undefined && result !== null;
   const isError = isCompleted && result?.is_error === true;
 

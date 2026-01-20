@@ -40,10 +40,8 @@ interface BasicConfigSectionProps {
     fontSize: number;
     lineSpacing: number;
   };
-  // 🔧 流式传输配置
   streamingEnabled?: boolean;
   onStreamingEnabledChange?: (enabled: boolean) => void;
-  // 发送快捷键配置
   sendShortcut?: 'enter' | 'cmdEnter';
   onSendShortcutChange?: (shortcut: 'enter' | 'cmdEnter') => void;
 }
@@ -64,14 +62,11 @@ const BasicConfigSection = ({
   onSaveWorkingDirectory = () => {},
   savingWorkingDirectory = false,
   editorFontConfig,
-  // 🔧 流式传输配置
   streamingEnabled = false,
   onStreamingEnabledChange = () => {},
-  // 发送快捷键配置
   sendShortcut = 'enter',
   onSendShortcutChange = () => {},
 }: BasicConfigSectionProps) => {
-  // 解析主版本号
   const parseMajorVersion = (version: string | null | undefined): number => {
     if (!version) return 0;
     const versionStr = version.startsWith('v') ? version.substring(1) : version;
@@ -82,7 +77,6 @@ const BasicConfigSection = ({
     return parseInt(versionStr, 10) || 0;
   };
 
-  // 检查版本是否过低
   const majorVersion = parseMajorVersion(nodeVersion);
   const isVersionTooLow = nodeVersion && majorVersion > 0 && majorVersion < minNodeVersion;
 
@@ -91,7 +85,6 @@ const BasicConfigSection = ({
       <h3 className={styles.sectionTitle}>Basic Configuration</h3>
       <p className={styles.sectionDesc}>Configure page theme and Node.js environment</p>
 
-      {/* 主题切换 */}
       <div className={styles.themeSection}>
         <div className={styles.fieldHeader}>
           <span className="codicon codicon-symbol-color" />
@@ -99,7 +92,6 @@ const BasicConfigSection = ({
         </div>
 
         <div className={styles.themeGrid}>
-          {/* 亮色主题卡片 */}
           <div
             className={`${styles.themeCard} ${theme === 'light' ? styles.active : ''}`}
             onClick={() => onThemeChange('light')}
@@ -118,7 +110,6 @@ const BasicConfigSection = ({
             <div className={styles.themeCardDesc}>Fresh and bright, suitable for daytime use</div>
           </div>
 
-          {/* 暗色主题卡片 */}
           <div
             className={`${styles.themeCard} ${theme === 'dark' ? styles.active : ''}`}
             onClick={() => onThemeChange('dark')}
@@ -139,7 +130,6 @@ const BasicConfigSection = ({
         </div>
       </div>
 
-      {/* 字体大小选择 */}
       <div className={styles.fontSizeSection}>
         <div className={styles.fieldHeader}>
           <span className="codicon codicon-text-size" />
@@ -159,7 +149,6 @@ const BasicConfigSection = ({
         </select>
       </div>
 
-      {/* IDEA 编辑器字体展示 - 只读 */}
       <div className={styles.editorFontSection}>
         <div className={styles.fieldHeader}>
           <span className="codicon codicon-symbol-text" />
@@ -174,7 +163,6 @@ const BasicConfigSection = ({
         </small>
       </div>
 
-      {/* Node.js 路径配置 */}
       <div className={styles.nodePathSection}>
         <div className={styles.fieldHeader}>
           <span className="codicon codicon-terminal" />
@@ -220,7 +208,6 @@ const BasicConfigSection = ({
         </small>
       </div>
 
-      {/* 工作目录配置 */}
       <div className={styles.workingDirSection}>
         <div className={styles.fieldHeader}>
           <span className="codicon codicon-folder" />
@@ -255,7 +242,6 @@ const BasicConfigSection = ({
         </small>
       </div>
 
-      {/* 🔧 流式传输配置 */}
       <div className={styles.streamingSection}>
         <div className={styles.fieldHeader}>
           <span className="codicon codicon-sync" />
@@ -279,14 +265,12 @@ const BasicConfigSection = ({
         </small>
       </div>
 
-      {/* 发送快捷键配置 */}
       <div className={styles.sendShortcutSection}>
         <div className={styles.fieldHeader}>
           <span className="codicon codicon-keyboard" />
           <span className={styles.fieldLabel}>Send Shortcut</span>
         </div>
         <div className={styles.themeGrid}>
-          {/* Enter 发送 */}
           <div
             className={`${styles.themeCard} ${sendShortcut === 'enter' ? styles.active : ''}`}
             onClick={() => onSendShortcutChange('enter')}
@@ -300,7 +284,6 @@ const BasicConfigSection = ({
             <div className={styles.themeCardDesc}>Press Enter to send message, Shift+Enter for new line</div>
           </div>
 
-          {/* Cmd/Ctrl+Enter 发送 */}
           <div
             className={`${styles.themeCard} ${sendShortcut === 'cmdEnter' ? styles.active : ''}`}
             onClick={() => onSendShortcutChange('cmdEnter')}

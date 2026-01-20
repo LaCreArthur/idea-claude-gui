@@ -446,63 +446,10 @@ public class ClaudeSession {
         JsonObject openedFilesJson,
         String externalAgentPrompt
     ) {
-        // Use new bridge.js protocol when no attachments (cleaner stdin/stdout IPC)
-        // Fall back to old channel-manager.js for attachment support
-        boolean hasAttachments = attachments != null && !attachments.isEmpty();
-        boolean useNewBridge = !hasAttachments && shouldUseNewBridge();
-
-        if (useNewBridge) {
-            LOG.info("[ClaudeSession] Using new bridge.js protocol");
-            return sendMessageWithBridge(channelId, input, openedFilesJson, externalAgentPrompt);
-        }
-
-        // Legacy path - use old channel-manager.js
-        LOG.info("[ClaudeSession] Using legacy channel-manager.js" + (hasAttachments ? " (has attachments)" : ""));
-
-        // Use external agent prompt if provided, otherwise fall back to global setting
-        String agentPrompt = externalAgentPrompt;
-        if (agentPrompt == null) {
-            agentPrompt = getAgentPrompt();
-            LOG.info("[Agent] Using agent from global setting (fallback)");
-        } else {
-            LOG.info("[Agent] Using agent from message (per-tab selection)");
-        }
-
-        ClaudeMessageHandler handler = new ClaudeMessageHandler(
-            project,
-            state,
-            callbackHandler,
-            messageParser,
-            messageMerger,
-            gson
-        );
-
-        // Read streaming configuration
-        Boolean streaming = null;
-        try {
-            String projectPath = project.getBasePath();
-            if (projectPath != null) {
-                PluginSettingsService settingsService = new PluginSettingsService();
-                streaming = settingsService.getStreamingEnabled(projectPath);
-                LOG.info("[Streaming] Read streaming config: " + streaming);
-            }
-        } catch (Exception e) {
-            LOG.warn("[Streaming] Failed to read streaming config: " + e.getMessage());
-        }
-
-        return claudeSDKBridge.sendMessage(
-            channelId,
-            input,
-            state.getSessionId(),
-            state.getCwd(),
-            attachments,
-            state.getPermissionMode(),
-            state.getModel(),
-            openedFilesJson,
-            agentPrompt,
-            streaming,
-            handler
-        ).thenApply(result -> null);
+        // Always use bridge.js protocol - it now handles attachments
+        LOG.info("[ClaudeSession] Using bridge.js protocol" +
+            (attachments != null && !attachments.isEmpty() ? " (with attachments)" : ""));
+        return sendMessageWithBridge(channelId, input, attachments, openedFilesJson, externalAgentPrompt);
     }
 
     /**
@@ -521,6 +468,7 @@ public class ClaudeSession {
      *
      * @param channelId           Channel ID
      * @param input               User message
+     * @param attachments         List of attachments (images, etc.)
      * @param openedFilesJson     Open files context
      * @param externalAgentPrompt Agent prompt (optional)
      * @return CompletableFuture that completes when message is processed
@@ -528,13 +476,14 @@ public class ClaudeSession {
     private CompletableFuture<Void> sendMessageWithBridge(
         String channelId,
         String input,
+        List<Attachment> attachments,
         JsonObject openedFilesJson,
         String externalAgentPrompt
     ) {
         String agentPrompt = externalAgentPrompt != null ? externalAgentPrompt : getAgentPrompt();
 
         // Get permission service for direct permission handling
-        PermissionService permissionService = PermissionService.getInstance(project);
+        PermissionService permissionService = project.getService(PermissionService.class);
 
         // Create permission callback
         ClaudeSDKBridge.PermissionCallback permissionCallback = (requestId, toolName, toolInput) -> {
@@ -575,6 +524,7 @@ public class ClaudeSession {
             input,
             state.getSessionId(),
             state.getCwd(),
+            attachments,
             state.getPermissionMode(),
             state.getModel(),
             openedFilesJson,

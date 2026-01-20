@@ -6,10 +6,6 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
-/**
- * HTML 加载器
- * 处理 HTML 文件加载和本地库注入
- */
 public class HtmlLoader {
 
     private static final Logger LOG = Logger.getInstance(HtmlLoader.class);
@@ -19,10 +15,6 @@ public class HtmlLoader {
         this.resourceClass = resourceClass;
     }
 
-    /**
-     * 加载聊天界面 HTML
-     * @return HTML 内容，如果加载失败返回备用 HTML
-     */
     public String loadChatHtml() {
         try {
             InputStream is = resourceClass.getResourceAsStream("/html/claude-chat.html");
@@ -33,21 +25,18 @@ public class HtmlLoader {
                 if (html.contains("<!-- LOCAL_LIBRARY_INJECTION_POINT -->")) {
                     html = injectLocalLibraries(html);
                 } else {
-                    LOG.info("✓ 检测到打包好的现代前端资源，无需额外注入库文件");
+                    LOG.info("Detected bundled modern frontend resources, no library injection needed");
                 }
 
                 return html;
             }
         } catch (Exception e) {
-            LOG.error("无法加载 claude-chat.html: " + e.getMessage());
+            LOG.error("Failed to load claude-chat.html: " + e.getMessage());
         }
 
         return generateFallbackHtml();
     }
 
-    /**
-     * 生成备用 HTML
-     */
     public String generateFallbackHtml() {
         return "<!DOCTYPE html>" +
             "<html>" +
@@ -64,16 +53,13 @@ public class HtmlLoader {
             "</head>" +
             "<body>" +
             "<div class=\"error\">" +
-            "<h1>无法加载聊天界面</h1>" +
-            "<p>请检查 HTML 资源文件是否存在</p>" +
+            "<h1>Failed to load chat interface</h1>" +
+            "<p>Please check if HTML resource files exist</p>" +
             "</div>" +
             "</body>" +
             "</html>";
     }
 
-    /**
-     * 将本地库文件内容注入到 HTML 中
-     */
     private String injectLocalLibraries(String html) {
         try {
             String reactJs = loadResourceAsString("/libs/react.production.min.js");
@@ -89,26 +75,23 @@ public class HtmlLoader {
             );
 
             StringBuilder injectedLibs = new StringBuilder();
-            injectedLibs.append("\n    <!-- React 和相关库 (本地版本) -->\n");
+            injectedLibs.append("\n    <!-- React and related libraries (local version) -->\n");
             injectedLibs.append("    <script>/* React 18 */\n").append(reactJs).append("\n    </script>\n");
             injectedLibs.append("    <script>/* ReactDOM 18 */\n").append(reactDomJs).append("\n    </script>\n");
             injectedLibs.append("    <script>/* Babel Standalone */\n").append(babelJs).append("\n    </script>\n");
             injectedLibs.append("    <script>/* Marked */\n").append(markedJs).append("\n    </script>\n");
-            injectedLibs.append("    <style>/* VS Code Codicons (含内嵌字体) */\n").append(codiconCss).append("\n    </style>");
+            injectedLibs.append("    <style>/* VS Code Codicons (with embedded font) */\n").append(codiconCss).append("\n    </style>");
 
             html = html.replace("<!-- LOCAL_LIBRARY_INJECTION_POINT -->", injectedLibs.toString());
 
-            LOG.info("✓ 成功注入本地库文件 (React + ReactDOM + Babel + Codicons)");
+            LOG.info("Successfully injected local library files (React + ReactDOM + Babel + Codicons)");
         } catch (Exception e) {
-            LOG.error("✗ 注入本地库文件失败: " + e.getMessage());
+            LOG.error("Failed to inject local library files: " + e.getMessage());
         }
 
         return html;
     }
 
-    /**
-     * 加载资源文件为字符串
-     */
     private String loadResourceAsString(String resourcePath) throws Exception {
         InputStream is = resourceClass.getResourceAsStream(resourcePath);
         if (is == null) {
@@ -119,9 +102,6 @@ public class HtmlLoader {
         return content;
     }
 
-    /**
-     * 加载资源文件为 Base64 字符串
-     */
     private String loadResourceAsBase64(String resourcePath) throws Exception {
         InputStream is = resourceClass.getResourceAsStream(resourcePath);
         if (is == null) {

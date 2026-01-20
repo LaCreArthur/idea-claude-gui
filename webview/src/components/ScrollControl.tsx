@@ -5,27 +5,15 @@ interface ScrollControlProps {
   inputAreaRef?: React.RefObject<HTMLDivElement | null>;
 }
 
-/**
- * ScrollControl - Scroll control button component
- * Features:
- * - Shows up arrow when scrolling up, click to go to top
- * - Shows down arrow when scrolling down, click to go to bottom
- * - Hidden when at the bottom
- * - Hidden when content fits on one screen
- * - Position always 20px above the input area
- */
 export const ScrollControl = ({ containerRef, inputAreaRef }: ScrollControlProps) => {
   const [visible, setVisible] = useState(false);
   const [direction, setDirection] = useState<'up' | 'down'>('down');
   const [bottomOffset, setBottomOffset] = useState(120);
   const hideTimerRef = useRef<number | null>(null);
 
-  const THRESHOLD = 100; // Distance from bottom threshold (pixels)
-  const HIDE_DELAY = 1500; // Delay before hiding after scroll stops (ms)
+  const THRESHOLD = 100;
+  const HIDE_DELAY = 1500;
 
-  /**
-   * Update button position to stay 20px above input area
-   */
   const updatePosition = useCallback(() => {
     if (inputAreaRef?.current) {
       const inputRect = inputAreaRef.current.getBoundingClientRect();
@@ -35,16 +23,12 @@ export const ScrollControl = ({ containerRef, inputAreaRef }: ScrollControlProps
     }
   }, [inputAreaRef]);
 
-  /**
-   * Check scroll position and update button state
-   */
   const checkScrollPosition = useCallback(() => {
     const container = containerRef.current;
     if (!container) return;
 
     const { scrollTop, scrollHeight, clientHeight } = container;
 
-    // Content fits on one screen, hide button
     if (scrollHeight <= clientHeight) {
       setVisible(false);
       return;
@@ -52,42 +36,32 @@ export const ScrollControl = ({ containerRef, inputAreaRef }: ScrollControlProps
 
     const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
 
-    // At bottom (distance from bottom < THRESHOLD), hide button
     if (distanceFromBottom < THRESHOLD) {
       setVisible(false);
     }
   }, [containerRef]);
 
-  /**
-   * Handle mouse wheel events
-   */
   const handleWheel = useCallback((e: WheelEvent) => {
     const container = containerRef.current;
     if (!container) return;
 
     const { scrollTop, scrollHeight, clientHeight } = container;
 
-    // Content fits on one screen, don't show
     if (scrollHeight <= clientHeight) {
       return;
     }
 
     const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
 
-    // At bottom, don't show
     if (distanceFromBottom < THRESHOLD) {
       setVisible(false);
       return;
     }
 
-    // Clear previous hide timer
     if (hideTimerRef.current) {
       clearTimeout(hideTimerRef.current);
     }
 
-    // Set arrow direction based on scroll direction
-    // deltaY > 0 means scrolling down (content moves up), show down arrow
-    // deltaY < 0 means scrolling up (content moves down), show up arrow
     if (e.deltaY > 0) {
       setDirection('down');
     } else if (e.deltaY < 0) {
@@ -96,15 +70,11 @@ export const ScrollControl = ({ containerRef, inputAreaRef }: ScrollControlProps
 
     setVisible(true);
 
-    // Set hide timer
     hideTimerRef.current = setTimeout(() => {
       setVisible(false);
     }, HIDE_DELAY);
   }, [containerRef]);
 
-  /**
-   * Scroll to top
-   */
   const scrollToTop = useCallback(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -115,9 +85,6 @@ export const ScrollControl = ({ containerRef, inputAreaRef }: ScrollControlProps
     });
   }, [containerRef]);
 
-  /**
-   * Scroll to bottom
-   */
   const scrollToBottom = useCallback(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -128,44 +95,32 @@ export const ScrollControl = ({ containerRef, inputAreaRef }: ScrollControlProps
     });
   }, [containerRef]);
 
-  /**
-   * Handle click events
-   */
   const handleClick = useCallback(() => {
     if (direction === 'up') {
       scrollToTop();
     } else {
       scrollToBottom();
     }
-    // Hide button after click
     setVisible(false);
   }, [direction, scrollToTop, scrollToBottom]);
 
-  /**
-   * Listen for scroll and wheel events
-   */
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
-    // Initial check
     checkScrollPosition();
     updatePosition();
 
-    // Add scroll listener (to detect reaching bottom)
     container.addEventListener('scroll', checkScrollPosition);
 
-    // Add wheel listener (to detect scroll direction)
     container.addEventListener('wheel', handleWheel, { passive: true });
 
-    // Listen for window resize
     const handleResize = () => {
       checkScrollPosition();
       updatePosition();
     };
     window.addEventListener('resize', handleResize);
 
-    // Use ResizeObserver to monitor input area size changes
     let resizeObserver: ResizeObserver | null = null;
     if (inputAreaRef?.current) {
       resizeObserver = new ResizeObserver(updatePosition);

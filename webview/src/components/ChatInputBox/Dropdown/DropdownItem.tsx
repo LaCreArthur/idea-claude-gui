@@ -2,9 +2,6 @@ import { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { DropdownItemProps } from '../types';
 
-/**
- * DropdownItem - 下拉菜单项组件
- */
 export const DropdownItem = ({
   item,
   isActive = false,
@@ -19,9 +16,6 @@ export const DropdownItem = ({
     placement: 'bottom'
   });
 
-  /**
-   * 处理鼠标进入，显示 tooltip
-   */
   const handleMouseEnterItem = () => {
     if (!itemRef.current || !item.description) return;
 
@@ -30,7 +24,6 @@ export const DropdownItem = ({
     const spaceBelow = viewportHeight - rect.bottom;
     const tooltipEstimatedHeight = 100;
 
-    // 决定 tooltip 显示位置
     const placement = spaceBelow < tooltipEstimatedHeight ? 'top' : 'bottom';
 
     setTooltipPosition({
@@ -41,18 +34,11 @@ export const DropdownItem = ({
     setShowTooltip(true);
   };
 
-  /**
-   * 处理鼠标离开，隐藏 tooltip
-   */
   const handleMouseLeaveItem = () => {
     setShowTooltip(false);
   };
 
-  /**
-   * 渲染图标
-   */
   const renderIcon = () => {
-    // 如果 icon 包含 SVG 标签，说明是内联 SVG
     if (item.icon?.startsWith('<svg')) {
       return (
         <span
@@ -69,14 +55,10 @@ export const DropdownItem = ({
       );
     }
 
-    // 否则使用 codicon 类名
     const iconClass = item.icon || getDefaultIconClass(item.type);
     return <span className={`dropdown-item-icon codicon ${iconClass}`} />;
   };
 
-  /**
-   * 获取默认图标类名（用于 codicon）
-   */
   const getDefaultIconClass = (type?: string): string => {
     switch (type) {
       case 'file':
@@ -90,9 +72,6 @@ export const DropdownItem = ({
     }
   };
 
-  /**
-   * 渲染 Portal Tooltip
-   */
   const renderTooltip = () => {
     if (!showTooltip || !item.description) return null;
 
@@ -157,12 +136,10 @@ export const DropdownItem = ({
     );
   };
 
-  // 分隔线
   if (item.type === 'separator') {
     return <div className="dropdown-separator" />;
   }
 
-  // 分组标题
   if (item.type === 'section-header') {
     return (
       <div className="dropdown-section-header">
@@ -171,7 +148,6 @@ export const DropdownItem = ({
     );
   }
 
-  // 所有项都可以选择（除了加载提示项）
   const isDisabled = item.id === '__loading__';
 
   return (
@@ -181,9 +157,7 @@ export const DropdownItem = ({
         className={`dropdown-item ${isActive ? 'active' : ''} ${isDisabled ? 'disabled' : ''}`}
         onClick={isDisabled ? undefined : onClick}
         onMouseEnter={() => {
-          // 调用原有的 onMouseEnter（用于键盘导航高亮）
           onMouseEnter?.();
-          // 显示 tooltip
           handleMouseEnterItem();
         }}
         onMouseLeave={handleMouseLeaveItem}

@@ -20,33 +20,21 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
-/**
- * 斜杠命令智能缓存
- *
- * 功能：
- * 1. 内存缓存：避免频繁启动 Node.js 进程
- * 2. 文件监听：自动检测 .claude/commands/ 目录变化
- * 3. 定期检查：10分钟保底刷新（防止监听失败）
- * 4. 通知机制：缓存更新时通知前端
- */
 public class SlashCommandCache {
     private static final Logger LOG = Logger.getInstance(SlashCommandCache.class);
     private final Project project;
     private final ClaudeSDKBridge sdkBridge;
     private final String cwd;
 
-    // 缓存数据
     private volatile List<JsonObject> cachedCommands;
     private volatile long lastLoadTime;
     private volatile long lastLoadAttemptTime;
     private volatile boolean isLoading;
 
-    // 缓存策略配置
-    private static final long CACHE_TTL = 10 * 60 * 1000; // 10分钟保底刷新
-    private static final long MIN_REFRESH_INTERVAL = 500; // 最小刷新间隔 500ms（加快响应）
-    private static final long LOAD_TIMEOUT_SECONDS = 25; // SDK 调用超时时间 25秒（与 ClaudeSDKBridge 中的 20s 轮询配合）
+    private static final long CACHE_TTL = 10 * 60 * 1000;
+    private static final long MIN_REFRESH_INTERVAL = 500;
+    private static final long LOAD_TIMEOUT_SECONDS = 25;
 
-    // 监听器
     private MessageBusConnection messageBusConnection;
     private Timer periodicCheckTimer;
     private final List<Consumer<List<JsonObject>>> updateListeners;
@@ -64,63 +52,38 @@ public class SlashCommandCache {
         this.refreshAlarm = new Alarm(Alarm.ThreadToUse.POOLED_THREAD, project);
     }
 
-    /**
-     * 初始化缓存系统
-     */
     public void init() {
         LOG.info("Initializing cache system");
 
-        // 1. 初始加载
         loadCommands();
 
-        // 2. 设置文件监听
         setupFileWatcher();
-
-        // 3. 定期检查已禁用（避免频繁的远程 API 计费）
-        // schedulePeriodicCheck();
     }
 
-    /**
-     * 获取缓存的命令列表
-     */
     public List<JsonObject> getCommands() {
         return new ArrayList<>(cachedCommands);
     }
 
-    /**
-     * 检查缓存是否为空
-     */
     public boolean isEmpty() {
         return cachedCommands.isEmpty();
     }
 
-    /**
-     * 检查是否正在加载
-     */
     public boolean isLoading() {
         return isLoading;
     }
 
-    /**
-     * 添加更新监听器
-     */
     public void addUpdateListener(Consumer<List<JsonObject>> listener) {
         updateListeners.add(listener);
     }
 
-    /**
-     * 加载命令列表
-     */
     private void loadCommands() {
         long now = System.currentTimeMillis();
 
-        // 防抖：如果距离上次加载尝试时间太短，跳过
         if (now - lastLoadAttemptTime < MIN_REFRESH_INTERVAL) {
             LOG.debug("Skipping load (too soon after last attempt)");
             return;
         }
 
-        // 如果正在加载,跳过
         if (isLoading) {
             LOG.debug("Already loading, skipping");
             return;
@@ -131,20 +94,17 @@ public class SlashCommandCache {
         long startTime = System.currentTimeMillis();
         LOG.info("Loading slash commands from SDK");
 
-        // 添加超时机制：30秒超时
         sdkBridge.getSlashCommands(cwd)
                 .orTimeout(LOAD_TIMEOUT_SECONDS, TimeUnit.SECONDS)
                 .thenAccept(commands -> {
                     long duration = System.currentTimeMillis() - startTime;
                     if (commands != null && !commands.isEmpty()) {
                         List<JsonObject> commandList = new ArrayList<>(commands);
-                        // Add essential commands that may be missing from SDK
                         addEssentialCommands(commandList);
                         cachedCommands = commandList;
                         lastLoadTime = System.currentTimeMillis();
                         LOG.info("Loaded " + commands.size() + " commands (+" + (commandList.size() - commands.size()) + " essential) in " + duration + "ms");
 
-                        // 通知所有监听器
                         notifyListeners();
                     } else {
                         LOG.info("No commands received (took " + duration + "ms)");
@@ -163,11 +123,7 @@ public class SlashCommandCache {
                 });
     }
 
-    /**
-     * 设置文件监听器
-     */
     private void setupFileWatcher() {
-        // 使用消息总线订阅文件变化事件（推荐的新方式）
         messageBusConnection = ApplicationManager.getApplication().getMessageBus().connect();
 
         messageBusConnection.subscribe(VirtualFileManager.VFS_CHANGES, new BulkFileListener() {
@@ -179,7 +135,7 @@ public class SlashCommandCache {
                         LOG.info("Command file changed: " + file.getPath());
                         refreshAlarm.cancelAllRequests();
                         refreshAlarm.addRequest(SlashCommandCache.this::loadCommands, 500);
-                        break; // 只需要触发一次刷新
+                        break;
                     }
                 }
             }
@@ -188,20 +144,13 @@ public class SlashCommandCache {
         LOG.info("File watcher setup complete (using MessageBus)");
     }
 
-    /**
-     * 检查是否是命令文件
-     */
     private boolean isCommandFile(VirtualFile file) {
         if (file == null) return false;
 
         String path = file.getPath();
-        // 检查是否在 .claude/commands/ 目录下
         return path.contains(".claude/commands/") || path.contains(".claude\\commands\\");
     }
 
-    /**
-     * 设置定期检查
-     */
     private void schedulePeriodicCheck() {
         periodicCheckTimer = new Timer("SlashCommandCache-PeriodicCheck", true);
         periodicCheckTimer.schedule(new TimerTask() {
@@ -217,12 +166,7 @@ public class SlashCommandCache {
         LOG.info("Periodic check scheduled (every 10 minutes)");
     }
 
-    /**
-     * Add essential commands that may be missing from SDK response.
-     * These are core Claude Code commands that should always be available.
-     */
     private void addEssentialCommands(List<JsonObject> commands) {
-        // Collect existing command names for deduplication
         java.util.Set<String> existingNames = new java.util.HashSet<>();
         for (JsonObject cmd : commands) {
             if (cmd.has("name")) {
@@ -230,7 +174,6 @@ public class SlashCommandCache {
             }
         }
 
-        // Essential commands
         addCommandIfMissing(commands, existingNames, "resume", "Resume a previous conversation");
         addCommandIfMissing(commands, existingNames, "clear", "Clear conversation history");
     }
@@ -246,9 +189,6 @@ public class SlashCommandCache {
         }
     }
 
-    /**
-     * 通知所有监听器
-     */
     private void notifyListeners() {
         List<JsonObject> commands = getCommands();
         for (Consumer<List<JsonObject>> listener : updateListeners) {
@@ -260,26 +200,16 @@ public class SlashCommandCache {
         }
     }
 
-    /**
-     * 清理资源
-     */
     public void dispose() {
         LOG.info("Disposing cache system");
 
-        // 断开消息总线连接
         if (messageBusConnection != null) {
             messageBusConnection.disconnect();
         }
 
-        // 定期检查已禁用，无需取消
-        // if (periodicCheckTimer != null) {
-        //     periodicCheckTimer.cancel();
-        // }
-
         refreshAlarm.cancelAllRequests();
         refreshAlarm.dispose();
 
-        // 清空监听器列表
         updateListeners.clear();
     }
 }

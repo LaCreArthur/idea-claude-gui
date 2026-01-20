@@ -24,7 +24,7 @@ import java.util.concurrent.CompletableFuture;
  */
 public class SlashCommandClient {
     private static final Logger LOG = Logger.getInstance(SlashCommandClient.class);
-    private static final String CHANNEL_SCRIPT = "channel-manager.js";
+    private static final String CHANNEL_SCRIPT = "bridge.js";
     private static final String SLASH_COMMANDS_CHANNEL_ID = "__slash_commands__";
 
     private final Gson gson;

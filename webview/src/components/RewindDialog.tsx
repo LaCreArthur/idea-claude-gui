@@ -43,7 +43,6 @@ const RewindDialog = ({
     onConfirm(request.sessionId, request.userMessageId);
   };
 
-  // Truncate message content for display
   const displayContent = request.messageContent.length > 50
     ? `${request.messageContent.substring(0, 50)}...`
     : request.messageContent;

@@ -30,9 +30,6 @@ const MODEL_DESCRIPTIONS: Record<string, string> = {
   'claude-haiku-4-5': 'Fastest, best for simple tasks',
 };
 
-/**
- * ModelSelect - Model selector component
- */
 export const ModelSelect = ({ value, onChange, models = AVAILABLE_MODELS }: ModelSelectProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);

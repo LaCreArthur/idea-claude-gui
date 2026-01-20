@@ -34,7 +34,6 @@ const RewindSelectDialog = ({
     }
   }, [isOpen, onCancel]);
 
-  // Sort messages by index descending (most recent first)
   const sortedMessages = useMemo(() => {
     return [...rewindableMessages].sort((a, b) => b.messageIndex - a.messageIndex);
   }, [rewindableMessages]);
@@ -43,7 +42,6 @@ const RewindSelectDialog = ({
     return null;
   }
 
-  // Truncate message content for display
   const truncateContent = (content: string, maxLength: number = 60): string => {
     if (content.length <= maxLength) {
       return content;

@@ -9,11 +9,7 @@ import {
 } from '../utils/streamingHelpers';
 import { THROTTLE_INTERVAL } from './useStreamingState';
 
-/**
- * Parameters for the useStreamingCallbacks hook
- */
 export interface UseStreamingCallbacksParams {
-  // Streaming refs from useStreamingState
   streamingContentRef: React.MutableRefObject<string>;
   isStreamingRef: React.MutableRefObject<boolean>;
   useBackendStreamingRenderRef: React.MutableRefObject<boolean>;
@@ -29,23 +25,16 @@ export interface UseStreamingCallbacksParams {
   lastThinkingUpdateRef: React.MutableRefObject<number>;
   autoExpandedThinkingKeysRef: React.MutableRefObject<Set<string>>;
 
-  // Provider ref
   currentProviderRef: React.MutableRefObject<string>;
 
-  // State setters
   setMessages: React.Dispatch<React.SetStateAction<ClaudeMessage[]>>;
   setStreamingActive: (active: boolean) => void;
   setExpandedThinking: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
   setIsThinking: (thinking: boolean) => void;
 
-  // User scroll ref
   isUserAtBottomRef: React.MutableRefObject<boolean>;
 }
 
-/**
- * Custom hook to set up streaming window callbacks.
- * Handles onStreamStart, onContentDelta, onThinkingDelta, and onStreamEnd.
- */
 export function useStreamingCallbacks(params: UseStreamingCallbacksParams): void {
   const {
     streamingContentRef,
@@ -71,7 +60,6 @@ export function useStreamingCallbacks(params: UseStreamingCallbacksParams): void
   } = params;
 
   useEffect(() => {
-    // Create refs object to pass to streaming helper functions
     const streamingRefs: StreamingRefs = {
       streamingTextSegmentsRef,
       streamingThinkingSegmentsRef,
@@ -79,11 +67,9 @@ export function useStreamingCallbacks(params: UseStreamingCallbacksParams): void
       streamingMessageIndexRef,
     };
 
-    // Stream start callback
     window.onStreamStart = () => {
       streamingContentRef.current = '';
       isStreamingRef.current = true;
-      // Claude streaming: backend drives rendering via updateMessages with raw blocks
       useBackendStreamingRenderRef.current = currentProviderRef.current === 'claude';
       autoExpandedThinkingKeysRef.current.clear();
       setStreamingActive(true);
@@ -94,20 +80,15 @@ export function useStreamingCallbacks(params: UseStreamingCallbacksParams): void
       activeThinkingSegmentIndexRef.current = -1;
       seenToolUseCountRef.current = 0;
 
-      // Claude streaming is driven by backend via updateMessages, no frontend placeholder needed
       if (useBackendStreamingRenderRef.current) {
         return;
       }
-      // Add a placeholder assistant message for streaming updates
       setMessages((prev) => {
-        // Check if last message is already a streaming assistant message
         const last = prev[prev.length - 1];
         if (last?.type === 'assistant' && last?.isStreaming) {
-          // Record streaming message index
           streamingMessageIndexRef.current = prev.length - 1;
-          return prev; // Already exists, don't add duplicate
+          return prev;
         }
-        // Record new streaming message index
         streamingMessageIndexRef.current = prev.length;
         return [...prev, {
           type: 'assistant',
@@ -118,14 +99,11 @@ export function useStreamingCallbacks(params: UseStreamingCallbacksParams): void
       });
     };
 
-    // Content delta callback - use index to locate streaming message
     window.onContentDelta = (delta: string) => {
       if (!isStreamingRef.current) return;
       streamingContentRef.current += delta;
-      // Content output means current thinking segment ends (subsequent thinking_delta starts new segment)
       activeThinkingSegmentIndexRef.current = -1;
 
-      // Calculate/create current text segment (starts new segment after tool calls)
       if (activeTextSegmentIndexRef.current < 0) {
         activeTextSegmentIndexRef.current = streamingTextSegmentsRef.current.length;
         streamingTextSegmentsRef.current.push('');
@@ -135,13 +113,11 @@ export function useStreamingCallbacks(params: UseStreamingCallbacksParams): void
       const now = Date.now();
       const timeSinceLastUpdate = now - lastContentUpdateRef.current;
 
-      // Real throttling: if threshold exceeded, update immediately
       if (timeSinceLastUpdate >= THROTTLE_INTERVAL) {
         lastContentUpdateRef.current = now;
         const currentContent = streamingContentRef.current;
         setMessages((prev) => {
           const newMessages = [...prev];
-          // Use index to locate, not isStreaming flag (avoids being overwritten by updateMessages)
           const idx = getOrCreateStreamingAssistantIndex(newMessages, streamingRefs);
           if (idx >= 0 && newMessages[idx]?.type === 'assistant') {
             newMessages[idx] = patchAssistantForStreaming({
@@ -153,7 +129,6 @@ export function useStreamingCallbacks(params: UseStreamingCallbacksParams): void
           return newMessages;
         });
       } else {
-        // If threshold not reached, ensure update happens when threshold expires
         if (!contentUpdateTimeoutRef.current) {
           const remainingTime = THROTTLE_INTERVAL - timeSinceLastUpdate;
           contentUpdateTimeoutRef.current = setTimeout(() => {
@@ -177,16 +152,13 @@ export function useStreamingCallbacks(params: UseStreamingCallbacksParams): void
       }
     };
 
-    // Thinking delta callback - use index to locate streaming message
     window.onThinkingDelta = (delta: string) => {
       if (!isStreamingRef.current) return;
-      // Normalize line endings, but don't over-clean here (unified cleanup in buildStreamingBlocks)
       const normalizedDelta = delta.replace(/\r\n/g, '\n');
-      // Multi-segment thinking: aggregate by "phase" (before/after tool calls go into different segments)
       if (activeThinkingSegmentIndexRef.current < 0) {
         const phaseIndex = activeTextSegmentIndexRef.current >= 0
           ? activeTextSegmentIndexRef.current
-          : streamingTextSegmentsRef.current.length; // After tool call but text not started yet, should go to next segment
+          : streamingTextSegmentsRef.current.length;
         while (streamingThinkingSegmentsRef.current.length <= phaseIndex) {
           streamingThinkingSegmentsRef.current.push('');
         }
@@ -197,7 +169,6 @@ export function useStreamingCallbacks(params: UseStreamingCallbacksParams): void
       const now = Date.now();
       const timeSinceLastUpdate = now - lastThinkingUpdateRef.current;
 
-      // Function to update thinking UI
       const updateThinkingUI = () => {
         setMessages((prev) => {
           const newMessages = [...prev];
@@ -226,12 +197,10 @@ export function useStreamingCallbacks(params: UseStreamingCallbacksParams): void
         setIsThinking(true);
       };
 
-      // Real throttling: if threshold exceeded, update immediately
       if (timeSinceLastUpdate >= THROTTLE_INTERVAL) {
         lastThinkingUpdateRef.current = now;
         updateThinkingUI();
       } else {
-        // If threshold not reached, ensure update happens when threshold expires
         if (!thinkingUpdateTimeoutRef.current) {
           const remainingTime = THROTTLE_INTERVAL - timeSinceLastUpdate;
           thinkingUpdateTimeoutRef.current = setTimeout(() => {
@@ -243,7 +212,6 @@ export function useStreamingCallbacks(params: UseStreamingCallbacksParams): void
       }
     };
 
-    // Stream end callback
     window.onStreamEnd = () => {
       const useBackendRender = useBackendStreamingRenderRef.current;
       isStreamingRef.current = false;
@@ -253,7 +221,6 @@ export function useStreamingCallbacks(params: UseStreamingCallbacksParams): void
       activeTextSegmentIndexRef.current = -1;
       seenToolUseCountRef.current = 0;
 
-      // Clear throttle timers
       if (contentUpdateTimeoutRef.current) {
         clearTimeout(contentUpdateTimeoutRef.current);
         contentUpdateTimeoutRef.current = null;
@@ -288,9 +255,7 @@ export function useStreamingCallbacks(params: UseStreamingCallbacksParams): void
         return;
       }
 
-      // Ensure final content is written
       const finalContent = streamingContentRef.current;
-      // Capture current index value
       const targetIdx = streamingMessageIndexRef.current;
 
       setMessages((prev) => {
@@ -310,13 +275,11 @@ export function useStreamingCallbacks(params: UseStreamingCallbacksParams): void
         return newMessages;
       });
 
-      // Reset streaming state
       streamingContentRef.current = '';
       streamingTextSegmentsRef.current = [];
       streamingThinkingSegmentsRef.current = [];
-      // Reset index
       streamingMessageIndexRef.current = -1;
       setIsThinking(false);
     };
-  }, []); // Empty deps - refs are stable
+  }, []);
 }

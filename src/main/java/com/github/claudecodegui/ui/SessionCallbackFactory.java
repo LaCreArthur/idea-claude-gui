@@ -55,7 +55,7 @@ public class SessionCallbackFactory {
                 ApplicationManager.getApplication().invokeLater(() -> {
                     deps.callJavaScript("showLoading", String.valueOf(loading));
                     if (error != null) {
-                        deps.callJavaScript("updateStatus", JsUtils.escapeJs("错误: " + error));
+                        deps.callJavaScript("updateStatus", JsUtils.escapeJs("Error: " + error));
                     }
                     if (!busy && !loading) {
                         VirtualFileManager.getInstance().asyncRefresh(null);

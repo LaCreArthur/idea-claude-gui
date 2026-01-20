@@ -12,7 +12,6 @@ export const BlinkingLogo = ({ provider, onProviderChange }: BlinkingLogoProps) 
   const [displayProvider, setDisplayProvider] = useState(provider);
   const [animationState, setAnimationState] = useState<'idle' | 'closing' | 'opening'>('idle');
 
-  // Dropdown state
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -22,10 +21,9 @@ export const BlinkingLogo = ({ provider, onProviderChange }: BlinkingLogoProps) 
       if (animationState === 'idle') {
         setAnimationState('closing');
       } else if (animationState === 'opening') {
-         // If we are opening and provider changes again, we should probably close again.
          setAnimationState('closing');
       }
-      // If already closing, do nothing, let it finish closing.
+
     }
   }, [provider, displayProvider, animationState]);
 
@@ -36,7 +34,7 @@ export const BlinkingLogo = ({ provider, onProviderChange }: BlinkingLogoProps) 
       timer = setTimeout(() => {
         setDisplayProvider(provider);
         setAnimationState('opening');
-      }, 200); // Match CSS transition duration
+      }, 200);
     } else if (animationState === 'opening') {
       timer = setTimeout(() => {
         setAnimationState('idle');
@@ -48,7 +46,6 @@ export const BlinkingLogo = ({ provider, onProviderChange }: BlinkingLogoProps) 
     };
   }, [animationState, provider]);
 
-  // Click outside handler
   useEffect(() => {
     if (!isOpen) return;
 
@@ -81,7 +78,6 @@ export const BlinkingLogo = ({ provider, onProviderChange }: BlinkingLogoProps) 
     setIsOpen(false);
   };
 
-  // Provider labels - Claude only
   const PROVIDER_LABELS: Record<string, string> = {
     claude: 'Claude Code',
   };

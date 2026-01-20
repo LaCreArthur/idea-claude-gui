@@ -62,7 +62,7 @@ public class SkillService {
         if (!dir.exists()) {
             boolean created = dir.mkdirs();
             if (created) {
-                LOG.info("[Skills] 创建目录: " + dirPath);
+                LOG.info("[Skills] Created directory: " + dirPath);
             }
             return created;
         }
@@ -101,7 +101,7 @@ public class SkillService {
     public static JsonObject getSkillsByScope(String scope, String workspaceRoot) {
         String dir = "global".equals(scope) ? getGlobalSkillsDir() : getLocalSkillsDir(workspaceRoot);
         if (dir == null) {
-            LOG.warn("[Skills] 无法获取 " + scope + " Skills 目录");
+            LOG.warn("[Skills] Unable to get " + scope + " skills directory");
             return new JsonObject();
         }
         return scanSkillsDirectory(dir, scope, true);
@@ -112,7 +112,7 @@ public class SkillService {
         File dir = new File(dirPath);
 
         if (!dir.exists()) {
-            LOG.info("[Skills] " + scope + " Skills 目录不存在: " + dirPath);
+            LOG.info("[Skills] " + scope + " skills directory does not exist: " + dirPath);
             return skills;
         }
 
@@ -146,13 +146,13 @@ public class SkillService {
                 skill.addProperty("createdAt", attrs.creationTime().toString());
                 skill.addProperty("modifiedAt", attrs.lastModifiedTime().toString());
             } catch (IOException e) {
-                LOG.warn("[Skills] 读取文件属性失败: " + entry.getAbsolutePath());
+                LOG.warn("[Skills] Failed to read file attributes: " + entry.getAbsolutePath());
             }
 
             skills.add(id, skill);
         }
 
-        LOG.info("[Skills] 从 " + scope + " 目录获取到 " + skills.size() + " 个 Skills (enabled=" + enabled + "): " + dirPath);
+        LOG.info("[Skills] Retrieved " + skills.size() + " skills from " + scope + " directory (enabled=" + enabled + "): " + dirPath);
         return skills;
     }
 
@@ -188,7 +188,7 @@ public class SkillService {
 
             return null;
         } catch (IOException e) {
-            LOG.warn("[Skills] 提取 description 失败: " + e.getMessage());
+            LOG.warn("[Skills] Failed to extract description: " + e.getMessage());
             return null;
         }
     }
@@ -201,7 +201,7 @@ public class SkillService {
         String targetDir = "global".equals(scope) ? getGlobalSkillsDir() : getLocalSkillsDir(workspaceRoot);
         if (targetDir == null) {
             result.addProperty("success", false);
-            result.addProperty("error", "无法获取 " + scope + " Skills 目录");
+            result.addProperty("error", "Unable to get " + scope + " skills directory");
             return result;
         }
 
@@ -209,10 +209,10 @@ public class SkillService {
         if (!targetDirFile.exists()) {
             if (!targetDirFile.mkdirs()) {
                 result.addProperty("success", false);
-                result.addProperty("error", "无法创建 Skills 目录: " + targetDir);
+                result.addProperty("error", "Unable to create skills directory: " + targetDir);
                 return result;
             }
-            LOG.info("[Skills] 创建 " + scope + " Skills 目录: " + targetDir);
+            LOG.info("[Skills] Created " + scope + " skills directory: " + targetDir);
         }
 
         for (String sourcePath : sourcePaths) {
@@ -220,7 +220,7 @@ public class SkillService {
             if (!source.exists()) {
                 JsonObject err = new JsonObject();
                 err.addProperty("path", sourcePath);
-                err.addProperty("error", "源路径不存在");
+                err.addProperty("error", "Source path does not exist");
                 errors.add(err);
                 continue;
             }
@@ -231,7 +231,7 @@ public class SkillService {
             if (targetPath.exists()) {
                 JsonObject err = new JsonObject();
                 err.addProperty("path", sourcePath);
-                err.addProperty("error", "已存在同名 Skill: " + name);
+                err.addProperty("error", "Skill with same name already exists: " + name);
                 errors.add(err);
                 continue;
             }
@@ -258,14 +258,14 @@ public class SkillService {
                 }
 
                 imported.add(skill);
-                LOG.info("[Skills] 成功导入 " + scope + " Skill: " + name);
+                LOG.info("[Skills] Successfully imported " + scope + " skill: " + name);
 
             } catch (IOException e) {
                 JsonObject err = new JsonObject();
                 err.addProperty("path", sourcePath);
-                err.addProperty("error", "复制失败: " + e.getMessage());
+                err.addProperty("error", "Copy failed: " + e.getMessage());
                 errors.add(err);
-                LOG.error("[Skills] 导入 Skill 失败: " + e.getMessage());
+                LOG.error("[Skills] Failed to import skill: " + e.getMessage());
             }
         }
 
@@ -292,7 +292,7 @@ public class SkillService {
 
         if (dir == null) {
             result.addProperty("success", false);
-            result.addProperty("error", "无法获取 " + scope + " Skills 目录");
+            result.addProperty("error", "Unable to get " + scope + " skills directory");
             return result;
         }
 
@@ -300,7 +300,7 @@ public class SkillService {
 
         if (!targetPath.exists()) {
             result.addProperty("success", false);
-            result.addProperty("error", "Skill 不存在: " + name);
+            result.addProperty("error", "Skill does not exist: " + name);
             return result;
         }
 
@@ -311,11 +311,11 @@ public class SkillService {
                 Files.delete(targetPath.toPath());
             }
             result.addProperty("success", true);
-            LOG.info("[Skills] 成功删除 " + scope + " Skill: " + name + " (enabled=" + enabled + ")");
+            LOG.info("[Skills] Successfully deleted " + scope + " skill: " + name + " (enabled=" + enabled + ")");
         } catch (IOException e) {
             result.addProperty("success", false);
-            result.addProperty("error", "删除失败: " + e.getMessage());
-            LOG.error("[Skills] 删除 Skill 失败: " + e.getMessage());
+            result.addProperty("error", "Delete failed: " + e.getMessage());
+            LOG.error("[Skills] Failed to delete skill: " + e.getMessage());
         }
 
         return result;
@@ -339,7 +339,7 @@ public class SkillService {
 
         if (sourceDir == null || targetDir == null) {
             result.addProperty("success", false);
-            result.addProperty("error", "无法获取 " + scope + " Skills 目录");
+            result.addProperty("error", "Unable to get " + scope + " skills directory");
             return result;
         }
 
@@ -348,20 +348,20 @@ public class SkillService {
 
         if (!source.exists()) {
             result.addProperty("success", false);
-            result.addProperty("error", "Skill 不存在于管理目录: " + name);
+            result.addProperty("error", "Skill does not exist in management directory: " + name);
             return result;
         }
 
         if (target.exists()) {
             result.addProperty("success", false);
-            result.addProperty("error", "使用中目录已存在同名 Skill: " + name);
+            result.addProperty("error", "Skill with same name already exists in active directory: " + name);
             result.addProperty("conflict", true);
             return result;
         }
 
         if (!ensureDirectoryExists(targetDir)) {
             result.addProperty("success", false);
-            result.addProperty("error", "无法创建目标目录: " + targetDir);
+            result.addProperty("error", "Unable to create target directory: " + targetDir);
             return result;
         }
 
@@ -372,7 +372,7 @@ public class SkillService {
             result.addProperty("scope", scope);
             result.addProperty("enabled", true);
             result.addProperty("path", target.getAbsolutePath());
-            LOG.info("[Skills] 成功启用 " + scope + " Skill: " + name);
+            LOG.info("[Skills] Successfully enabled " + scope + " skill: " + name);
         } catch (IOException e) {
             try {
                 if (source.isDirectory()) {
@@ -387,11 +387,11 @@ public class SkillService {
                 result.addProperty("scope", scope);
                 result.addProperty("enabled", true);
                 result.addProperty("path", target.getAbsolutePath());
-                LOG.info("[Skills] 成功启用 " + scope + " Skill (copy+delete): " + name);
+                LOG.info("[Skills] Successfully enabled " + scope + " skill (copy+delete): " + name);
             } catch (IOException e2) {
                 result.addProperty("success", false);
-                result.addProperty("error", "移动失败: " + e2.getMessage());
-                LOG.error("[Skills] 启用 Skill 失败: " + e2.getMessage());
+                result.addProperty("error", "Move failed: " + e2.getMessage());
+                LOG.error("[Skills] Failed to enable skill: " + e2.getMessage());
             }
         }
 
@@ -406,7 +406,7 @@ public class SkillService {
 
         if (sourceDir == null || targetDir == null) {
             result.addProperty("success", false);
-            result.addProperty("error", "无法获取 " + scope + " Skills 目录");
+            result.addProperty("error", "Unable to get " + scope + " skills directory");
             return result;
         }
 
@@ -415,20 +415,20 @@ public class SkillService {
 
         if (!source.exists()) {
             result.addProperty("success", false);
-            result.addProperty("error", "Skill 不存在于使用中目录: " + name);
+            result.addProperty("error", "Skill does not exist in active directory: " + name);
             return result;
         }
 
         if (target.exists()) {
             result.addProperty("success", false);
-            result.addProperty("error", "管理目录已存在同名 Skill: " + name);
+            result.addProperty("error", "Skill with same name already exists in management directory: " + name);
             result.addProperty("conflict", true);
             return result;
         }
 
         if (!ensureDirectoryExists(targetDir)) {
             result.addProperty("success", false);
-            result.addProperty("error", "无法创建目标目录: " + targetDir);
+            result.addProperty("error", "Unable to create target directory: " + targetDir);
             return result;
         }
 
@@ -439,7 +439,7 @@ public class SkillService {
             result.addProperty("scope", scope);
             result.addProperty("enabled", false);
             result.addProperty("path", target.getAbsolutePath());
-            LOG.info("[Skills] 成功停用 " + scope + " Skill: " + name);
+            LOG.info("[Skills] Successfully disabled " + scope + " skill: " + name);
         } catch (IOException e) {
             try {
                 if (source.isDirectory()) {
@@ -454,11 +454,11 @@ public class SkillService {
                 result.addProperty("scope", scope);
                 result.addProperty("enabled", false);
                 result.addProperty("path", target.getAbsolutePath());
-                LOG.info("[Skills] 成功停用 " + scope + " Skill (copy+delete): " + name);
+                LOG.info("[Skills] Successfully disabled " + scope + " skill (copy+delete): " + name);
             } catch (IOException e2) {
                 result.addProperty("success", false);
-                result.addProperty("error", "移动失败: " + e2.getMessage());
-                LOG.error("[Skills] 停用 Skill 失败: " + e2.getMessage());
+                result.addProperty("error", "Move failed: " + e2.getMessage());
+                LOG.error("[Skills] Failed to disable skill: " + e2.getMessage());
             }
         }
 

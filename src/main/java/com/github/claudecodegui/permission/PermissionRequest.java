@@ -5,9 +5,6 @@ import com.intellij.openapi.project.Project;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
-/**
- * 权限请求类，用于管理工具调用的权限询问
- */
 public class PermissionRequest {
     private final String channelId;
     private final String toolName;
@@ -26,19 +23,11 @@ public class PermissionRequest {
         this.resultFuture = new CompletableFuture<>();
     }
 
-    /**
-     * 兼容旧版本的构造函数（不包含 project）.
-     *
-     * @deprecated 使用包含 project 参数的构造函数
-     */
     @Deprecated
     public PermissionRequest(String channelId, String toolName, Map<String, Object> inputs, JsonObject suggestions) {
         this(channelId, toolName, inputs, suggestions, null);
     }
 
-    /**
-     * 批准权限请求
-     */
     public void accept(Map<String, Object> updatedInput, JsonObject updatedPermissions) {
         if (!resolved) {
             resolved = true;
@@ -53,16 +42,10 @@ public class PermissionRequest {
         }
     }
 
-    /**
-     * 批准权限请求（使用原始输入）
-     */
     public void accept() {
         accept(null, null);
     }
 
-    /**
-     * 拒绝权限请求
-     */
     public void reject(String message, boolean interrupt) {
         if (!resolved) {
             resolved = true;
@@ -77,9 +60,6 @@ public class PermissionRequest {
         }
     }
 
-    /**
-     * 拒绝权限请求（使用默认参数）
-     */
     public void reject() {
         reject(null, true);
     }
@@ -112,9 +92,6 @@ public class PermissionRequest {
         return resolved;
     }
 
-    /**
-     * 权限结果类
-     */
     public static class PermissionResult {
         public enum Behavior {
             ALLOW, DENY

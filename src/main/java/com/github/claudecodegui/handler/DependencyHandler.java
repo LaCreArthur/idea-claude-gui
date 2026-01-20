@@ -13,21 +13,17 @@ import com.intellij.openapi.diagnostic.Logger;
 
 import java.util.concurrent.CompletableFuture;
 
-/**
- * SDK 依赖管理消息处理器
- * 处理前端发来的依赖安装、卸载、检查更新等请求
- */
 public class DependencyHandler extends BaseMessageHandler {
 
     private static final Logger LOG = Logger.getInstance(DependencyHandler.class);
     private static final String NODE_PATH_PROPERTY_KEY = "claude.code.node.path";
 
     private static final String[] SUPPORTED_TYPES = {
-        "get_dependency_status",      // 获取所有 SDK 状态
-        "install_dependency",         // 安装 SDK
-        "uninstall_dependency",       // 卸载 SDK
-        "check_dependency_updates",   // 检查更新
-        "check_node_environment"      // 检查 Node.js 环境
+        "get_dependency_status",
+        "install_dependency",
+        "uninstall_dependency",
+        "check_dependency_updates",
+        "check_node_environment"
     };
 
     private final DependencyManager dependencyManager;
@@ -35,7 +31,6 @@ public class DependencyHandler extends BaseMessageHandler {
 
     public DependencyHandler(HandlerContext context) {
         super(context);
-        // 创建 NodeDetector 并尝试使用配置中的 Node.js 路径
         NodeDetector nodeDetector = new NodeDetector();
         String configuredNodePath = getConfiguredNodePath();
         if (configuredNodePath != null && !configuredNodePath.isEmpty()) {
@@ -51,9 +46,6 @@ public class DependencyHandler extends BaseMessageHandler {
         this.gson = new Gson();
     }
 
-    /**
-     * 从设置中获取配置的 Node.js 路径
-     */
     private String getConfiguredNodePath() {
         try {
             PropertiesComponent props = PropertiesComponent.getInstance();
@@ -95,9 +87,6 @@ public class DependencyHandler extends BaseMessageHandler {
         }
     }
 
-    /**
-     * 获取所有 SDK 的安装状态
-     */
     private void handleGetStatus() {
         try {
             JsonObject status = dependencyManager.getAllSdkStatus();
@@ -112,9 +101,6 @@ public class DependencyHandler extends BaseMessageHandler {
         }
     }
 
-    /**
-     * 安装 SDK
-     */
     private void handleInstall(String content) {
         try {
             JsonObject json = gson.fromJson(content, JsonObject.class);
@@ -126,7 +112,6 @@ public class DependencyHandler extends BaseMessageHandler {
                 return;
             }
 
-            // 检查 Node.js 环境
             if (!dependencyManager.checkNodeEnvironment()) {
                 JsonObject errorResult = new JsonObject();
                 errorResult.addProperty("success", false);
@@ -140,10 +125,8 @@ public class DependencyHandler extends BaseMessageHandler {
                 return;
             }
 
-            // 异步安装
             CompletableFuture.runAsync(() -> {
                 InstallResult result = dependencyManager.installSdkSync(sdkId, (logLine) -> {
-                    // 发送安装进度日志
                     JsonObject progress = new JsonObject();
                     progress.addProperty("sdkId", sdkId);
                     progress.addProperty("log", logLine);
@@ -155,7 +138,6 @@ public class DependencyHandler extends BaseMessageHandler {
 
                 sendInstallResult(result);
 
-                // 安装完成后刷新状态
                 if (result.isSuccess()) {
                     handleGetStatus();
                 }
@@ -167,9 +149,6 @@ public class DependencyHandler extends BaseMessageHandler {
         }
     }
 
-    /**
-     * 卸载 SDK
-     */
     private void handleUninstall(String content) {
         try {
             JsonObject json = gson.fromJson(content, JsonObject.class);
@@ -189,7 +168,6 @@ public class DependencyHandler extends BaseMessageHandler {
                     callJavaScript("window.dependencyUninstallResult", escapeJs(gson.toJson(result)));
                 });
 
-                // 卸载完成后刷新状态
                 handleGetStatus();
             });
 
@@ -199,9 +177,6 @@ public class DependencyHandler extends BaseMessageHandler {
         }
     }
 
-    /**
-     * 检查 SDK 更新
-     */
     private void handleCheckUpdates(String content) {
         try {
             String sdkId = null;
@@ -218,11 +193,9 @@ public class DependencyHandler extends BaseMessageHandler {
                 JsonObject updates = new JsonObject();
 
                 if (targetSdkId != null) {
-                    // 检查指定 SDK
                     UpdateInfo info = dependencyManager.checkForUpdates(targetSdkId);
                     updates.add(targetSdkId, toJson(info));
                 } else {
-                    // 检查所有已安装的 SDK
                     for (SdkDefinition sdk : SdkDefinition.values()) {
                         if (dependencyManager.isInstalled(sdk.getId())) {
                             UpdateInfo info = dependencyManager.checkForUpdates(sdk.getId());
@@ -242,20 +215,14 @@ public class DependencyHandler extends BaseMessageHandler {
         }
     }
 
-    /**
-     * 检查 Node.js 环境
-     * 优先使用配置中的 Node.js 路径，如果未配置则使用自动检测
-     */
     private void handleCheckNodeEnvironment() {
         try {
-            // 首先检查是否有配置的 Node.js 路径
             String configuredPath = getConfiguredNodePath();
             boolean available = false;
             String detectedPath = null;
             String detectedVersion = null;
 
             if (configuredPath != null && !configuredPath.isEmpty()) {
-                // 使用配置的路径
                 NodeDetector nodeDetector = new NodeDetector();
                 String version = nodeDetector.verifyNodePath(configuredPath);
                 if (version != null) {
@@ -268,7 +235,6 @@ public class DependencyHandler extends BaseMessageHandler {
                 }
             }
 
-            // 如果配置的路径无效，尝试自动检测
             if (!available) {
                 available = dependencyManager.checkNodeEnvironment();
             }
@@ -297,8 +263,6 @@ public class DependencyHandler extends BaseMessageHandler {
             });
         }
     }
-
-    // ==================== 辅助方法 ====================
 
     private void sendInstallResult(InstallResult result) {
         JsonObject json = new JsonObject();

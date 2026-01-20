@@ -2,6 +2,7 @@ package com.github.claudecodegui.permission;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.intellij.openapi.components.Service;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.Project;
 
@@ -11,12 +12,14 @@ import java.util.concurrent.*;
 /**
  * Permission service - handles permission requests via direct API (stdin/stdout protocol).
  * File-based IPC has been removed in favor of the new stdin/stdout bridge protocol.
+ *
+ * This is a per-project service to ensure permission prompts appear in the correct IDE instance.
  */
-public class PermissionService {
+@Service(Service.Level.PROJECT)
+public final class PermissionService {
 
     private static final Logger LOG = Logger.getInstance(PermissionService.class);
 
-    private static PermissionService instance;
     private final Project project;
 
     // Tool-level permission memory (tool name -> always allow)
@@ -142,15 +145,8 @@ public class PermissionService {
         CompletableFuture<JsonObject> showPlanApprovalDialog(String requestId, JsonObject planData);
     }
 
-    private PermissionService(Project project) {
+    public PermissionService(Project project) {
         this.project = project;
-    }
-
-    public static synchronized PermissionService getInstance(Project project) {
-        if (instance == null) {
-            instance = new PermissionService(project);
-        }
-        return instance;
     }
 
     public void setDecisionListener(PermissionDecisionListener listener) {

@@ -1,9 +1,6 @@
 import type { CommandItem, DropdownItemData } from '../types';
 import { sendBridgeEvent } from '../../../utils/bridge';
 
-/**
- * Local commands list (commands to be filtered out)
- */
 const HIDDEN_COMMANDS = new Set([
   '/context',
   '/cost',
@@ -12,10 +9,6 @@ const HIDDEN_COMMANDS = new Set([
   '/security-review',
   '/todo',
 ]);
-
-// ============================================================================
-// State Management
-// ============================================================================
 
 type LoadingState = 'idle' | 'loading' | 'success' | 'failed';
 
@@ -29,10 +22,6 @@ let pendingWaiters: Array<{ resolve: () => void; reject: (error: unknown) => voi
 const MIN_REFRESH_INTERVAL = 2000;
 const LOADING_TIMEOUT = 8000;
 const MAX_RETRY_COUNT = 3;
-
-// ============================================================================
-// Core Functions
-// ============================================================================
 
 export function resetSlashCommandsState() {
   cachedSdkCommands = [];

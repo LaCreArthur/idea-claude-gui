@@ -3,44 +3,29 @@ import { sendBridgeEvent } from '../utils/bridge';
 import type { PermissionRequest } from '../components/PermissionDialog';
 
 export interface UsePermissionDialogReturn {
-  /** Whether the permission dialog is currently open */
   isOpen: boolean;
-  /** The current permission request being displayed */
   currentRequest: PermissionRequest | null;
-  /** Handle approval (allow once) */
   handleApprove: (channelId: string) => void;
-  /** Handle approval with remember (always allow) */
   handleApproveAlways: (channelId: string) => void;
-  /** Handle denial (skip/reject) */
   handleSkip: (channelId: string) => void;
-  /** Queue a new permission request (called from window.showPermissionDialog) */
   queueRequest: (request: PermissionRequest) => void;
-  /** Refs for checking state in callbacks (avoids stale closure issues) */
   isOpenRef: React.RefObject<boolean>;
   currentRequestRef: React.RefObject<PermissionRequest | null>;
 }
 
-/**
- * Custom hook to manage permission dialog state and handlers.
- * Handles queueing multiple permission requests and processing them one at a time.
- */
 export function usePermissionDialog(): UsePermissionDialogReturn {
-  // Dialog state
   const [isOpen, setIsOpen] = useState(false);
   const [currentRequest, setCurrentRequest] = useState<PermissionRequest | null>(null);
 
-  // Refs for synchronous access in callbacks (avoids stale closure issues)
   const isOpenRef = useRef(false);
   const currentRequestRef = useRef<PermissionRequest | null>(null);
   const pendingRequestsRef = useRef<PermissionRequest[]>([]);
 
-  // Keep refs in sync with state
   useEffect(() => {
     isOpenRef.current = isOpen;
     currentRequestRef.current = currentRequest;
   }, [isOpen, currentRequest]);
 
-  // Open dialog with a specific request
   const openDialog = useCallback((request: PermissionRequest) => {
     currentRequestRef.current = request;
     isOpenRef.current = true;
@@ -48,7 +33,6 @@ export function usePermissionDialog(): UsePermissionDialogReturn {
     setIsOpen(true);
   }, []);
 
-  // Close dialog and clear current request
   const closeDialog = useCallback(() => {
     isOpenRef.current = false;
     currentRequestRef.current = null;
@@ -56,7 +40,6 @@ export function usePermissionDialog(): UsePermissionDialogReturn {
     setCurrentRequest(null);
   }, []);
 
-  // Process next pending request when dialog closes
   useEffect(() => {
     if (isOpen) return;
     if (currentRequest) return;
@@ -67,18 +50,14 @@ export function usePermissionDialog(): UsePermissionDialogReturn {
     }
   }, [isOpen, currentRequest, openDialog]);
 
-  // Queue a new permission request
   const queueRequest = useCallback((request: PermissionRequest) => {
     if (isOpenRef.current || currentRequestRef.current) {
-      // Dialog is busy, queue the request
       pendingRequestsRef.current.push(request);
     } else {
-      // Dialog is free, open immediately
       openDialog(request);
     }
   }, [openDialog]);
 
-  // Handle approval (allow once)
   const handleApprove = useCallback((channelId: string) => {
     const payload = JSON.stringify({
       channelId,
@@ -90,7 +69,6 @@ export function usePermissionDialog(): UsePermissionDialogReturn {
     closeDialog();
   }, [closeDialog]);
 
-  // Handle approval with remember (always allow)
   const handleApproveAlways = useCallback((channelId: string) => {
     const payload = JSON.stringify({
       channelId,
@@ -102,7 +80,6 @@ export function usePermissionDialog(): UsePermissionDialogReturn {
     closeDialog();
   }, [closeDialog]);
 
-  // Handle denial (skip/reject)
   const handleSkip = useCallback((channelId: string) => {
     const payload = JSON.stringify({
       channelId,

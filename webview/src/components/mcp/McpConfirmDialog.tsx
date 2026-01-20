@@ -7,9 +7,6 @@ interface McpConfirmDialogProps {
   onCancel: () => void;
 }
 
-/**
- * MCP 确认对话框
- */
 export function McpConfirmDialog({
   title,
   message,
@@ -18,7 +15,6 @@ export function McpConfirmDialog({
   onConfirm,
   onCancel,
 }: McpConfirmDialogProps) {
-  // 点击遮罩关闭
   const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) {
       onCancel();

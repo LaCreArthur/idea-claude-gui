@@ -20,15 +20,12 @@ export default function AgentDialog({
   const [prompt, setPrompt] = useState('');
   const [nameError, setNameError] = useState('');
 
-  // Initialize form
   useEffect(() => {
     if (isOpen) {
       if (agent) {
-        // Edit mode
         setName(agent.name || '');
         setPrompt(agent.prompt || '');
       } else {
-        // Add mode
         setName('');
         setPrompt('');
       }
@@ -36,7 +33,6 @@ export default function AgentDialog({
     }
   }, [isOpen, agent]);
 
-  // ESC key to close
   useEffect(() => {
     if (isOpen) {
       const handleEscape = (e: KeyboardEvent) => {
@@ -51,7 +47,6 @@ export default function AgentDialog({
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    // Limit to 20 characters
     if (value.length <= 20) {
       setName(value);
       setNameError('');
@@ -60,14 +55,12 @@ export default function AgentDialog({
 
   const handlePromptChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
-    // Limit to 10000 characters
     if (value.length <= 10000) {
       setPrompt(value);
     }
   };
 
   const handleSave = () => {
-    // Validate name
     if (!name.trim()) {
       setNameError('Please enter agent name');
       return;

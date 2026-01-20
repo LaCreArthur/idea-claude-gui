@@ -1,12 +1,8 @@
 import type { ClaudeMessage, ClaudeContentBlock, ToolResultBlock } from '../types';
 
-/**
- * 将消息列表转换为 JSON 格式
- */
 export function convertMessagesToJSON(messages: ClaudeMessage[], sessionTitle: string): string {
   const exportTime = formatTimestamp(new Date().toISOString());
 
-  // 过滤掉不需要导出的消息
   const filteredMessages = messages
     .filter(msg => shouldExportMessage(msg))
     .map(msg => processMessageForExport(msg));
@@ -22,21 +18,15 @@ export function convertMessagesToJSON(messages: ClaudeMessage[], sessionTitle: s
   return JSON.stringify(exportData, null, 2);
 }
 
-/**
- * 处理单个消息以便导出
- */
 function processMessageForExport(message: ClaudeMessage): any {
   const contentBlocks = getContentBlocks(message);
 
-  // 处理内容块
   let processedBlocks: any[] = [];
   if (contentBlocks.length > 0) {
     processedBlocks = contentBlocks.map(block => processContentBlock(block));
   } else if (message.content && message.content.trim()) {
-    // 如果没有内容块但有content字段，使用content
     processedBlocks = [{ type: 'text', text: message.content }];
   } else if (message.raw) {
-    // 尝试从raw中提取内容
     const rawContent = extractRawContent(message.raw);
     if (rawContent) {
       processedBlocks = [{ type: 'text', text: rawContent }];
@@ -48,13 +38,10 @@ function processMessageForExport(message: ClaudeMessage): any {
     timestamp: message.timestamp ? formatTimestamp(message.timestamp) : null,
     content: message.content,
     contentBlocks: processedBlocks,
-    raw: message.raw // 保留原始数据用于调试
+    raw: message.raw
   };
 }
 
-/**
- * 从raw数据中提取文本内容
- */
 function extractRawContent(raw: any): string | null {
   if (!raw) return null;
 
@@ -82,9 +69,6 @@ function extractRawContent(raw: any): string | null {
   return null;
 }
 
-/**
- * 处理内容块
- */
 function processContentBlock(block: ClaudeContentBlock | ToolResultBlock): any {
   if (block.type === 'text') {
     return {
@@ -106,7 +90,6 @@ function processContentBlock(block: ClaudeContentBlock | ToolResultBlock): any {
     };
   } else if (block.type === 'tool_result') {
     const toolResult = block as ToolResultBlock;
-    // 限制工具结果内容的长度
     const content = limitContentLength(toolResult.content, 10000);
     return {
       type: 'tool_result',
@@ -127,9 +110,6 @@ function processContentBlock(block: ClaudeContentBlock | ToolResultBlock): any {
   return block;
 }
 
-/**
- * 限制内容长度
- */
 function limitContentLength(content: any, maxLength: number): any {
   if (typeof content === 'string') {
     if (content.length > maxLength) {
@@ -150,9 +130,6 @@ function limitContentLength(content: any, maxLength: number): any {
   return content;
 }
 
-/**
- * 格式化时间戳为 YYYY-MM-DD HH:mm:ss 格式
- */
 function formatTimestamp(timestamp: string): string {
   try {
     const date = new Date(timestamp);
@@ -168,11 +145,7 @@ function formatTimestamp(timestamp: string): string {
   }
 }
 
-/**
- * 判断是否应该导出该消息
- */
 function shouldExportMessage(message: ClaudeMessage): boolean {
-  // 跳过特殊的命令消息
   const text = getMessageText(message);
   if (text && (
     text.includes('<command-name>') ||
@@ -187,9 +160,6 @@ function shouldExportMessage(message: ClaudeMessage): boolean {
   return true;
 }
 
-/**
- * 获取消息的文本内容
- */
 function getMessageText(message: ClaudeMessage): string {
   if (message.content) {
     return message.content;
@@ -225,11 +195,7 @@ function getMessageText(message: ClaudeMessage): string {
   return '';
 }
 
-/**
- * 获取消息的内容块
- */
 function getContentBlocks(message: ClaudeMessage): (ClaudeContentBlock | ToolResultBlock)[] {
-  // 优先从 raw 中获取
   if (message.raw) {
     const rawBlocks = normalizeBlocks(message.raw);
     if (rawBlocks && rawBlocks.length > 0) {
@@ -237,7 +203,6 @@ function getContentBlocks(message: ClaudeMessage): (ClaudeContentBlock | ToolRes
     }
   }
 
-  // 如果有 content 字段，作为文本块
   if (message.content && message.content.trim()) {
     return [{ type: 'text', text: message.content }];
   }
@@ -245,9 +210,6 @@ function getContentBlocks(message: ClaudeMessage): (ClaudeContentBlock | ToolRes
   return [];
 }
 
-/**
- * 规范化内容块
- */
 function normalizeBlocks(raw: any): (ClaudeContentBlock | ToolResultBlock)[] | null {
   if (!raw) {
     return null;
@@ -255,11 +217,9 @@ function normalizeBlocks(raw: any): (ClaudeContentBlock | ToolResultBlock)[] | n
 
   let contentArray: any[] | null = null;
 
-  // 处理后端返回的 ConversationMessage 格式
   if (raw.message && Array.isArray(raw.message.content)) {
     contentArray = raw.message.content;
   }
-  // 处理其他格式
   else if (Array.isArray(raw)) {
     contentArray = raw;
   } else if (Array.isArray(raw.content)) {
@@ -299,11 +259,7 @@ function normalizeBlocks(raw: any): (ClaudeContentBlock | ToolResultBlock)[] | n
   return null;
 }
 
-/**
- * 触发文件下载（通过后端保存）
- */
 export function downloadJSON(content: string, filename: string): void {
-  // 通过后端保存文件，显示文件选择对话框
   const payload = JSON.stringify({
     content: content,
     filename: filename.endsWith('.json') ? filename : `${filename}.json`
@@ -313,14 +269,10 @@ export function downloadJSON(content: string, filename: string): void {
     window.sendToJava(`save_json:${payload}`);
   } else {
     console.error('[Frontend] sendToJava not available, falling back to browser download');
-    // 降级方案：使用浏览器下载
     fallbackBrowserDownload(content, filename);
   }
 }
 
-/**
- * 降级方案：浏览器直接下载
- */
 function fallbackBrowserDownload(content: string, filename: string): void {
   const blob = new Blob([content], { type: 'application/json;charset=utf-8' });
   const url = URL.createObjectURL(blob);

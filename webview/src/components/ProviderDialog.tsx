@@ -31,7 +31,6 @@ export default function ProviderDialog({
   const [apiKey, setApiKey] = useState('');
   const [showApiKey, setShowApiKey] = useState(false);
 
-  // Initialize form
   useEffect(() => {
     if (isOpen) {
       if (provider) {
@@ -43,7 +42,6 @@ export default function ProviderDialog({
     }
   }, [isOpen, provider]);
 
-  // ESC key to close
   useEffect(() => {
     if (isOpen) {
       const handleEscape = (e: KeyboardEvent) => {

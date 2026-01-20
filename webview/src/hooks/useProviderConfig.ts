@@ -4,7 +4,6 @@ import { CLAUDE_MODELS } from '../components/ChatInputBox/types';
 import type { ProviderConfig } from '../types/provider';
 
 export interface UseProviderConfigReturn {
-  // State
   currentProvider: string;
   setCurrentProvider: Dispatch<SetStateAction<string>>;
   selectedClaudeModel: string;
@@ -18,19 +17,12 @@ export interface UseProviderConfigReturn {
   claudeSettingsAlwaysThinkingEnabled: boolean;
   setClaudeSettingsAlwaysThinkingEnabled: Dispatch<SetStateAction<boolean>>;
 
-  // Ref
   currentProviderRef: React.MutableRefObject<string>;
 
-  // Helper
   syncActiveProviderModelMapping: (provider?: ProviderConfig | null) => void;
 }
 
-/**
- * Custom hook to manage provider and model configuration state.
- * Consolidates provider-related state in one place for easier maintenance.
- */
 export function useProviderConfig(): UseProviderConfigReturn {
-  // Provider state
   const [currentProvider, setCurrentProvider] = useState('claude');
   const [selectedClaudeModel, setSelectedClaudeModel] = useState(CLAUDE_MODELS[0].id);
   const [claudePermissionMode, setClaudePermissionMode] = useState<PermissionMode>('default');
@@ -38,25 +30,18 @@ export function useProviderConfig(): UseProviderConfigReturn {
   const [activeProviderConfig, setActiveProviderConfig] = useState<ProviderConfig | null>(null);
   const [claudeSettingsAlwaysThinkingEnabled, setClaudeSettingsAlwaysThinkingEnabled] = useState(true);
 
-  // Ref to avoid stale closures in callbacks
   const currentProviderRef = useRef(currentProvider);
 
-  // Keep ref in sync with state
   useEffect(() => {
     currentProviderRef.current = currentProvider;
   }, [currentProvider]);
 
-  /**
-   * Sync provider model mapping to localStorage.
-   * Used for persisting ANTHROPIC_MODEL settings.
-   */
   const syncActiveProviderModelMapping = (provider?: ProviderConfig | null) => {
     if (typeof window === 'undefined' || !window.localStorage) return;
     if (!provider || !provider.settingsConfig || !provider.settingsConfig.env) {
       try {
         window.localStorage.removeItem('claude-model-mapping');
       } catch {
-        // Ignore localStorage errors
       }
       return;
     }
@@ -75,12 +60,10 @@ export function useProviderConfig(): UseProviderConfigReturn {
         window.localStorage.removeItem('claude-model-mapping');
       }
     } catch {
-      // Ignore localStorage errors
     }
   };
 
   return {
-    // State
     currentProvider,
     setCurrentProvider,
     selectedClaudeModel,
@@ -94,10 +77,8 @@ export function useProviderConfig(): UseProviderConfigReturn {
     claudeSettingsAlwaysThinkingEnabled,
     setClaudeSettingsAlwaysThinkingEnabled,
 
-    // Ref
     currentProviderRef,
 
-    // Helper
     syncActiveProviderModelMapping,
   };
 }

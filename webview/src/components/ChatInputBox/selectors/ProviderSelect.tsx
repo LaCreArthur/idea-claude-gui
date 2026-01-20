@@ -7,9 +7,6 @@ interface ProviderSelectProps {
   onChange?: (providerId: string) => void;
 }
 
-/**
- * ProviderSelect - AI Provider selector
- */
 export const ProviderSelect = ({ value, onChange }: ProviderSelectProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [showToast, setShowToast] = useState(false);

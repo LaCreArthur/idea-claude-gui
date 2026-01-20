@@ -67,10 +67,6 @@ import java.util.Map;
 import java.util.concurrent.*;
 import com.github.claudecodegui.ui.ClaudeChatWindow;
 
-/**
- * Claude SDK 聊天工具窗口
- * 实现 DumbAware 接口允许在索引构建期间使用此工具窗口
- */
 public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
 
     private static final Logger LOG = Logger.getInstance(ClaudeSDKToolWindow.class);
@@ -78,23 +74,10 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
     private static volatile boolean shutdownHookRegistered = false;
     private static final String TAB_NAME_PREFIX = "AI";
 
-    /**
-     * 获取指定项目的聊天窗口实例.
-     *
-     * @param project 项目
-     * @return 聊天窗口实例，如果不存在返回 null
-     */
     public static ClaudeChatWindow getChatWindow(Project project) {
         return instances.get(project);
     }
 
-    /**
-     * Register a chat window instance for a project.
-     * If a window already exists for the project, the old one will be disposed first.
-     *
-     * @param project the project
-     * @param window the chat window to register
-     */
     public static void registerChatWindow(Project project, ClaudeChatWindow window) {
         synchronized (instances) {
             ClaudeChatWindow oldInstance = instances.get(project);
@@ -106,13 +89,6 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
         }
     }
 
-    /**
-     * Unregister a chat window instance for a project.
-     * Only removes if the current registered window matches the provided one.
-     *
-     * @param project the project
-     * @param window the chat window to unregister
-     */
     public static void unregisterChatWindow(Project project, ClaudeChatWindow window) {
         synchronized (instances) {
             if (instances.get(project) == window) {
@@ -121,23 +97,10 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
         }
     }
 
-    /**
-     * Remove a chat window from instances map (unconditional).
-     * Used when window needs cleanup regardless of which instance is registered.
-     *
-     * @param project the project
-     */
     public static void removeChatWindow(Project project) {
         instances.remove(project);
     }
 
-    /**
-     * Generate the next available tab name in the format "AIN".
-     * Finds the next available number by checking existing tab names.
-     *
-     * @param toolWindow the tool window to check existing tabs
-     * @return the next available tab name (e.g., "AI1", "AI2", etc.)
-     */
     public static String getNextTabName(ToolWindow toolWindow) {
         if (toolWindow == null) {
             return TAB_NAME_PREFIX + "1";
@@ -156,7 +119,6 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
                         maxNumber = number;
                     }
                 } catch (NumberFormatException ignored) {
-                    // Ignore non-numeric suffixes
                 }
             }
         }
@@ -166,12 +128,10 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
 
     @Override
     public void createToolWindowContent(@NotNull Project project, @NotNull ToolWindow toolWindow) {
-        // 注册 JVM Shutdown Hook（只注册一次）
         registerShutdownHook();
 
         ClaudeChatWindow chatWindow = new ClaudeChatWindow(project);
         ContentFactory contentFactory = ContentFactory.getInstance();
-        // Set the initial tab name to "AI1"
         Content content = contentFactory.createContent(chatWindow.getContent(), TAB_NAME_PREFIX + "1", false);
 
         ContentManager contentManager = toolWindow.getContentManager();
@@ -184,8 +144,6 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
             }
         });
 
-        // Add listener to manage tab closeable state based on tab count
-        // When there's only one tab, disable the close button to prevent closing the last tab
         contentManager.addContentManagerListener(new ContentManagerListener() {
             @Override
             public void contentAdded(@NotNull ContentManagerEvent event) {
@@ -198,14 +156,9 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
             }
         });
 
-        // Initialize closeable state for the first tab
         updateTabCloseableState(contentManager);
     }
 
-    /**
-     * Update the closeable state of all tabs based on the tab count.
-     * If there's only one tab, disable the close button; otherwise enable it.
-     */
     private void updateTabCloseableState(ContentManager contentManager) {
         int tabCount = contentManager.getContentCount();
         boolean closeable = tabCount > 1;
@@ -217,10 +170,6 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
         LOG.debug("[TabManager] Updated tab closeable state: count=" + tabCount + ", closeable=" + closeable);
     }
 
-    /**
-     * 注册 JVM Shutdown Hook，确保在 IDEA 关闭时清理所有 Node.js 进程
-     * 这是最后的保底机制，即使 dispose() 未被正常调用也能清理进程
-     */
     private static synchronized void registerShutdownHook() {
         if (shutdownHookRegistered) {
             return;
@@ -228,37 +177,34 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
         shutdownHookRegistered = true;
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            LOG.info("[ShutdownHook] IDEA 正在关闭，清理所有 Node.js 进程...");
+            LOG.info("[ShutdownHook] IDE is shutting down, cleaning up all Node.js processes...");
 
             ExecutorService executor = Executors.newSingleThreadExecutor();
             try {
                 Future<?> future = executor.submit(() -> {
-                    // 复制实例列表，避免并发修改
                     for (ClaudeChatWindow window : new java.util.ArrayList<>(instances.values())) {
                         try {
                             if (window != null) {
                                 window.cleanupAllProcesses();
                             }
                         } catch (Exception e) {
-                            // Shutdown hook 中不要抛出异常
-                            LOG.error("[ShutdownHook] 清理进程时出错: " + e.getMessage());
+                            LOG.error("[ShutdownHook] Error cleaning up processes: " + e.getMessage());
                         }
                     }
                 });
 
-                // 最多等待3秒
                 future.get(3, TimeUnit.SECONDS);
-                LOG.info("[ShutdownHook] Node.js 进程清理完成");
+                LOG.info("[ShutdownHook] Node.js process cleanup complete");
             } catch (TimeoutException e) {
-                LOG.warn("[ShutdownHook] 清理进程超时(3秒)，强制退出");
+                LOG.warn("[ShutdownHook] Process cleanup timed out (3 seconds), forcing exit");
             } catch (Exception e) {
-                LOG.error("[ShutdownHook] 清理进程失败: " + e.getMessage());
+                LOG.error("[ShutdownHook] Failed to clean up processes: " + e.getMessage());
             } finally {
                 executor.shutdownNow();
             }
         }, "Claude-Process-Cleanup-Hook"));
 
-        LOG.info("[ShutdownHook] JVM Shutdown Hook 已注册");
+        LOG.info("[ShutdownHook] JVM Shutdown Hook registered");
     }
 
     public static void addSelectionFromExternal(Project project, String selectionInfo) {

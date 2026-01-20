@@ -73,3 +73,4 @@ firebase-debug.log
 tests/e2e/screenshots/
 tests/tests/
 *.hprof
+.ralph/

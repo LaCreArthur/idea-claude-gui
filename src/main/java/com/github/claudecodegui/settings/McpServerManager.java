@@ -370,7 +370,7 @@ public class McpServerManager {
         List<String> errors = new ArrayList<>();
 
         if (!server.has("name") || server.get("name").getAsString().isEmpty()) {
-            errors.add("服务器名称不能为空");
+            errors.add("Server name cannot be empty");
         }
 
         if (server.has("server")) {
@@ -379,24 +379,24 @@ public class McpServerManager {
 
             if ("stdio".equals(type)) {
                 if (!serverSpec.has("command") || serverSpec.get("command").getAsString().isEmpty()) {
-                    errors.add("命令不能为空");
+                    errors.add("Command cannot be empty");
                 }
             } else if ("http".equals(type) || "sse".equals(type)) {
                 if (!serverSpec.has("url") || serverSpec.get("url").getAsString().isEmpty()) {
-                    errors.add("URL 不能为空");
+                    errors.add("URL cannot be empty");
                 } else {
                     String url = serverSpec.get("url").getAsString();
                     try {
                         new java.net.URI(url).toURL();
                     } catch (Exception e) {
-                        errors.add("URL 格式无效");
+                        errors.add("Invalid URL format");
                     }
                 }
             } else {
-                errors.add("不支持的连接类型: " + type);
+                errors.add("Unsupported connection type: " + type);
             }
         } else {
-            errors.add("缺少服务器配置详情");
+            errors.add("Missing server configuration details");
         }
 
         Map<String, Object> result = new HashMap<>();

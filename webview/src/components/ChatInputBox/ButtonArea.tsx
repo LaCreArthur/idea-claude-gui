@@ -3,9 +3,6 @@ import type { ButtonAreaProps, ModelInfo, PermissionMode } from './types';
 import { ConfigSelect, ModelSelect, ModeSelect } from './selectors';
 import { CLAUDE_MODELS } from './types';
 
-/**
- * ButtonArea - Bottom toolbar component
- */
 export const ButtonArea = ({
   disabled = false,
   hasInputContent = false,

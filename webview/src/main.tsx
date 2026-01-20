@@ -6,23 +6,17 @@ import './styles/app.less';
 import { setupSlashCommandsCallback } from './components/ChatInputBox/providers/slashCommandProvider';
 import { sendBridgeEvent } from './utils/bridge';
 
-/**
- * 应用 IDEA 编辑器字体配置到 CSS 变量
- */
 function applyFontConfig(config: { fontFamily: string; fontSize: number; lineSpacing: number; fallbackFonts?: string[] }) {
   const root = document.documentElement;
 
-  // 构建字体族字符串，包含主字体、回落字体和系统默认回落
   const fontParts: string[] = [`'${config.fontFamily}'`];
 
-  // 添加 IDEA 配置的回落字体
   if (config.fallbackFonts && config.fallbackFonts.length > 0) {
     for (const fallback of config.fallbackFonts) {
       fontParts.push(`'${fallback}'`);
     }
   }
 
-  // 添加系统默认回落字体
   fontParts.push("'Consolas'", 'monospace');
 
   const fontFamily = fontParts.join(', ');
@@ -34,17 +28,14 @@ function applyFontConfig(config: { fontFamily: string; fontSize: number; lineSpa
   console.log('[Main] Applied IDEA font config:', config, 'fontFamily CSS:', fontFamily);
 }
 
-// 注册 applyIdeaFontConfig 函数
 window.applyIdeaFontConfig = applyFontConfig;
 
-// 检查是否有待处理的字体配置（Java 端可能先于 JS 执行）
 if (window.__pendingFontConfig) {
   console.log('[Main] Found pending font config, applying...');
   applyFontConfig(window.__pendingFontConfig);
   delete window.__pendingFontConfig;
 }
 
-// 预注册 updateSlashCommands，避免后端调用早于 React 初始化
 if (typeof window !== 'undefined' && !window.updateSlashCommands) {
   console.log('[Main] Pre-registering updateSlashCommands placeholder');
   window.updateSlashCommands = (json: string) => {
@@ -53,8 +44,6 @@ if (typeof window !== 'undefined' && !window.updateSlashCommands) {
   };
 }
 
-// 预注册 setSessionId，避免后端调用早于 React 初始化
-// 这是 rewind 功能所需的会话 ID
 if (typeof window !== 'undefined' && !window.setSessionId) {
   console.log('[Main] Pre-registering setSessionId placeholder');
   window.setSessionId = (sessionId: string) => {
@@ -63,7 +52,6 @@ if (typeof window !== 'undefined' && !window.setSessionId) {
   };
 }
 
-// 预注册 updateDependencyStatus，避免后端返回状态早于 React 初始化
 if (typeof window !== 'undefined' && !window.updateDependencyStatus) {
   console.log('[Main] Pre-registering updateDependencyStatus placeholder');
   window.updateDependencyStatus = (json: string) => {
@@ -72,7 +60,6 @@ if (typeof window !== 'undefined' && !window.updateDependencyStatus) {
   };
 }
 
-// 预注册 dependencyUpdateAvailable，避免后端检查更新早于 Settings/React 初始化
 if (typeof window !== 'undefined' && !window.dependencyUpdateAvailable) {
   console.log('[Main] Pre-registering dependencyUpdateAvailable placeholder');
   window.dependencyUpdateAvailable = (json: string) => {
@@ -81,16 +68,12 @@ if (typeof window !== 'undefined' && !window.dependencyUpdateAvailable) {
   };
 }
 
-// 渲染 React 应用
 ReactDOM.createRoot(document.getElementById('app') as HTMLElement).render(
   <ErrorBoundary>
     <App />
   </ErrorBoundary>,
 );
 
-/**
- * 等待 sendToJava 桥接函数可用
- */
 function waitForBridge(callback: () => void, maxAttempts = 50, interval = 100) {
   let attempts = 0;
 
@@ -109,7 +92,6 @@ function waitForBridge(callback: () => void, maxAttempts = 50, interval = 100) {
   check();
 }
 
-// 等待桥接可用后，初始化斜杠命令
 waitForBridge(() => {
   console.log('[Main] Bridge ready, setting up slash commands');
   setupSlashCommandsCallback();
@@ -120,7 +102,6 @@ waitForBridge(() => {
   console.log('[Main] Sending refresh_slash_commands request');
   sendBridgeEvent('refresh_slash_commands');
 
-  // Ensure SDK dependency status is fetched on initial load (not only after opening Settings).
   console.log('[Main] Requesting dependency status');
   sendBridgeEvent('get_dependency_status');
 });

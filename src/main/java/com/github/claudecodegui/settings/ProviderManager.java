@@ -19,10 +19,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 
-/**
- * Provider 管理器
- * 负责管理 Claude 供应商配置
- */
 public class ProviderManager {
     private static final Logger LOG = Logger.getInstance(ProviderManager.class);
     private static final String BACKUP_FILE_NAME = "config.json.bak";
@@ -47,9 +43,6 @@ public class ProviderManager {
         this.claudeSettingsManager = claudeSettingsManager;
     }
 
-    /**
-     * 获取所有Claude供应商
-     */
     public List<JsonObject> getClaudeProviders() {
         JsonObject config = configReader.apply(null);
         List<JsonObject> result = new ArrayList<>();
@@ -85,9 +78,6 @@ public class ProviderManager {
         return result;
     }
 
-    /**
-     * 获取当前激活的供应商
-     */
     public JsonObject getActiveClaudeProvider() {
         JsonObject config = configReader.apply(null);
 
@@ -121,9 +111,6 @@ public class ProviderManager {
         return null;
     }
 
-    /**
-     * 添加供应商
-     */
     public void addClaudeProvider(JsonObject provider) throws IOException {
         if (!provider.has("id")) {
             throw new IllegalArgumentException("Provider must have an id");
@@ -131,7 +118,6 @@ public class ProviderManager {
 
         JsonObject config = configReader.apply(null);
 
-        // 确保 claude 配置存在
         if (!config.has("claude")) {
             JsonObject claude = new JsonObject();
             claude.add("providers", new JsonObject());
@@ -144,26 +130,20 @@ public class ProviderManager {
 
         String id = provider.get("id").getAsString();
 
-        // 检查 ID 是否已存在
         if (providers.has(id)) {
             throw new IllegalArgumentException("Provider with id '" + id + "' already exists");
         }
 
-        // 添加创建时间
         if (!provider.has("createdAt")) {
             provider.addProperty("createdAt", System.currentTimeMillis());
         }
 
-        // 添加供应商(不自动设为 current,用户需要手动点击"启用"按钮来激活)
         providers.add(id, provider);
 
         configWriter.accept(config);
         LOG.info("[ProviderManager] Added provider: " + id + " (not activated, user needs to manually switch)");
     }
 
-    /**
-     * 保存供应商(如果存在则更新,不存在则添加)
-     */
     public void saveClaudeProvider(JsonObject provider) throws IOException {
         if (!provider.has("id")) {
             throw new IllegalArgumentException("Provider must have an id");
@@ -171,7 +151,6 @@ public class ProviderManager {
 
         JsonObject config = configReader.apply(null);
 
-        // 确保 claude 配置存在
         if (!config.has("claude")) {
             JsonObject claude = new JsonObject();
             claude.add("providers", new JsonObject());
@@ -184,7 +163,6 @@ public class ProviderManager {
 
         String id = provider.get("id").getAsString();
 
-        // 如果已存在,保留原有的 createdAt
         if (providers.has(id)) {
             JsonObject existing = providers.getAsJsonObject(id);
             if (existing.has("createdAt") && !provider.has("createdAt")) {
@@ -196,14 +174,10 @@ public class ProviderManager {
             }
         }
 
-        // 覆盖保存
         providers.add(id, provider);
         configWriter.accept(config);
     }
 
-    /**
-     * 更新供应商
-     */
     public void updateClaudeProvider(String id, JsonObject updates) throws IOException {
         JsonObject config = configReader.apply(null);
 
@@ -220,14 +194,11 @@ public class ProviderManager {
 
         JsonObject provider = providers.getAsJsonObject(id);
 
-        // 合并更新
         for (String key : updates.keySet()) {
-            // 不允许修改 id
             if (key.equals("id")) {
                 continue;
             }
 
-            // 如果值为 null (JsonNull),则删除该字段
             if (updates.get(key).isJsonNull()) {
                 provider.remove(key);
             } else {
@@ -239,11 +210,6 @@ public class ProviderManager {
         LOG.info("[ProviderManager] Updated provider: " + id);
     }
 
-    /**
-     * 删除供应商(返回 DeleteResult 提供详细错误信息)
-     * @param id 供应商 ID
-     * @return DeleteResult 包含操作结果和错误详情
-     */
     public DeleteResult deleteClaudeProvider(String id) {
         Path configFilePath = null;
         Path backupFilePath = null;
@@ -258,7 +224,7 @@ public class ProviderManager {
                     DeleteResult.ErrorType.FILE_NOT_FOUND,
                     "No claude configuration found",
                     configFilePath.toString(),
-                    "请先添加至少一个供应商配置"
+                    "Please add at least one provider configuration first"
                 );
             }
 
@@ -270,23 +236,19 @@ public class ProviderManager {
                     DeleteResult.ErrorType.FILE_NOT_FOUND,
                     "Provider with id '" + id + "' not found",
                     null,
-                    "请检查供应商 ID 是否正确"
+                    "Please check if the provider ID is correct"
                 );
             }
 
-            // 创建配置备份(用于回滚)
             try {
                 Files.copy(configFilePath, backupFilePath, StandardCopyOption.REPLACE_EXISTING);
                 LOG.info("[ProviderManager] Created backup: " + backupFilePath);
             } catch (IOException e) {
                 LOG.warn("[ProviderManager] Warning: Failed to create backup: " + e.getMessage());
-                // 备份失败不阻止删除操作,但记录警告
             }
 
-            // 删除供应商
             providers.remove(id);
 
-            // 如果删除的是当前激活的供应商,切换到第一个可用的供应商
             String currentId = claude.has("current") ? claude.get("current").getAsString() : null;
             if (id.equals(currentId)) {
                 if (providers.size() > 0) {
@@ -299,21 +261,17 @@ public class ProviderManager {
                 }
             }
 
-            // 写入配置
             configWriter.accept(config);
             LOG.info("[ProviderManager] Deleted provider: " + id);
 
-            // 删除成功后移除备份
             try {
                 Files.deleteIfExists(backupFilePath);
             } catch (IOException e) {
-                // 忽略备份文件删除失败
             }
 
             return DeleteResult.success(id);
 
         } catch (Exception e) {
-            // 尝试从备份恢复
             if (backupFilePath != null && configFilePath != null) {
                 try {
                     if (Files.exists(backupFilePath)) {
@@ -329,9 +287,6 @@ public class ProviderManager {
         }
     }
 
-    /**
-     * 切换供应商
-     */
     public void switchClaudeProvider(String id) throws IOException {
         JsonObject config = configReader.apply(null);
 
@@ -351,11 +306,6 @@ public class ProviderManager {
         LOG.info("[ProviderManager] Switched to provider: " + id);
     }
 
-    /**
-     * 批量保存供应商配置
-     * @param providers 供应商列表
-     * @return 成功保存的数量
-     */
     public int saveProviders(List<JsonObject> providers) throws IOException {
         int count = 0;
         for (JsonObject provider : providers) {
@@ -369,9 +319,6 @@ public class ProviderManager {
         return count;
     }
 
-    /**
-     * 设置 alwaysThinkingEnabled 在当前激活的供应商中
-     */
     public boolean setAlwaysThinkingEnabledInActiveProvider(boolean enabled) throws IOException {
         JsonObject config = configReader.apply(null);
         if (!config.has("claude") || config.get("claude").isJsonNull()) {
@@ -411,9 +358,6 @@ public class ProviderManager {
         return true;
     }
 
-    /**
-     * 应用激活的供应商到 Claude settings.json
-     */
     public void applyActiveProviderToClaudeSettings() throws IOException {
         JsonObject config = configReader.apply(null);
 
@@ -432,30 +376,24 @@ public class ProviderManager {
         claudeSettingsManager.applyProviderToClaudeSettings(activeProvider);
     }
 
-    /**
-     * 获取 ai-bridge 目录路径(使用 BridgeDirectoryResolver 自动处理解压)
-     */
     private String getAiBridgePath() throws IOException {
-        // 使用共享的 BridgeDirectoryResolver 实例，以便正确检测解压状态
         com.github.claudecodegui.bridge.BridgeDirectoryResolver resolver =
                 com.github.claudecodegui.startup.BridgePreloader.getSharedResolver();
 
         File aiBridgeDir = resolver.findSdkDir();
 
-        // 如果返回 null，可能是正在后台解压中，等待解压完成
         if (aiBridgeDir == null) {
             if (resolver.isExtractionInProgress()) {
-                LOG.info("[ProviderManager] ai-bridge 正在解压中，等待完成...");
+                LOG.info("[ProviderManager] ai-bridge extraction in progress, waiting...");
                 try {
-                    // 等待解压完成（最多等待 60 秒）
                     Boolean ready = resolver.getExtractionFuture().get(60, java.util.concurrent.TimeUnit.SECONDS);
                     if (ready != null && ready) {
                         aiBridgeDir = resolver.getSdkDir();
                     }
                 } catch (java.util.concurrent.TimeoutException e) {
-                    throw new IOException("ai-bridge 解压超时，请稍后重试", e);
+                    throw new IOException("ai-bridge extraction timed out, please try again later", e);
                 } catch (Exception e) {
-                    throw new IOException("等待 ai-bridge 解压时发生错误: " + e.getMessage(), e);
+                    throw new IOException("Error waiting for ai-bridge extraction: " + e.getMessage(), e);
                 }
             }
         }
@@ -464,13 +402,10 @@ public class ProviderManager {
             throw new IOException("Cannot find ai-bridge directory, please check plugin installation");
         }
 
-        LOG.info("[ProviderManager] ai-bridge 目录: " + aiBridgeDir.getAbsolutePath());
+        LOG.info("[ProviderManager] ai-bridge directory: " + aiBridgeDir.getAbsolutePath());
         return aiBridgeDir.getAbsolutePath();
     }
 
-    /**
-     * 提取环境配置
-     */
     private JsonObject extractEnvConfig(JsonObject provider) {
         if (provider == null ||
             !provider.has("settingsConfig") ||

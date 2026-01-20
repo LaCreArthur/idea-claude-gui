@@ -24,10 +24,6 @@ import java.io.File;
 import java.util.List;
 import java.util.concurrent.*;
 
-/**
- * Claude 聊天窗口类
- * 从 ClaudeSDKToolWindow 内部类提取而来
- */
 public class ClaudeChatWindow {
     private static final Logger LOG = Logger.getInstance(ClaudeChatWindow.class);
 
@@ -39,38 +35,29 @@ public class ClaudeChatWindow {
     private final SettingsLoader settingsLoader;
     private Content parentContent;
 
-    // Editor context tracking (extracted to separate class)
     private EditorContextManager editorContextManager;
 
     private JBCefBrowser browser;
     private ClaudeSession session;
 
-    // Streaming message update handler (extracted to separate class)
     private StreamingMessageHandler streamingHandler;
 
-    // Slash command management (extracted to separate class)
     private SlashCommandManager slashCommandManager;
 
     private volatile boolean disposed = false;
     private volatile boolean initialized = false;
-    private volatile boolean frontendReady = false;  // Frontend React app ready flag
+    private volatile boolean frontendReady = false;
 
-    // QuickFix message handling (extracted to separate class)
     private QuickFixHandler quickFixHandler;
 
-    // Usage tracking (extracted to separate class)
     private UsageTracker usageTracker;
 
-    // WebView initialization (extracted to separate class)
     private WebViewInitializer webViewInitializer;
 
-    // JavaScript bridge message handling (extracted to separate class)
     private JsBridgeMessageHandler jsBridgeMessageHandler;
 
-    // Code snippet handling (extracted to separate class)
     private CodeSnippetHandler codeSnippetHandler;
 
-    // Handler 相关
     private HandlerContext handlerContext;
     private MessageDispatcher messageDispatcher;
     private PermissionHandler permissionHandler;
@@ -112,11 +99,7 @@ public class ClaudeChatWindow {
         initializeStatusBar();
 
         this.initialized = true;
-        LOG.info("窗口实例已完全初始化，项目: " + project.getName());
-
-        // 注意：斜杠命令的加载现在由前端发起
-        // 前端在 bridge 准备好后会发送 frontend_ready 和 refresh_slash_commands 事件
-        // 这确保了前后端初始化时序正确
+        LOG.info("Window instance fully initialized, project: " + project.getName());
     }
 
     public void setParentContent(Content content) {
@@ -186,7 +169,7 @@ public class ClaudeChatWindow {
                 String basePath = project.getBasePath();
                 if (basePath == null) return;
                 File bridgeDir = new File(basePath, "ai-bridge");
-                File channelManager = new File(bridgeDir, "channel-manager.js");
+                File channelManager = new File(bridgeDir, "bridge.js");
                 if (bridgeDir.exists() && bridgeDir.isDirectory() && channelManager.exists()) {
                     claudeSDKBridge.setSdkTestDir(bridgeDir.getAbsolutePath());
                     LOG.info("Overriding ai-bridge path to project directory: " + bridgeDir.getAbsolutePath());
@@ -207,15 +190,12 @@ public class ClaudeChatWindow {
             ApplicationManager.getApplication().invokeLater(() -> {
                 if (project == null || disposed) return;
 
-                // Set initial mode
                 String mode = session != null ? session.getPermissionMode() : "default";
                 com.github.claudecodegui.notifications.ClaudeNotifier.setMode(project, mode);
 
-                // Set initial model
                 String model = session != null ? session.getModel() : "claude-sonnet-4-5";
                 com.github.claudecodegui.notifications.ClaudeNotifier.setModel(project, model);
 
-                // Set initial agent
                 try {
                     String selectedId = settingsService.getSelectedAgentId();
                     if (selectedId != null) {
@@ -233,8 +213,6 @@ public class ClaudeChatWindow {
 
         private void syncActiveProvider() {
             try {
-                // First, try to auto-enable local provider if no provider is configured
-                // This provides a better out-of-the-box experience for users who have 'claude login' done
                 if (settingsService.autoEnableLocalProviderIfAvailable()) {
                     LOG.info("[ClaudeSDKToolWindow] Auto-enabled local settings.json provider");
                     return;
@@ -251,8 +229,7 @@ public class ClaudeChatWindow {
         }
 
         private void setupPermissionService() {
-            PermissionService permissionService = PermissionService.getInstance(project);
-            // Register dialog showers for multi-project support
+            PermissionService permissionService = project.getService(PermissionService.class);
             permissionService.registerDialogShower(project, (toolName, inputs) ->
                 permissionHandler.showFrontendPermissionDialog(toolName, inputs));
             permissionService.registerAskUserQuestionDialogShower(project, (requestId, questionsData) ->
@@ -277,7 +254,6 @@ public class ClaudeChatWindow {
 
             this.messageDispatcher = new MessageDispatcher();
 
-            // Register all handlers
             messageDispatcher.registerHandler(new McpServerHandler(handlerContext));
             messageDispatcher.registerHandler(new SkillHandler(handlerContext, mainPanel));
             messageDispatcher.registerHandler(new FileHandler(handlerContext));
@@ -290,12 +266,10 @@ public class ClaudeChatWindow {
             messageDispatcher.registerHandler(new RewindHandler(handlerContext));
             messageDispatcher.registerHandler(new DependencyHandler(handlerContext));
 
-            // 权限处理器（需要特殊回调）
             this.permissionHandler = new PermissionHandler(handlerContext);
             permissionHandler.setPermissionDeniedCallback(this::interruptDueToPermissionDenial);
             messageDispatcher.registerHandler(permissionHandler);
 
-            // 历史处理器（需要特殊回调）
             this.historyHandler = new HistoryHandler(handlerContext);
             historyHandler.setSessionLoadCallback(this::loadHistorySession);
             messageDispatcher.registerHandler(historyHandler);
@@ -496,18 +470,11 @@ public class ClaudeChatWindow {
             mainPanel.add(errorPanel, BorderLayout.CENTER);
         }
 
-        /**
-         * Show a loading panel while AI Bridge is being extracted.
-         * This avoids EDT freeze during first-time setup.
-         */
         private void showLoadingPanel() {
             JPanel loadingPanel = ErrorPanelManager.buildLoadingPanel();
             mainPanel.add(loadingPanel, BorderLayout.CENTER);
         }
 
-        /**
-         * Reinitialize UI after bridge extraction completes.
-         */
         private void reinitializeAfterExtraction() {
             ApplicationManager.getApplication().invokeLater(() -> {
                 LOG.info("[ClaudeSDKToolWindow] Bridge extraction complete, reinitializing UI...");
@@ -535,8 +502,8 @@ public class ClaudeChatWindow {
 
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(mainPanel,
-                    "保存或应用 Node.js 路径时出错: " + ex.getMessage(),
-                    "错误", JOptionPane.ERROR_MESSAGE);
+                    "Error saving or applying Node.js path: " + ex.getMessage(),
+                    "Error", JOptionPane.ERROR_MESSAGE);
             }
         }
 
@@ -553,26 +520,22 @@ public class ClaudeChatWindow {
         private String determineWorkingDirectory() {
             String projectPath = project.getBasePath();
 
-            // 如果项目路径无效，回退到用户主目录
             if (projectPath == null || !new File(projectPath).exists()) {
                 String userHome = System.getProperty("user.home");
                 LOG.warn("Using user home directory as fallback: " + userHome);
                 return userHome;
             }
 
-            // 尝试从配置中读取自定义工作目录
             try {
                 PluginSettingsService settingsService = new PluginSettingsService();
                 String customWorkingDir = settingsService.getCustomWorkingDirectory(projectPath);
 
                 if (customWorkingDir != null && !customWorkingDir.isEmpty()) {
-                    // 如果是相对路径，拼接到项目根路径
                     File workingDirFile = new File(customWorkingDir);
                     if (!workingDirFile.isAbsolute()) {
                         workingDirFile = new File(projectPath, customWorkingDir);
                     }
 
-                    // 验证目录是否存在
                     if (workingDirFile.exists() && workingDirFile.isDirectory()) {
                         String resolvedPath = workingDirFile.getAbsolutePath();
                         LOG.info("Using custom working directory: " + resolvedPath);
@@ -585,14 +548,12 @@ public class ClaudeChatWindow {
                 LOG.warn("Failed to read custom working directory: " + e.getMessage());
             }
 
-            // 默认使用项目根路径
             return projectPath;
         }
 
         private void loadHistorySession(String sessionId, String projectPath) {
             LOG.info("Loading history session: " + sessionId + " from project: " + projectPath);
 
-            // 保存当前的 permission mode、provider、model（如果存在旧 session）
             String previousPermissionMode;
             String previousProvider;
             String previousModel;
@@ -602,10 +563,8 @@ public class ClaudeChatWindow {
                 previousProvider = session.getProvider();
                 previousModel = session.getModel();
             } else {
-                // If no existing session, load from persistent storage
                 String savedMode = settingsLoader.getSavedPermissionMode();
                 previousPermissionMode = (savedMode != null) ? savedMode : "bypassPermissions";
-                // provider and model use defaults, as frontend syncs these on startup
                 previousProvider = "claude";
                 previousModel = "claude-sonnet-4-5";
             }
@@ -615,7 +574,6 @@ public class ClaudeChatWindow {
 
             session = new ClaudeSession(project, claudeSDKBridge);
 
-            // 恢复之前保存的 permission mode、provider、model
             session.setPermissionMode(previousPermissionMode);
             session.setProvider(previousProvider);
             session.setModel(previousModel);
@@ -631,7 +589,7 @@ public class ClaudeChatWindow {
             session.loadFromServer().thenRun(() -> ApplicationManager.getApplication().invokeLater(() -> {}))
                 .exceptionally(ex -> {
                     ApplicationManager.getApplication().invokeLater(() ->
-                        callJavaScript("addErrorMessage", JsUtils.escapeJs("加载会话失败: " + ex.getMessage())));
+                        callJavaScript("addErrorMessage", JsUtils.escapeJs("Failed to load session: " + ex.getMessage())));
                     return null;
                 });
         }
@@ -661,10 +619,6 @@ public class ClaudeChatWindow {
             session.setCallback(SessionCallbackFactory.create(deps));
         }
 
-        /**
-         * Sends messages to the webview for display.
-         * Called by StreamingMessageHandler through the callback.
-         */
         private void sendStreamMessagesToWebView(
             List<ClaudeSession.Message> messages,
             Long sequence,
@@ -687,7 +641,6 @@ public class ClaudeChatWindow {
                         return;
                     }
 
-                    // Check sequence is still current (for deduplication)
                     if (sequence != null && !streamingHandler.isSequenceCurrent(sequence)) {
                         return;
                     }
@@ -702,15 +655,10 @@ public class ClaudeChatWindow {
             });
         }
 
-        /**
-         * 发送当前权限模式到前端
-         * 在前端准备就绪时调用，确保前端显示正确的权限模式
-         */
         private void sendCurrentPermissionMode() {
             try {
-                String currentMode = "bypassPermissions";  // 默认值
+                String currentMode = "bypassPermissions";
 
-                // 优先从 session 中获取
                 if (session != null) {
                     String sessionMode = session.getPermissionMode();
                     if (sessionMode != null && !sessionMode.trim().isEmpty()) {
@@ -733,17 +681,13 @@ public class ClaudeChatWindow {
         private void createNewSession() {
             LOG.info("Creating new session...");
 
-            // 保存当前的 permission mode、provider、model（如果存在旧 session）
             String previousPermissionMode = (session != null) ? session.getPermissionMode() : "bypassPermissions";
             String previousProvider = (session != null) ? session.getProvider() : "claude";
             String previousModel = (session != null) ? session.getModel() : "claude-sonnet-4-5";
             LOG.info("Preserving session state: mode=" + previousPermissionMode + ", provider=" + previousProvider + ", model=" + previousModel);
 
-            // 清空前端消息显示（修复新建会话时消息不清空的bug）
             callJavaScript("clearMessages");
 
-            // 先中断旧会话，确保彻底断开旧的连接
-            // 使用异步方式等待中断完成，避免竞态条件
             CompletableFuture<Void> interruptFuture = session != null
                 ? session.interrupt()
                 : CompletableFuture.completedFuture(null);
@@ -751,38 +695,31 @@ public class ClaudeChatWindow {
             interruptFuture.thenRun(() -> {
                 LOG.info("Old session interrupted, creating new session");
 
-                // 创建全新的 Session 对象
                 session = new ClaudeSession(project, claudeSDKBridge);
 
-                // 恢复之前保存的 permission mode、provider、model
                 session.setPermissionMode(previousPermissionMode);
                 session.setProvider(previousProvider);
                 session.setModel(previousModel);
                 LOG.info("Restored session state to new session: mode=" + previousPermissionMode + ", provider=" + previousProvider + ", model=" + previousModel);
 
-                // 更新 HandlerContext 中的 Session 引用（重要：确保所有 Handler 使用新 Session）
                 handlerContext.setSession(session);
 
-                // 设置回调
                 setupSessionCallbacks();
 
-                // 设置工作目录（sessionId 为 null 表示新会话）
                 String workingDirectory = determineWorkingDirectory();
                 session.setSessionInfo(null, workingDirectory);
 
                 LOG.info("New session created successfully, working directory: " + workingDirectory);
 
-                // 更新前端状态
                 ApplicationManager.getApplication().invokeLater(() -> {
                     callJavaScript("updateStatus", JsUtils.escapeJs("New session created, you can start asking questions"));
 
-                    // 重置 Token 使用统计
                     usageTracker.resetUsage();
                 });
             }).exceptionally(ex -> {
                 LOG.error("Failed to create new session: " + ex.getMessage(), ex);
                 ApplicationManager.getApplication().invokeLater(() -> {
-                    callJavaScript("updateStatus", JsUtils.escapeJs("创建新会话失败: " + ex.getMessage()));
+                    callJavaScript("updateStatus", JsUtils.escapeJs("Failed to create new session: " + ex.getMessage()));
                 });
                 return null;
             });
@@ -792,11 +729,6 @@ public class ClaudeChatWindow {
             this.session.interrupt().thenRun(() -> ApplicationManager.getApplication().invokeLater(() -> {}));
         }
 
-        /**
-         * 执行 JavaScript 代码（对外公开，用于权限弹窗等功能）.
-         *
-         * @param jsCode 要执行的 JavaScript 代码
-         */
         public void executeJavaScriptCode(String jsCode) {
             if (this.disposed || this.browser == null) {
                 return;
@@ -810,7 +742,7 @@ public class ClaudeChatWindow {
 
         private void callJavaScript(String functionName, String... args) {
             if (disposed || browser == null) {
-                LOG.warn("无法调用 JS 函数 " + functionName + ": disposed=" + disposed + ", browser=" + (browser == null ? "null" : "exists"));
+                LOG.warn("Cannot call JS function " + functionName + ": disposed=" + disposed + ", browser=" + (browser == null ? "null" : "exists"));
                 return;
             }
 
@@ -849,43 +781,27 @@ public class ClaudeChatWindow {
 
                     browser.getCefBrowser().executeJavaScript(checkAndCall, browser.getCefBrowser().getURL(), 0);
                 } catch (Exception e) {
-                    LOG.warn("调用 JS 函数失败: " + functionName + ", 错误: " + e.getMessage(), e);
+                    LOG.warn("Failed to call JS function: " + functionName + ", error: " + e.getMessage(), e);
                 }
             });
         }
 
-        /**
-         * Delegate to CodeSnippetHandler for external access.
-         */
         public static void addSelectionFromExternalInternal(Project project, String selectionInfo) {
             CodeSnippetHandler.addSelectionFromExternal(project, selectionInfo);
         }
 
-        /**
-         * Get the code snippet handler for this window.
-         */
         public CodeSnippetHandler getCodeSnippetHandler() {
             return codeSnippetHandler;
         }
 
-        /**
-         * Check if this window has been disposed.
-         */
         public boolean isDisposed() {
             return disposed;
         }
 
-        /**
-         * Check if this window has been initialized.
-         */
         public boolean isInitialized() {
             return initialized;
         }
 
-        /**
-         * 发送 QuickFix 消息 - 供 QuickFixWithClaudeAction 调用
-         * Send QuickFix message - called by QuickFixWithClaudeAction
-         */
         public void sendQuickFixMessage(String prompt, boolean isQuickFix, MessageCallback callback) {
             quickFixHandler.sendQuickFixMessage(prompt, isQuickFix, callback);
         }
@@ -894,10 +810,6 @@ public class ClaudeChatWindow {
             return mainPanel;
         }
 
-        /**
-         * Cleanup all Node.js processes managed by this window.
-         * Used by shutdown hooks for cleanup during IDE shutdown.
-         */
         public void cleanupAllProcesses() {
             if (claudeSDKBridge != null) {
                 claudeSDKBridge.cleanupAllProcesses();
@@ -907,7 +819,6 @@ public class ClaudeChatWindow {
         public void dispose() {
             if (disposed) return;
 
-            // Dispose editor context manager
             if (editorContextManager != null) {
                 editorContextManager.dispose();
                 editorContextManager = null;
@@ -920,22 +831,20 @@ public class ClaudeChatWindow {
                 LOG.warn("Failed to dispose streaming handler: " + e.getMessage());
             }
 
-            // 清理斜杠命令管理器
             if (slashCommandManager != null) {
                 slashCommandManager.dispose();
                 slashCommandManager = null;
             }
 
-            // 注销权限服务的 dialogShower 和 askUserQuestionDialogShower，防止内存泄漏
             try {
-                PermissionService permissionService = PermissionService.getInstance(project);
+                PermissionService permissionService = project.getService(PermissionService.class);
                 permissionService.unregisterDialogShower(project);
                 permissionService.unregisterAskUserQuestionDialogShower(project);
             } catch (Exception e) {
                 LOG.warn("Failed to unregister dialog showers: " + e.getMessage());
             }
 
-            LOG.info("开始清理窗口资源，项目: " + project.getName());
+            LOG.info("Starting to clean up window resources, project: " + project.getName());
 
             disposed = true;
             handlerContext.setDisposed(true);
@@ -945,20 +854,19 @@ public class ClaudeChatWindow {
             try {
                 if (session != null) session.interrupt();
             } catch (Exception e) {
-                LOG.warn("清理会话失败: " + e.getMessage());
+                LOG.warn("Failed to clean up session: " + e.getMessage());
             }
 
-            // 清理所有活跃的 Node.js 子进程
             try {
                 if (claudeSDKBridge != null) {
                     int activeCount = claudeSDKBridge.getActiveProcessCount();
                     if (activeCount > 0) {
-                        LOG.info("正在清理 " + activeCount + " 个活跃的 Claude 进程...");
+                        LOG.info("Cleaning up " + activeCount + " active Claude processes...");
                     }
                     claudeSDKBridge.cleanupAllProcesses();
                 }
             } catch (Exception e) {
-                LOG.warn("清理 Claude 进程失败: " + e.getMessage());
+                LOG.warn("Failed to clean up Claude processes: " + e.getMessage());
             }
 
             try {
@@ -967,11 +875,11 @@ public class ClaudeChatWindow {
                     browser = null;
                 }
             } catch (Exception e) {
-                LOG.warn("清理浏览器失败: " + e.getMessage());
+                LOG.warn("Failed to clean up browser: " + e.getMessage());
             }
 
             messageDispatcher.clear();
 
-            LOG.info("窗口资源已完全清理，项目: " + project.getName());
+            LOG.info("Window resources fully cleaned up, project: " + project.getName());
         }
 }

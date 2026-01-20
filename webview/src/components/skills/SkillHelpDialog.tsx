@@ -4,19 +4,13 @@ interface SkillHelpDialogProps {
   onClose: () => void;
 }
 
-/**
- * Skills Help Dialog
- * Explains what Skills are and how to use them
- */
 export function SkillHelpDialog({ onClose }: SkillHelpDialogProps) {
-  // Prevent event bubbling
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
       onClose();
     }
   };
 
-  // Copy link and show alert
   const handleLinkClick = async (e: React.MouseEvent, url: string) => {
     e.preventDefault();
     const success = await copyToClipboard(url);
@@ -28,7 +22,6 @@ export function SkillHelpDialog({ onClose }: SkillHelpDialogProps) {
   return (
     <div className="skill-dialog-backdrop" onClick={handleBackdropClick}>
       <div className="skill-dialog help-dialog">
-        {/* Header */}
         <div className="dialog-header">
           <h3>What are Skills?</h3>
           <button className="close-btn" onClick={onClose}>
@@ -36,7 +29,6 @@ export function SkillHelpDialog({ onClose }: SkillHelpDialogProps) {
           </button>
         </div>
 
-        {/* Content */}
         <div className="dialog-content help-content">
           <section className="help-section">
             <h4>
@@ -151,7 +143,6 @@ Detailed instruction content...`}
           </section>
         </div>
 
-        {/* Footer */}
         <div className="dialog-footer">
           <button className="btn-primary" onClick={onClose}>
             Got it

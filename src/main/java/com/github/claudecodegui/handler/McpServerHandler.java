@@ -9,9 +9,6 @@ import javax.swing.*;
 import java.util.List;
 import java.util.Map;
 
-/**
- * MCP 服务器管理消息处理器
- */
 public class McpServerHandler extends BaseMessageHandler {
 
     private static final Logger LOG = Logger.getInstance(McpServerHandler.class);
@@ -64,12 +61,8 @@ public class McpServerHandler extends BaseMessageHandler {
         }
     }
 
-    /**
-     * Get all MCP servers with project-level disabled tracking
-     */
     private void handleGetMcpServers() {
         try {
-            // Get project path for project-level MCP configuration
             String projectPath = context.getProject() != null
                 ? context.getProject().getBasePath()
                 : null;
@@ -89,10 +82,6 @@ public class McpServerHandler extends BaseMessageHandler {
         }
     }
 
-    /**
-     * 获取 MCP 服务器连接状态.
-     * 通过 Claude SDK 获取实时的 MCP 服务器连接状态
-     */
     private void handleGetMcpServerStatus() {
         try {
             String cwd = context.getProject() != null
@@ -104,7 +93,6 @@ public class McpServerHandler extends BaseMessageHandler {
                     Gson gson = new Gson();
                     String statusJson = gson.toJson(statusList);
 
-                    // 添加调试日志，帮助排查名称匹配问题
                     LOG.info("[McpServerHandler] MCP server status received: " + statusList.size() + " servers");
                     for (JsonObject status : statusList) {
                         if (status.has("name")) {
@@ -131,9 +119,6 @@ public class McpServerHandler extends BaseMessageHandler {
         }
     }
 
-    /**
-     * 添加 MCP 服务器
-     */
     private void handleAddMcpServer(String content) {
         try {
             Gson gson = new Gson();
@@ -154,9 +139,6 @@ public class McpServerHandler extends BaseMessageHandler {
         }
     }
 
-    /**
-     * 更新 MCP 服务器
-     */
     private void handleUpdateMcpServer(String content) {
         try {
             Gson gson = new Gson();
@@ -177,9 +159,6 @@ public class McpServerHandler extends BaseMessageHandler {
         }
     }
 
-    /**
-     * Delete MCP server
-     */
     private void handleDeleteMcpServer(String content) {
         try {
             Gson gson = new Gson();
@@ -208,15 +187,11 @@ public class McpServerHandler extends BaseMessageHandler {
         }
     }
 
-    /**
-     * Toggle MCP server enabled/disabled state
-     */
     private void handleToggleMcpServer(String content) {
         try {
             Gson gson = new Gson();
             JsonObject server = gson.fromJson(content, JsonObject.class);
 
-            // Update server configuration with project path
             String projectPath = context.getProject() != null
                 ? context.getProject().getBasePath()
                 : null;
@@ -231,7 +206,6 @@ public class McpServerHandler extends BaseMessageHandler {
             ApplicationManager.getApplication().invokeLater(() -> {
                 callJavaScript("window.mcpServerToggled", escapeJs(content));
                 handleGetMcpServers();
-                // Also refresh status to show updated connection state
                 handleGetMcpServerStatus();
             });
         } catch (Exception e) {
@@ -242,9 +216,6 @@ public class McpServerHandler extends BaseMessageHandler {
         }
     }
 
-    /**
-     * Validate MCP server configuration
-     */
     private void handleValidateMcpServer(String content) {
         try {
             Gson gson = new Gson();

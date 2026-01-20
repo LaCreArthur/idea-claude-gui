@@ -20,16 +20,9 @@ export const truncate = (text: string, maxLength = 60) => {
   return `${text.substring(0, maxLength)}...`;
 };
 
-/**
- * Check if a value is truthy (true or 'true' string).
- * Useful for parsing boolean values from Java bridge.
- */
 export const isTruthy = (value: unknown): boolean =>
   value === true || value === 'true';
 
-/**
- * Format a timestamp string as HH:MM time.
- */
 export const formatTime = (timestamp?: string): string => {
   if (!timestamp) return '';
   try {

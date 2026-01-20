@@ -7,10 +7,6 @@ interface SkillConfirmDialogProps {
   onCancel: () => void;
 }
 
-/**
- * Skill 确认弹窗
- * 用于删除等危险操作的二次确认
- */
 export function SkillConfirmDialog({
   title,
   message,
@@ -19,7 +15,6 @@ export function SkillConfirmDialog({
   onConfirm,
   onCancel,
 }: SkillConfirmDialogProps) {
-  // 阻止事件冒泡
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
       onCancel();
@@ -29,7 +24,6 @@ export function SkillConfirmDialog({
   return (
     <div className="skill-dialog-backdrop" onClick={handleBackdropClick}>
       <div className="skill-dialog confirm-dialog">
-        {/* 标题栏 */}
         <div className="dialog-header">
           <h3>{title}</h3>
           <button className="close-btn" onClick={onCancel}>
@@ -37,7 +31,6 @@ export function SkillConfirmDialog({
           </button>
         </div>
 
-        {/* 内容 */}
         <div className="dialog-content">
           <div className="confirm-message">
             <span className="codicon codicon-warning warning-icon"></span>
@@ -45,7 +38,6 @@ export function SkillConfirmDialog({
           </div>
         </div>
 
-        {/* 底部按钮 */}
         <div className="dialog-footer">
           <button className="btn-secondary" onClick={onCancel}>
             {cancelText}

@@ -12,10 +12,6 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 
-/**
- * 文件导出处理器
- * 处理文件保存（支持 Markdown、JSON 等格式）
- */
 public class FileExportHandler extends BaseMessageHandler {
 
     private static final Logger LOG = Logger.getInstance(FileExportHandler.class);
@@ -43,72 +39,55 @@ public class FileExportHandler extends BaseMessageHandler {
             handleSaveFile(content, ".md", "Save Markdown File");
             return true;
         } else if ("save_json".equals(type)) {
-            LOG.info("[FileExportHandler] 处理: save_json");
+            LOG.info("[FileExportHandler] Processing: save_json");
             handleSaveFile(content, ".json", "Save JSON File");
             return true;
         }
         return false;
     }
 
-    /**
-     * 处理保存文件（支持多种格式）
-     */
     private void handleSaveFile(String jsonContent, String fileExtension, String dialogTitle) {
         try {
-            LOG.info("[FileExportHandler] ========== 开始保存文件 ==========");
-            LOG.info("[FileExportHandler] 文件类型: " + fileExtension);
+            LOG.info("[FileExportHandler] Starting file save");
+            LOG.info("[FileExportHandler] File type: " + fileExtension);
 
-            // 解析 JSON
             JsonObject json = gson.fromJson(jsonContent, JsonObject.class);
             String content = json.get("content").getAsString();
             String filename = json.get("filename").getAsString();
 
-            LOG.info("[FileExportHandler] 文件名: " + filename);
+            LOG.info("[FileExportHandler] Filename: " + filename);
 
-            // 在 EDT 线程显示文件对话框并保存
             ApplicationManager.getApplication().invokeLater(() -> {
                 try {
-                    // 获取项目路径作为默认目录
                     String projectPath = context.getProject().getBasePath();
 
-                    // 使用 FileDialog 以获得原生系统对话框
                     FileDialog fileDialog = new FileDialog((Frame) null, dialogTitle, FileDialog.SAVE);
 
-                    // 设置默认目录
                     if (projectPath != null) {
                         fileDialog.setDirectory(projectPath);
                     }
 
-                    // 设置默认文件名
                     fileDialog.setFile(filename);
-
-                    // 设置文件过滤器
                     fileDialog.setFilenameFilter((dir, name) -> name.toLowerCase().endsWith(fileExtension));
-
-                    // 显示对话框
                     fileDialog.setVisible(true);
 
-                    // 获取用户选择的文件
                     String selectedDir = fileDialog.getDirectory();
                     String selectedFile = fileDialog.getFile();
 
                     if (selectedDir != null && selectedFile != null) {
                         File fileToSave = new File(selectedDir, selectedFile);
 
-                        // 确保文件扩展名正确
                         String path = fileToSave.getAbsolutePath();
                         if (!path.toLowerCase().endsWith(fileExtension)) {
                             fileToSave = new File(path + fileExtension);
                         }
 
-                        // 写入文件 (在后台线程执行IO操作)
                         File finalFileToSave = fileToSave;
                         CompletableFuture.runAsync(() -> {
                             try (FileWriter writer = new FileWriter(finalFileToSave)) {
                                 writer.write(content);
-                                LOG.info("[FileExportHandler] ✅ 文件保存成功: " + finalFileToSave.getAbsolutePath());
+                                LOG.info("[FileExportHandler] File saved successfully: " + finalFileToSave.getAbsolutePath());
 
-                                // 通知前端成功
                                 ApplicationManager.getApplication().invokeLater(() -> {
                                     String successMsg = escapeJs("File saved");
                                     String jsCode = "if (window.addToast) { " +
@@ -118,9 +97,8 @@ public class FileExportHandler extends BaseMessageHandler {
                                 });
 
                             } catch (IOException e) {
-                                LOG.error("[FileExportHandler] ❌ Failed to save file: " + e.getMessage(), e);
+                                LOG.error("[FileExportHandler] Failed to save file: " + e.getMessage(), e);
 
-                                // Notify frontend of failure
                                 ApplicationManager.getApplication().invokeLater(() -> {
                                     String errorDetail = e.getMessage() != null ? e.getMessage() : "Save failed";
                                     String errorMsg = escapeJs("Save failed: " + errorDetail);
@@ -135,7 +113,7 @@ public class FileExportHandler extends BaseMessageHandler {
                         LOG.info("[FileExportHandler] User cancelled save");
                     }
                 } catch (Exception e) {
-                    LOG.error("[FileExportHandler] ❌ Failed to show dialog: " + e.getMessage(), e);
+                    LOG.error("[FileExportHandler] Failed to show dialog: " + e.getMessage(), e);
 
                     String errorDetail = e.getMessage() != null ? e.getMessage() : "Failed to show dialog";
                     String errorMsg = escapeJs("Save failed: " + errorDetail);
@@ -145,11 +123,11 @@ public class FileExportHandler extends BaseMessageHandler {
                     context.executeJavaScriptOnEDT(jsCode);
                 }
 
-                LOG.info("[FileExportHandler] ========== File save completed ==========");
+                LOG.info("[FileExportHandler] File save completed");
             });
 
         } catch (Exception e) {
-            LOG.error("[FileExportHandler] ❌ Failed to process save request: " + e.getMessage(), e);
+            LOG.error("[FileExportHandler] Failed to process save request: " + e.getMessage(), e);
 
             ApplicationManager.getApplication().invokeLater(() -> {
                 String errorDetail = e.getMessage() != null ? e.getMessage() : "Unknown error";

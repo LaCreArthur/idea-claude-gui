@@ -26,14 +26,6 @@ export interface KeyboardHandlersReturn {
   completionSelectedRef: React.MutableRefObject<boolean>;
 }
 
-/**
- * useKeyboardHandlers - Extract keyboard handling logic from ChatInputBox
- * Handles:
- * - Mac-style cursor movement (Cmd+Arrow keys)
- * - Enter/Shift+Enter for submit/newline
- * - Completion menu keyboard navigation
- * - Native event listeners for JCEF/IME compatibility
- */
 export function useKeyboardHandlers({
   editableRef,
   isComposing,
@@ -55,9 +47,6 @@ export function useKeyboardHandlers({
   const submittedOnEnterRef = useRef(false);
   const completionSelectedRef = useRef(false);
 
-  /**
-   * Handle Mac-style cursor movement, text selection, and delete operations
-   */
   const handleMacCursorMovement = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
     if (!editableRef.current) return false;
 
@@ -67,25 +56,21 @@ export function useKeyboardHandlers({
     const range = selection.getRangeAt(0);
     const isShift = e.shiftKey;
 
-    // Cmd + Backspace: Delete from cursor to line start
     if (e.key === 'Backspace' && e.metaKey) {
       e.preventDefault();
 
       const node = range.startContainer;
       const offset = range.startOffset;
 
-      // If there's selected content, use execCommand to delete (supports undo)
       if (!range.collapsed) {
         document.execCommand('delete', false);
         handleInput();
         return true;
       }
 
-      // No selection, select from cursor to line start, then delete
       let lineStartOffset = 0;
       if (node.nodeType === Node.TEXT_NODE) {
         const text = node.textContent || '';
-        // Search backward for newline
         for (let i = offset - 1; i >= 0; i--) {
           if (text[i] === '\n') {
             lineStartOffset = i + 1;
@@ -94,33 +79,28 @@ export function useKeyboardHandlers({
         }
       }
 
-      // If cursor is already at line start, do nothing
       if (lineStartOffset === offset) {
         return true;
       }
 
-      // Select from line start to cursor
       const newRange = document.createRange();
       newRange.setStart(node, lineStartOffset);
       newRange.setEnd(node, offset);
       selection.removeAllRanges();
       selection.addRange(newRange);
 
-      // Delete selection (supports undo)
       document.execCommand('delete', false);
 
       handleInput();
       return true;
     }
 
-    // Cmd + Left Arrow: Move to line start (or select to line start)
     if (e.key === 'ArrowLeft' && e.metaKey) {
       e.preventDefault();
 
       const node = range.startContainer;
       const offset = range.startOffset;
 
-      // Find line start
       let lineStartOffset = 0;
       if (node.nodeType === Node.TEXT_NODE) {
         const text = node.textContent || '';
@@ -136,10 +116,8 @@ export function useKeyboardHandlers({
       newRange.setStart(node, lineStartOffset);
 
       if (isShift) {
-        // Shift: Select to line start
         newRange.setEnd(range.endContainer, range.endOffset);
       } else {
-        // No Shift: Move cursor to line start
         newRange.collapse(true);
       }
 
@@ -148,14 +126,12 @@ export function useKeyboardHandlers({
       return true;
     }
 
-    // Cmd + Right Arrow: Move to line end (or select to line end)
     if (e.key === 'ArrowRight' && e.metaKey) {
       e.preventDefault();
 
       const node = range.endContainer;
       const offset = range.endOffset;
 
-      // Find line end
       let lineEndOffset = node.textContent?.length || 0;
       if (node.nodeType === Node.TEXT_NODE) {
         const text = node.textContent || '';
@@ -170,11 +146,9 @@ export function useKeyboardHandlers({
       const newRange = document.createRange();
 
       if (isShift) {
-        // Shift: Select to line end
         newRange.setStart(range.startContainer, range.startOffset);
         newRange.setEnd(node, lineEndOffset);
       } else {
-        // No Shift: Move cursor to line end
         newRange.setStart(node, lineEndOffset);
         newRange.collapse(true);
       }
@@ -184,7 +158,6 @@ export function useKeyboardHandlers({
       return true;
     }
 
-    // Cmd + Up Arrow: Move to text start (or select to start)
     if (e.key === 'ArrowUp' && e.metaKey) {
       e.preventDefault();
 
@@ -192,11 +165,9 @@ export function useKeyboardHandlers({
       const newRange = document.createRange();
 
       if (isShift) {
-        // Shift: Select to start
         newRange.setStart(firstNode, 0);
         newRange.setEnd(range.endContainer, range.endOffset);
       } else {
-        // No Shift: Move cursor to start
         newRange.setStart(firstNode, 0);
         newRange.collapse(true);
       }
@@ -206,7 +177,6 @@ export function useKeyboardHandlers({
       return true;
     }
 
-    // Cmd + Down Arrow: Move to text end (or select to end)
     if (e.key === 'ArrowDown' && e.metaKey) {
       e.preventDefault();
 
@@ -218,11 +188,9 @@ export function useKeyboardHandlers({
       const newRange = document.createRange();
 
       if (isShift) {
-        // Shift: Select to end
         newRange.setStart(range.startContainer, range.startOffset);
         newRange.setEnd(lastNode, lastOffset);
       } else {
-        // No Shift: Move cursor to end
         newRange.setStart(lastNode, lastOffset);
         newRange.collapse(true);
       }
@@ -235,15 +203,9 @@ export function useKeyboardHandlers({
     return false;
   }, [editableRef, handleInput]);
 
-  /**
-   * Handle keyboard events (React event handler)
-   */
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
-    // Track Shift key state for Shift+Enter newline handling in beforeinput
     shiftKeyPressedRef.current = e.shiftKey;
 
-    // Detect IME composition state
-    // keyCode 229 is the special code during IME input
     const isIMEComposing = isComposing || e.nativeEvent.isComposing;
 
     const isEnterKey =
@@ -252,12 +214,10 @@ export function useKeyboardHandlers({
       (e.nativeEvent as unknown as { keyCode?: number }).keyCode === 13 ||
       (e as unknown as { which?: number }).which === 13;
 
-    // Handle Mac-style cursor movement and text selection first
     if (handleMacCursorMovement(e)) {
       return;
     }
 
-    // Allow other cursor movement shortcuts (Home/End/Ctrl+A/Ctrl+E)
     const isCursorMovementKey =
       e.key === 'Home' ||
       e.key === 'End' ||
@@ -265,11 +225,9 @@ export function useKeyboardHandlers({
       ((e.key === 'e' || e.key === 'E') && e.ctrlKey && !e.metaKey);
 
     if (isCursorMovementKey) {
-      // Allow default cursor movement behavior
       return;
     }
 
-    // Handle completion menu keyboard events first
     if (fileCompletionIsOpen) {
       const handled = fileCompletionHandleKeyDown(e.nativeEvent);
       if (handled) {
@@ -306,12 +264,8 @@ export function useKeyboardHandlers({
       }
     }
 
-    // Check if composition just ended (prevent IME confirmation triggering send)
     const isRecentlyComposing = Date.now() - lastCompositionEndTimeRef.current < 100;
 
-    // Determine send behavior based on sendShortcut setting
-    // sendShortcut === 'enter': Enter sends, Shift+Enter creates newline
-    // sendShortcut === 'cmdEnter': Cmd/Ctrl+Enter sends, Enter creates newline
     const isSendKey = sendShortcut === 'cmdEnter'
       ? (isEnterKey && (e.metaKey || e.ctrlKey) && !isIMEComposing)
       : (isEnterKey && !e.shiftKey && !isIMEComposing && !isRecentlyComposing);
@@ -326,8 +280,6 @@ export function useKeyboardHandlers({
       return;
     }
 
-    // For cmdEnter mode, allow normal Enter to create newline (default behavior)
-    // For enter mode, Shift+Enter creates newline (default behavior)
   }, [
     isComposing,
     handleSubmit,
@@ -344,9 +296,6 @@ export function useKeyboardHandlers({
     lastCompositionEndTimeRef,
   ]);
 
-  /**
-   * Handle key up events (React event handler)
-   */
   const handleKeyUp = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
     const isEnterKey =
       e.key === 'Enter' ||
@@ -360,7 +309,6 @@ export function useKeyboardHandlers({
 
     if (isSendKey) {
       e.preventDefault();
-      // If just selected item in completion menu, don't send
       if (completionSelectedRef.current) {
         completionSelectedRef.current = false;
         return;
@@ -369,20 +317,16 @@ export function useKeyboardHandlers({
         submittedOnEnterRef.current = false;
         return;
       }
-      // Don't handle send in keyup, let keydown handle it
     }
   }, [sendShortcut]);
 
-  // Native event listeners for JCEF/IME compatibility
   useEffect(() => {
     const el = editableRef.current;
     if (!el) return;
 
     const nativeKeyDown = (ev: KeyboardEvent) => {
-      // Track Shift key state
       shiftKeyPressedRef.current = ev.shiftKey;
 
-      // Detect IME input: keyCode 229 means IME is processing
       const isIMEProcessing = (ev as unknown as { keyCode?: number }).keyCode === 229 || ev.isComposing;
       if (isIMEProcessing) {
         isComposingRef.current = true;
@@ -393,7 +337,6 @@ export function useKeyboardHandlers({
         (ev as unknown as { keyCode?: number }).keyCode === 13 ||
         (ev as unknown as { which?: number }).which === 13;
 
-      // Mac-style shortcuts (already handled in React events)
       const isMacCursorMovementOrDelete =
         (ev.key === 'ArrowLeft' && ev.metaKey) ||
         (ev.key === 'ArrowRight' && ev.metaKey) ||
@@ -405,7 +348,6 @@ export function useKeyboardHandlers({
         return;
       }
 
-      // Allow cursor movement shortcuts
       const isCursorMovementKey =
         ev.key === 'Home' ||
         ev.key === 'End' ||
@@ -416,7 +358,6 @@ export function useKeyboardHandlers({
         return;
       }
 
-      // Skip if completion menu is open (React handler handles it)
       if (fileCompletionIsOpen || commandCompletionIsOpen || agentCompletionIsOpen) {
         return;
       }
@@ -464,12 +405,10 @@ export function useKeyboardHandlers({
     const nativeBeforeInput = (ev: InputEvent) => {
       const type = ev.inputType;
       if (type === 'insertParagraph') {
-        // For cmdEnter mode, allow normal Enter to create newline
         if (sendShortcut === 'cmdEnter') {
           return;
         }
 
-        // For enter mode: Shift+Enter should insert newline
         if (shiftKeyPressedRef.current) {
           return;
         }

@@ -47,6 +47,7 @@ const TESTS = [
   'test-skills.mjs',              // US-10: Skills/Agents
   'test-auth-states.mjs',         // Auth state detection
   'test-auth-validation.mjs',     // Auth validation with API calls
+  'test-image-attachment.mjs',    // Image attachment flow
 ];
 
 async function runTest(testFile) {

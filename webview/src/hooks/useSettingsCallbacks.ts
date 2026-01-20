@@ -3,41 +3,30 @@ import type { PermissionMode } from '../components/ChatInputBox/types';
 import type { ProviderConfig } from '../types/provider';
 import { sendBridgeEvent } from '../utils/bridge';
 
-/** SDK status record as used in App.tsx */
 type SdkStatusRecord = Record<string, { installed?: boolean; status?: string }>;
 
 export interface UseSettingsCallbacksParams {
-  // SDK status setters
   setSdkStatus: Dispatch<SetStateAction<SdkStatusRecord>>;
   setSdkStatusLoaded: Dispatch<SetStateAction<boolean>>;
 
-  // Usage setters
   setUsagePercentage: Dispatch<SetStateAction<number>>;
   setUsageUsedTokens: Dispatch<SetStateAction<number | undefined>>;
   setUsageMaxTokens: Dispatch<SetStateAction<number | undefined>>;
 
-  // Mode setters
   setPermissionMode: Dispatch<SetStateAction<PermissionMode>>;
   setClaudePermissionMode: Dispatch<SetStateAction<PermissionMode>>;
 
-  // Model setters
   setSelectedClaudeModel: Dispatch<SetStateAction<string>>;
 
-  // Provider setters
   syncActiveProviderModelMapping: (provider?: ProviderConfig | null) => void;
   setProviderConfigVersion: Dispatch<SetStateAction<number>>;
   setActiveProviderConfig: Dispatch<SetStateAction<ProviderConfig | null>>;
 
-  // Thinking/streaming setters
   setClaudeSettingsAlwaysThinkingEnabled: Dispatch<SetStateAction<boolean>>;
   setStreamingEnabledSetting: Dispatch<SetStateAction<boolean>>;
   setSendShortcut: Dispatch<SetStateAction<'enter' | 'cmdEnter'>>;
 }
 
-/**
- * Custom hook to handle settings-related window callbacks and initialization.
- * Extracts SDK status, usage, mode, model, provider, and streaming callbacks from App.tsx.
- */
 export function useSettingsCallbacks({
   setSdkStatus,
   setSdkStatusLoaded,
@@ -55,8 +44,6 @@ export function useSettingsCallbacks({
   setSendShortcut,
 }: UseSettingsCallbacksParams): void {
   useEffect(() => {
-    // === SDK Status Callback ===
-    // Uses decorator pattern to preserve original callback from DependencySection
     const originalUpdateDependencyStatus = window.updateDependencyStatus;
     window.updateDependencyStatus = (jsonStr: string) => {
       try {
@@ -67,27 +54,22 @@ export function useSettingsCallbacks({
         console.error('[Frontend] Failed to parse SDK status:', error);
         setSdkStatusLoaded(true);
       }
-      // Call original callback (from DependencySection) if it exists
       if (originalUpdateDependencyStatus && originalUpdateDependencyStatus !== window.updateDependencyStatus) {
         originalUpdateDependencyStatus(jsonStr);
       }
     };
-    // Save App's callback reference for DependencySection to use
     (window as any)._appUpdateDependencyStatus = window.updateDependencyStatus;
 
-    // Handle pending SDK status (backend may return before React initializes)
     if (window.__pendingDependencyStatus) {
       const pending = window.__pendingDependencyStatus;
       delete window.__pendingDependencyStatus;
       window.updateDependencyStatus?.(pending);
     }
 
-    // Request initial SDK status
     if (window.sendToJava) {
       window.sendToJava('get_dependency_status:');
     }
 
-    // === Usage Callback ===
     window.onUsageUpdate = (json) => {
       try {
         const data = JSON.parse(json);
@@ -103,7 +85,6 @@ export function useSettingsCallbacks({
       }
     };
 
-    // === Mode Callbacks ===
     const updateMode = (mode?: PermissionMode) => {
       if (mode === 'default' || mode === 'plan' || mode === 'acceptEdits' || mode === 'bypassPermissions') {
         setPermissionMode(mode);
@@ -114,7 +95,6 @@ export function useSettingsCallbacks({
     window.onModeChanged = (mode) => updateMode(mode as PermissionMode);
     window.onModeReceived = (mode) => updateMode(mode as PermissionMode);
 
-    // === Model Callbacks ===
     window.onModelChanged = (modelId) => {
       setSelectedClaudeModel(modelId);
     };
@@ -123,7 +103,6 @@ export function useSettingsCallbacks({
       setSelectedClaudeModel(modelId);
     };
 
-    // === Provider Callback ===
     window.updateActiveProvider = (jsonStr: string) => {
       try {
         const provider: ProviderConfig = JSON.parse(jsonStr);
@@ -135,7 +114,6 @@ export function useSettingsCallbacks({
       }
     };
 
-    // === Thinking Enabled Callback ===
     window.updateThinkingEnabled = (jsonStr: string) => {
       const trimmed = (jsonStr || '').trim();
       try {
@@ -155,7 +133,6 @@ export function useSettingsCallbacks({
       }
     };
 
-    // === Streaming Enabled Callback ===
     window.updateStreamingEnabled = (jsonStr: string) => {
       try {
         const data = JSON.parse(jsonStr);
@@ -165,7 +142,6 @@ export function useSettingsCallbacks({
       }
     };
 
-    // === Send Shortcut Callback ===
     window.updateSendShortcut = (jsonStr: string) => {
       try {
         const data = JSON.parse(jsonStr);
@@ -175,10 +151,8 @@ export function useSettingsCallbacks({
       }
     };
 
-    // === Initialization Requests with Retry Logic ===
     const MAX_RETRIES = 30;
 
-    // Request active provider
     let providerRetryCount = 0;
     const requestActiveProvider = () => {
       if (window.sendToJava) {
@@ -194,7 +168,6 @@ export function useSettingsCallbacks({
     };
     setTimeout(requestActiveProvider, 200);
 
-    // Request thinking enabled
     let thinkingRetryCount = 0;
     const requestThinkingEnabled = () => {
       if (window.sendToJava) {
@@ -208,7 +181,6 @@ export function useSettingsCallbacks({
     };
     setTimeout(requestThinkingEnabled, 200);
 
-    // Request streaming enabled
     let streamingRetryCount = 0;
     const requestStreamingEnabled = () => {
       if (window.sendToJava) {
@@ -222,7 +194,6 @@ export function useSettingsCallbacks({
     };
     setTimeout(requestStreamingEnabled, 200);
 
-    // Request send shortcut
     let sendShortcutRetryCount = 0;
     const requestSendShortcut = () => {
       if (window.sendToJava) {
@@ -236,5 +207,5 @@ export function useSettingsCallbacks({
     };
     setTimeout(requestSendShortcut, 200);
 
-  }, []); // Empty deps - runs once on mount
+  }, []);
 }

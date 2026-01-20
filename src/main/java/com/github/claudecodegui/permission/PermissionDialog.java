@@ -25,9 +25,7 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import com.intellij.openapi.diagnostic.Logger;
-/**
- * 权限请求对话框
- */
+
 public class PermissionDialog extends DialogWrapper {
     private static final Logger LOG = Logger.getInstance(PermissionDialog.class);
 
@@ -59,12 +57,10 @@ public class PermissionDialog extends DialogWrapper {
         setModal(true);
         setResizable(false);
 
-        // 创建 JCEF 浏览器
         this.browser = JBCefBrowserFactory.create();
         JBCefBrowserBase browserBase = this.browser;
         this.jsQuery = JBCefJSQuery.create(browserBase);
 
-        // 设置 JavaScript 回调
         jsQuery.addHandler((message) -> {
             if (message.startsWith("permission_decision:")) {
                 String jsonData = message.substring("permission_decision:".length());
@@ -78,7 +74,6 @@ public class PermissionDialog extends DialogWrapper {
             return null;
         });
 
-        // 加载 HTML
         loadHtml();
 
         init();
@@ -86,7 +81,6 @@ public class PermissionDialog extends DialogWrapper {
 
     private void loadHtml() {
         try {
-            // 读取 HTML 文件
             InputStream is = getClass().getResourceAsStream("/html/permission-dialog.html");
             if (is == null) {
                 throw new RuntimeException("Cannot find permission dialog HTML file");
@@ -96,18 +90,15 @@ public class PermissionDialog extends DialogWrapper {
                     .lines()
                     .collect(Collectors.joining("\n"));
 
-            // 注入 JavaScript 桥接代码
             String jsInjection = String.format(
                     "<script>window.sendToJava = function(message) { %s };</script>",
                     jsQuery.inject("message")
             );
             html = html.replace("</body>", jsInjection + "</body>");
 
-            // 加载 HTML
             browser.getJBCefClient().addLoadHandler(new CefLoadHandlerAdapter() {
                 @Override
                 public void onLoadEnd(CefBrowser cefBrowser, CefFrame frame, int httpStatusCode) {
-                    // 页面加载完成后，初始化权限请求数据
                     initializeRequestData();
                 }
             }, browser.getCefBrowser());
@@ -133,9 +124,6 @@ public class PermissionDialog extends DialogWrapper {
         browser.getCefBrowser().executeJavaScript(script, browser.getCefBrowser().getURL(), 0);
     }
 
-    /**
-     * Get display name for tool (returns tool name as-is)
-     */
     private String translateToolName(String toolName) {
         return toolName;
     }
@@ -154,7 +142,6 @@ public class PermissionDialog extends DialogWrapper {
 
     @Override
     protected Action[] createActions() {
-        // 不显示默认的 OK 和 Cancel 按钮
         return new Action[0];
     }
 

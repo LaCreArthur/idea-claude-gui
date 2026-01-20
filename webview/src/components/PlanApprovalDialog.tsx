@@ -31,7 +31,6 @@ const PlanApprovalDialog = ({
 
   useEffect(() => {
     if (isOpen && request) {
-      // Reset to default mode when dialog opens
       setSelectedMode('default');
 
       const handleKeyDown = (e: KeyboardEvent) => {
@@ -74,7 +73,6 @@ const PlanApprovalDialog = ({
   return (
     <div className="permission-dialog-overlay">
       <div className="plan-approval-dialog">
-        {/* Header */}
         <div className="plan-approval-dialog-header">
           <span className="codicon codicon-tasklist plan-approval-icon"></span>
           <h3 className="plan-approval-dialog-title">
@@ -82,12 +80,10 @@ const PlanApprovalDialog = ({
           </h3>
         </div>
 
-        {/* Subtitle */}
         <div className="plan-approval-dialog-subtitle">
           Claude has created a plan. Review and approve to start execution.
         </div>
 
-        {/* Plan content */}
         <div className="plan-approval-dialog-content">
           <div
             className="plan-content-wrapper markdown-content"
@@ -95,7 +91,6 @@ const PlanApprovalDialog = ({
           />
         </div>
 
-        {/* Mode selector */}
         <div className="plan-approval-dialog-mode-section">
           <div className="plan-approval-mode-label">
             Execute with mode:
@@ -116,7 +111,6 @@ const PlanApprovalDialog = ({
           </div>
         </div>
 
-        {/* Actions */}
         <div className="plan-approval-dialog-actions">
           <button
             className="action-button secondary"

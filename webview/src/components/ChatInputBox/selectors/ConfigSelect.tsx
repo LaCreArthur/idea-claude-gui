@@ -18,10 +18,6 @@ interface ConfigSelectProps {
   onOpenAgentSettings?: () => void;
 }
 
-/**
- * ConfigSelect - Combined Configuration Selector
- * Contains CLI Tool Selection and Thinking Switch
- */
 export const ConfigSelect = ({
   currentProvider: providerId,
   onProviderChange,
@@ -272,7 +268,6 @@ export const ConfigSelect = ({
             minWidth: '200px'
           }}
         >
-          {/* CLI Tool Item */}
           <div
             className="selector-option"
             onMouseEnter={() => setActiveSubmenu('provider')}
@@ -301,10 +296,8 @@ export const ConfigSelect = ({
             {activeSubmenu === 'provider' && renderProviderSubmenu()}
           </div>
 
-          {/* Divider */}
           <div style={{ height: 1, background: 'var(--dropdown-border)', margin: '4px 0', opacity: 0.5 }} />
 
-          {/* Provider Item (Disabled) */}
           <div
             className="selector-option disabled"
             style={{ position: 'relative', opacity: 0.5, cursor: 'not-allowed' }}
@@ -320,10 +313,8 @@ export const ConfigSelect = ({
             <span className="codicon codicon-chevron-right" style={{ marginLeft: 'auto', fontSize: '12px' }} />
           </div>
 
-          {/* Divider */}
           <div style={{ height: 1, background: 'var(--dropdown-border)', margin: '4px 0', opacity: 0.5 }} />
 
-          {/* MCP Item (Disabled) */}
           <div
             className="selector-option disabled"
             style={{ position: 'relative', opacity: 0.5, cursor: 'not-allowed' }}
@@ -339,10 +330,8 @@ export const ConfigSelect = ({
             <span className="codicon codicon-chevron-right" style={{ marginLeft: 'auto', fontSize: '12px' }} />
           </div>
 
-          {/* Divider */}
           <div style={{ height: 1, background: 'var(--dropdown-border)', margin: '4px 0', opacity: 0.5 }} />
 
-          {/* Agent Item */}
           <div
             className="selector-option"
             onMouseEnter={() => setActiveSubmenu('agent')}
@@ -374,10 +363,8 @@ export const ConfigSelect = ({
             {activeSubmenu === 'agent' && renderAgentSubmenu()}
           </div>
 
-          {/* Divider */}
           <div style={{ height: 1, background: 'var(--dropdown-border)', margin: '4px 0', opacity: 0.5 }} />
 
-          {/* Streaming Switch Item */}
           <div
             className="selector-option"
             onClick={(e) => {
@@ -401,10 +388,8 @@ export const ConfigSelect = ({
             />
           </div>
 
-          {/* Divider */}
           <div style={{ height: 1, background: 'var(--dropdown-border)', margin: '4px 0', opacity: 0.5 }} />
 
-          {/* Thinking Switch Item */}
           <div
             className="selector-option"
             onClick={(e) => {

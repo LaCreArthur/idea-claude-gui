@@ -5,40 +5,28 @@ import com.github.claudecodegui.ClaudeSession;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * 会话状态管理
- * 负责维护会话的所有状态信息
- */
 public class SessionState {
-    // 会话标识
     private String sessionId;
     private String channelId;
 
-    // 会话状态
     private boolean busy = false;
     private boolean loading = false;
     private String error = null;
 
-    // 消息历史
     private final List<ClaudeSession.Message> messages = new ArrayList<>();
 
-    // 会话元数据
     private String summary = null;
     private long lastModifiedTime = System.currentTimeMillis();
     private String cwd = null;
 
-    // 配置
     private String permissionMode = "default";
     private String model = "claude-sonnet-4-5";
     private String provider = "claude";
 
-    // 斜杠命令
     private List<String> slashCommands = new ArrayList<>();
 
-    // PSI上下文收集开关
     private boolean psiContextEnabled = true;
 
-    // Getters
     public String getSessionId() {
         return sessionId;
     }
@@ -95,13 +83,10 @@ public class SessionState {
         return new ArrayList<>(slashCommands);
     }
 
-
-
     public boolean isPsiContextEnabled() {
         return psiContextEnabled;
     }
 
-    // Setters
     public void setSessionId(String sessionId) {
         this.sessionId = sessionId;
     }
@@ -150,29 +135,18 @@ public class SessionState {
         this.slashCommands = new ArrayList<>(slashCommands);
     }
 
-
-
     public void setPsiContextEnabled(boolean psiContextEnabled) {
         this.psiContextEnabled = psiContextEnabled;
     }
 
-    /**
-     * 添加消息
-     */
     public void addMessage(ClaudeSession.Message message) {
         messages.add(message);
     }
 
-    /**
-     * 清空消息
-     */
     public void clearMessages() {
         messages.clear();
     }
 
-    /**
-     * 更新最后修改时间为当前时间
-     */
     public void updateLastModifiedTime() {
         this.lastModifiedTime = System.currentTimeMillis();
     }

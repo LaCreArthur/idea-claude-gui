@@ -1,3 +1,13 @@
+##### **v0.2.9** (2026-01-20)
+
+**Image Attachment Bug Fix**
+
+Bug Fixes:
+- Fix image attachments not working (dragging an image would send but Claude's response never appeared)
+- Fix permission dialogs appearing for wrong project when multiple IDE windows open
+
+---
+
 ##### **v0.2.8** (2026-01-19)
 
 **Auth Detection & E2E Testing**

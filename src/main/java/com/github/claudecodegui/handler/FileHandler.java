@@ -19,10 +19,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-/**
- * File and command message handler.
- * Handles file listing, command listing, and file/browser opening.
- */
 public class FileHandler extends BaseMessageHandler {
 
     private static final Logger LOG = Logger.getInstance(FileHandler.class);
@@ -64,9 +60,6 @@ public class FileHandler extends BaseMessageHandler {
         }
     }
 
-    /**
-     * Handle file list request for @-mention autocomplete
-     */
     private void handleListFiles(String content) {
         CompletableFuture.runAsync(() -> {
             try {
@@ -92,9 +85,6 @@ public class FileHandler extends BaseMessageHandler {
         });
     }
 
-    /**
-     * 发送结果回前端
-     */
     private void sendResult(List<JsonObject> files) {
         Gson gson = new Gson();
         JsonObject result = new JsonObject();

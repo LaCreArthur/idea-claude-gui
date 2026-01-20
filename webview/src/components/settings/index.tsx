@@ -9,7 +9,6 @@ import { ToastContainer, type ToastMessage } from '../Toast';
 import ProviderDialog from '../ProviderDialog';
 import AgentDialog from '../AgentDialog';
 
-// Import split components
 import SettingsHeader from './SettingsHeader';
 import SettingsSidebar, { type SettingsTab } from './SettingsSidebar';
 import BasicConfigSection from './BasicConfigSection';
@@ -26,10 +25,8 @@ interface SettingsViewProps {
   onClose: () => void;
   initialTab?: SettingsTab;
   currentProvider: string;
-  // Streaming configuration (passed from App.tsx for state sync)
   streamingEnabled?: boolean;
   onStreamingEnabledChange?: (enabled: boolean) => void;
-  // Send shortcut configuration (passed from App.tsx for state sync)
   sendShortcut?: 'enter' | 'cmdEnter';
   onSendShortcutChange?: (shortcut: 'enter' | 'cmdEnter') => void;
 }
@@ -42,7 +39,6 @@ const sendToJava = (message: string) => {
   }
 };
 
-// Auto-collapse threshold (window width)
 const AUTO_COLLAPSE_THRESHOLD = 900;
 
 const SettingsView = ({ onClose, initialTab, streamingEnabled: streamingEnabledProp, onStreamingEnabledChange: onStreamingEnabledChangeProp, sendShortcut: sendShortcutProp, onSendShortcutChange: onSendShortcutChangeProp }: SettingsViewProps) => {
@@ -52,26 +48,21 @@ const SettingsView = ({ onClose, initialTab, streamingEnabled: streamingEnabledP
   const [providers, setProviders] = useState<ProviderConfig[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Claude CLI config (from ~/.claude/settings.json)
   const [claudeConfig, setClaudeConfig] = useState<ClaudeConfig | null>(null);
   const [claudeConfigLoading, setClaudeConfigLoading] = useState(false);
 
-  // Sidebar responsive state
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const [manualCollapsed, setManualCollapsed] = useState<boolean | null>(null);
 
-  // Calculate whether to collapse: prefer manual setting, otherwise auto based on window width
   const isCollapsed = manualCollapsed !== null
       ? manualCollapsed
       : windowWidth < AUTO_COLLAPSE_THRESHOLD;
 
-  // Provider dialog state
   const [providerDialog, setProviderDialog] = useState<{
     isOpen: boolean;
     provider: ProviderConfig | null;
   }>({ isOpen: false, provider: null });
 
-  // Alert dialog state
   const [alertDialog, setAlertDialog] = useState<{
     isOpen: boolean;
     type: AlertType;
@@ -79,13 +70,11 @@ const SettingsView = ({ onClose, initialTab, streamingEnabled: streamingEnabledP
     message: string;
   }>({ isOpen: false, type: 'info', title: '', message: '' });
 
-  // Delete confirmation state
   const [deleteConfirm, setDeleteConfirm] = useState<{
     isOpen: boolean;
     provider: ProviderConfig | null;
   }>({ isOpen: false, provider: null });
 
-  // Agent state
   const [agents, setAgents] = useState<AgentConfig[]>([]);
   const [agentsLoading, setAgentsLoading] = useState(false);
   const [agentDialog, setAgentDialog] = useState<{
@@ -97,45 +86,37 @@ const SettingsView = ({ onClose, initialTab, streamingEnabled: streamingEnabledP
     agent: AgentConfig | null;
   }>({ isOpen: false, agent: null });
 
-  // Theme state
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     const savedTheme = localStorage.getItem('theme');
     return (savedTheme === 'light' || savedTheme === 'dark') ? savedTheme : 'dark';
   });
 
-  // Font size level state (1-6, default 3 = 100%)
   const [fontSizeLevel, setFontSizeLevel] = useState<number>(() => {
     const savedLevel = localStorage.getItem('fontSizeLevel');
     const level = savedLevel ? parseInt(savedLevel, 10) : 3;
     return level >= 1 && level <= 6 ? level : 3;
   });
 
-  // Node.js path
   const [nodePath, setNodePath] = useState('');
   const [nodeVersion, setNodeVersion] = useState<string | null>(null);
   const [minNodeVersion, setMinNodeVersion] = useState(18);
   const [savingNodePath, setSavingNodePath] = useState(false);
 
-  // Working directory config
   const [workingDirectory, setWorkingDirectory] = useState('');
   const [savingWorkingDirectory, setSavingWorkingDirectory] = useState(false);
 
-  // IDEA editor font config (read-only display)
   const [editorFontConfig, setEditorFontConfig] = useState<{
     fontFamily: string;
     fontSize: number;
     lineSpacing: number;
   } | undefined>();
 
-  // Streaming config - prefer props, otherwise use local state
   const [localStreamingEnabled, setLocalStreamingEnabled] = useState<boolean>(false);
   const streamingEnabled = streamingEnabledProp ?? localStreamingEnabled;
 
-  // Send shortcut config - prefer props, otherwise use local state
   const [localSendShortcut, setLocalSendShortcut] = useState<'enter' | 'cmdEnter'>('enter');
   const sendShortcut = sendShortcutProp ?? localSendShortcut;
 
-  // Toast state management
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   const syncActiveProviderModelMapping = (provider?: ProviderConfig | null) => {
@@ -165,7 +146,6 @@ const SettingsView = ({ onClose, initialTab, streamingEnabled: streamingEnabledP
     }
   };
 
-  // Toast helper functions
   const addToast = (message: string, type: ToastMessage['type'] = 'info') => {
     const id = `toast-${Date.now()}-${Math.random()}`;
     setToasts((prev) => [...prev, { id, message, type }]);
@@ -179,7 +159,6 @@ const SettingsView = ({ onClose, initialTab, streamingEnabled: streamingEnabledP
     setCurrentTab(tab);
   };
 
-  // Show alert dialog helper
   const showAlert = (type: AlertType, title: string, message: string) => {
     console.log('[SettingsView] showAlert called:', { type, title, message });
     setAlertDialog({ isOpen: true, type, title, message });
@@ -189,14 +168,12 @@ const SettingsView = ({ onClose, initialTab, streamingEnabled: streamingEnabledP
     setAlertDialog({ ...alertDialog, isOpen: false });
   };
 
-  // Show switch success dialog
   const showSwitchSuccess = (message: string) => {
     console.log('[SettingsView] showSwitchSuccess called:', message);
     showAlert('success', 'Switched successfully', message);
   };
 
   useEffect(() => {
-    // Set global callbacks
     window.updateProviders = (jsonStr: string) => {
       try {
         const providersList: ProviderConfig[] = JSON.parse(jsonStr);
@@ -226,7 +203,6 @@ const SettingsView = ({ onClose, initialTab, streamingEnabled: streamingEnabledP
       }
     };
 
-    // Claude CLI config callback
     window.updateCurrentClaudeConfig = (jsonStr: string) => {
       try {
         const config: ClaudeConfig = JSON.parse(jsonStr);
@@ -295,7 +271,6 @@ const SettingsView = ({ onClose, initialTab, streamingEnabled: streamingEnabledP
       }
     };
 
-    // Streaming config callback - only use local state if props not passed from App.tsx
     const previousUpdateStreamingEnabled = window.updateStreamingEnabled;
     if (!onStreamingEnabledChangeProp) {
       window.updateStreamingEnabled = (jsonStr: string) => {
@@ -308,7 +283,6 @@ const SettingsView = ({ onClose, initialTab, streamingEnabled: streamingEnabledP
       };
     }
 
-    // Send shortcut config callback - only use local state if props not passed from App.tsx
     const previousUpdateSendShortcut = window.updateSendShortcut;
     if (!onSendShortcutChangeProp) {
       window.updateSendShortcut = (jsonStr: string) => {
@@ -321,10 +295,8 @@ const SettingsView = ({ onClose, initialTab, streamingEnabled: streamingEnabledP
       };
     }
 
-    // Agent callbacks
     const previousUpdateAgents = window.updateAgents;
     window.updateAgents = (jsonStr: string) => {
-      // Clear timeout timer if exists
       const timeoutId = (window as any).__agentsLoadingTimeoutId;
       if (timeoutId) {
         clearTimeout(timeoutId);
@@ -362,23 +334,15 @@ const SettingsView = ({ onClose, initialTab, streamingEnabled: streamingEnabledP
       }
     };
 
-    // Load provider list
     loadProviders();
-    // Load agent list
     loadAgents();
-    // Load Claude CLI config
     loadClaudeConfig();
-    // Load Node.js path
     sendToJava('get_node_path:');
-    // Load working directory config
     sendToJava('get_working_directory:');
-    // Load IDEA editor font config
     sendToJava('get_editor_font_config:');
-    // Load streaming config
     sendToJava('get_streaming_enabled:');
 
     return () => {
-      // Clear timeout timer
       const timeoutId = (window as any).__agentsLoadingTimeoutId;
       if (timeoutId) {
         clearTimeout(timeoutId);
@@ -394,11 +358,9 @@ const SettingsView = ({ onClose, initialTab, streamingEnabled: streamingEnabledP
       window.updateWorkingDirectory = undefined;
       window.showSuccess = undefined;
       window.onEditorFontConfigReceived = undefined;
-      // Restore previous streaming callback if we overrode it
       if (!onStreamingEnabledChangeProp) {
         window.updateStreamingEnabled = previousUpdateStreamingEnabled;
       }
-      // Restore previous send shortcut callback if we overrode it
       if (!onSendShortcutChangeProp) {
         window.updateSendShortcut = previousUpdateSendShortcut;
       }
@@ -407,12 +369,10 @@ const SettingsView = ({ onClose, initialTab, streamingEnabled: streamingEnabledP
     };
   }, [onStreamingEnabledChangeProp, onSendShortcutChangeProp]);
 
-  // Monitor window size changes
   useEffect(() => {
     const handleResize = () => {
       setWindowWidth(window.innerWidth);
 
-      // If window size change should auto-toggle state, reset manual setting
       const shouldAutoCollapse = window.innerWidth < AUTO_COLLAPSE_THRESHOLD;
       if (manualCollapsed !== null && manualCollapsed === shouldAutoCollapse) {
         setManualCollapsed(null);
@@ -426,7 +386,6 @@ const SettingsView = ({ onClose, initialTab, streamingEnabled: streamingEnabledP
     };
   }, [manualCollapsed]);
 
-  // Manual toggle sidebar collapse state
   const toggleManualCollapse = () => {
     if (manualCollapsed === null) {
       setManualCollapsed(!isCollapsed);
@@ -435,13 +394,11 @@ const SettingsView = ({ onClose, initialTab, streamingEnabled: streamingEnabledP
     }
   };
 
-  // Theme change handler
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('theme', theme);
   }, [theme]);
 
-  // Font size handler
   useEffect(() => {
     const fontSizeMap: Record<number, number> = {
       1: 0.8,
@@ -500,7 +457,6 @@ const SettingsView = ({ onClose, initialTab, streamingEnabled: streamingEnabledP
     sendToJava(`set_working_directory:${JSON.stringify(payload)}`);
   };
 
-  // Streaming toggle handler
   const handleStreamingEnabledChange = (enabled: boolean) => {
     if (onStreamingEnabledChangeProp) {
       onStreamingEnabledChangeProp(enabled);
@@ -511,7 +467,6 @@ const SettingsView = ({ onClose, initialTab, streamingEnabled: streamingEnabledP
     }
   };
 
-  // Send shortcut change handler
   const handleSendShortcutChange = (shortcut: 'enter' | 'cmdEnter') => {
     if (onSendShortcutChangeProp) {
       onSendShortcutChangeProp(shortcut);
@@ -631,7 +586,6 @@ const SettingsView = ({ onClose, initialTab, streamingEnabled: streamingEnabledP
     setDeleteConfirm({ isOpen: false, provider: null });
   };
 
-  // ==================== Agent Handlers ====================
   const handleAddAgent = () => {
     setAgentDialog({ isOpen: true, agent: null });
   };
@@ -689,12 +643,9 @@ const SettingsView = ({ onClose, initialTab, streamingEnabled: streamingEnabledP
 
   return (
     <div className={styles.settingsPage}>
-      {/* Header */}
       <SettingsHeader onClose={onClose} />
 
-      {/* Main content */}
       <div className={styles.settingsMain}>
-        {/* Sidebar */}
         <SettingsSidebar
           currentTab={currentTab}
           onTabChange={handleTabChange}
@@ -703,9 +654,7 @@ const SettingsView = ({ onClose, initialTab, streamingEnabled: streamingEnabledP
           disabledTabs={[]}
         />
 
-        {/* Content area */}
         <div className={`${styles.settingsContent} ${currentTab === 'providers' ? styles.providerSettingsContent : ''}`}>
-          {/* Basic config */}
           {currentTab === 'basic' && (
             <BasicConfigSection
               theme={theme}
@@ -730,7 +679,6 @@ const SettingsView = ({ onClose, initialTab, streamingEnabled: streamingEnabledP
             />
           )}
 
-          {/* Provider management */}
           {currentTab === 'providers' && (
             <ProviderManageSection
               claudeConfig={claudeConfig}
@@ -745,13 +693,10 @@ const SettingsView = ({ onClose, initialTab, streamingEnabled: streamingEnabledP
             />
           )}
 
-          {/* SDK dependency management */}
           {currentTab === 'dependencies' && <DependencySection addToast={addToast} />}
 
-          {/* MCP servers */}
           {currentTab === 'mcp' && <PlaceholderSection type="mcp" />}
 
-          {/* Agents */}
           {currentTab === 'agents' && (
             <AgentSection
               agents={agents}
@@ -762,15 +707,12 @@ const SettingsView = ({ onClose, initialTab, streamingEnabled: streamingEnabledP
             />
           )}
 
-          {/* Skills */}
           {currentTab === 'skills' && <SkillsSettingsSection />}
 
-          {/* Community */}
           {currentTab === 'community' && <CommunitySection />}
         </div>
       </div>
 
-      {/* Alert dialog */}
       <AlertDialog
         isOpen={alertDialog.isOpen}
         type={alertDialog.type}
@@ -779,7 +721,6 @@ const SettingsView = ({ onClose, initialTab, streamingEnabled: streamingEnabledP
         onClose={closeAlert}
       />
 
-      {/* Delete confirmation dialog */}
       <ConfirmDialog
         isOpen={deleteConfirm.isOpen}
         title={'Confirm Delete Provider'}
@@ -790,7 +731,6 @@ const SettingsView = ({ onClose, initialTab, streamingEnabled: streamingEnabledP
         onCancel={cancelDeleteProvider}
       />
 
-      {/* Provider add/edit dialog */}
       <ProviderDialog
         isOpen={providerDialog.isOpen}
         provider={providerDialog.provider}
@@ -801,7 +741,6 @@ const SettingsView = ({ onClose, initialTab, streamingEnabled: streamingEnabledP
         addToast={addToast}
       />
 
-      {/* Agent add/edit dialog */}
       <AgentDialog
         isOpen={agentDialog.isOpen}
         agent={agentDialog.agent}
@@ -809,7 +748,6 @@ const SettingsView = ({ onClose, initialTab, streamingEnabled: streamingEnabledP
         onSave={handleSaveAgentFromDialog}
       />
 
-      {/* Agent delete confirmation dialog */}
       <ConfirmDialog
         isOpen={deleteAgentConfirm.isOpen}
         title={'Confirm Delete'}
@@ -820,7 +758,6 @@ const SettingsView = ({ onClose, initialTab, streamingEnabled: streamingEnabledP
         onCancel={cancelDeleteAgent}
       />
 
-      {/* Toast notifications */}
       <ToastContainer messages={toasts} onDismiss={dismissToast} />
     </div>
   );

@@ -1,42 +1,10 @@
 #!/usr/bin/env node
-/**
- * Minimal Claude SDK Bridge
- *
- * Simple stdin/stdout JSON line protocol for Java <-> Node.js communication.
- * Replaces the complex file-based IPC with direct process I/O.
- *
- * Protocol:
- *   Java -> Node: Initial command (first line), then permission responses
- *   Node -> Java: Events, permission requests, errors
- *
- * Message types (Node -> Java):
- *   { type: "event", event: {...} }           - SDK message event
- *   { type: "permission_request", id, toolName, toolInput } - Needs user approval
- *   { type: "ask_user_question", id, questions } - AskUserQuestion tool
- *   { type: "session_id", sessionId }         - Session identifier
- *   { type: "content", text }                 - Assistant text content
- *   { type: "content_delta", delta }          - Streaming text delta
- *   { type: "thinking", text }                - Thinking content
- *   { type: "thinking_delta", delta }         - Streaming thinking delta
- *   { type: "tool_use", tool }                - Tool invocation
- *   { type: "tool_result", result }           - Tool execution result
- *   { type: "done", sessionId }               - Query complete
- *   { type: "error", message }                - Error occurred
- *
- * Message types (Java -> Node):
- *   { type: "command", ... }                  - Initial query command
- *   { type: "response", id, allow, message?, updatedInput? } - Permission response
- */
 
 import { createInterface } from 'readline';
 import { homedir, platform } from 'os';
 import { join } from 'path';
 import { readFileSync, existsSync } from 'fs';
 import { execSync } from 'child_process';
-
-// ============================================================================
-// JSON Line Protocol
-// ============================================================================
 
 const send = (msg) => {
   try {
@@ -48,10 +16,6 @@ const send = (msg) => {
 
 const sendError = (message) => send({ type: 'error', message });
 
-// ============================================================================
-// Pending Response Management
-// ============================================================================
-
 const pendingResponses = new Map();
 let responseId = 0;
 
@@ -61,19 +25,13 @@ function waitForResponse(id) {
   });
 }
 
-// ============================================================================
-// Stdin Line Reader
-// ============================================================================
-
 const rl = createInterface({
   input: process.stdin,
   terminal: false
 });
 
-// Debug logging to stderr (won't interfere with JSON protocol on stdout)
 const debug = (msg) => process.stderr.write(`[bridge-debug] ${msg}\n`);
 
-// Handle incoming responses from Java
 rl.on('line', (line) => {
   if (!line.trim()) return;
 
@@ -81,7 +39,6 @@ rl.on('line', (line) => {
     const msg = JSON.parse(line);
     debug(`Received from Java: type=${msg.type}, id=${msg.id}, keys=${Object.keys(msg).join(',')}`);
 
-    // Handle permission responses
     if (msg.type === 'response' && pendingResponses.has(msg.id)) {
       debug(`Found pending response for id=${msg.id}, resolving...`);
       const resolve = pendingResponses.get(msg.id);
@@ -91,14 +48,9 @@ rl.on('line', (line) => {
       debug(`WARNING: No pending response for id=${msg.id}, pending keys: [${[...pendingResponses.keys()].join(',')}]`);
     }
   } catch (e) {
-    // Silently ignore parse errors for non-JSON lines (e.g., the initial command)
     debug(`Parse error for line: ${line.substring(0, 100)}... Error: ${e.message}`);
   }
 });
-
-// ============================================================================
-// Authentication
-// ============================================================================
 
 function loadClaudeSettings() {
   try {
@@ -107,7 +59,6 @@ function loadClaudeSettings() {
       return JSON.parse(readFileSync(settingsPath, 'utf8'));
     }
   } catch (e) {
-    // Ignore
   }
   return null;
 }
@@ -129,7 +80,6 @@ function readMacKeychainCredentials() {
       }
     }
   } catch {
-    // Ignore
   }
   return null;
 }
@@ -141,7 +91,6 @@ function readFileCredentials() {
       return JSON.parse(readFileSync(credentialsPath, 'utf8'));
     }
   } catch {
-    // Ignore
   }
   return null;
 }
@@ -149,26 +98,22 @@ function readFileCredentials() {
 function setupAuthentication() {
   const settings = loadClaudeSettings();
 
-  // Priority 1: ANTHROPIC_AUTH_TOKEN (Bearer auth)
   if (settings?.env?.ANTHROPIC_AUTH_TOKEN) {
     process.env.ANTHROPIC_AUTH_TOKEN = settings.env.ANTHROPIC_AUTH_TOKEN;
     delete process.env.ANTHROPIC_API_KEY;
     return { authType: 'auth_token', source: 'settings.json' };
   }
 
-  // Priority 2: ANTHROPIC_API_KEY (x-api-key auth)
   if (settings?.env?.ANTHROPIC_API_KEY) {
     process.env.ANTHROPIC_API_KEY = settings.env.ANTHROPIC_API_KEY;
     delete process.env.ANTHROPIC_AUTH_TOKEN;
     return { authType: 'api_key', source: 'settings.json' };
   }
 
-  // Priority 3: AWS Bedrock
   if (settings?.env?.CLAUDE_CODE_USE_BEDROCK) {
     return { authType: 'aws_bedrock', source: 'settings.json' };
   }
 
-  // Priority 4: CLI session (Keychain on macOS, file elsewhere)
   let credentials = null;
   if (platform() === 'darwin') {
     credentials = readMacKeychainCredentials() || readFileCredentials();
@@ -177,13 +122,11 @@ function setupAuthentication() {
   }
 
   if (credentials?.claudeAiOauth?.accessToken) {
-    // Clear any API keys to let SDK use CLI session
     delete process.env.ANTHROPIC_API_KEY;
     delete process.env.ANTHROPIC_AUTH_TOKEN;
     return { authType: 'cli_session', source: platform() === 'darwin' ? 'Keychain' : 'credentials.json' };
   }
 
-  // Set base URL if configured
   if (settings?.env?.ANTHROPIC_BASE_URL) {
     process.env.ANTHROPIC_BASE_URL = settings.env.ANTHROPIC_BASE_URL;
   }
@@ -191,17 +134,10 @@ function setupAuthentication() {
   throw new Error('No authentication configured. Run "claude login" or set ANTHROPIC_API_KEY in ~/.claude/settings.json');
 }
 
-// ============================================================================
-// Permission Handling (canUseTool callback)
-// ============================================================================
-
-// Read-only tools that can be auto-approved
 const AUTO_ALLOW_TOOLS = new Set(['Read', 'Glob', 'Grep']);
 
-// Tools that require user interaction (never auto-approve)
 const INTERACTIVE_TOOLS = new Set(['AskUserQuestion']);
 
-// Tools that can be auto-approved in acceptEdits mode
 const ACCEPT_EDITS_TOOLS = new Set([
   'Write', 'Edit', 'MultiEdit', 'CreateDirectory', 'MoveFile', 'CopyFile', 'Rename'
 ]);
@@ -209,7 +145,6 @@ const ACCEPT_EDITS_TOOLS = new Set([
 async function canUseTool(toolName, toolInput, permissionMode) {
   debug(`[E2E DEBUG] canUseTool called: tool="${toolName}", permissionMode="${permissionMode}"`);
 
-  // AskUserQuestion - special handling
   if (toolName === 'AskUserQuestion') {
     const id = ++responseId;
     debug(`AskUserQuestion: sending request with id=${id}`);
@@ -237,22 +172,18 @@ async function canUseTool(toolName, toolInput, permissionMode) {
     return { behavior: 'deny', message: response.message || 'User did not provide answers' };
   }
 
-  // Auto-allow read-only tools
   if (AUTO_ALLOW_TOOLS.has(toolName)) {
     return { behavior: 'allow', updatedInput: toolInput };
   }
 
-  // bypassPermissions mode - allow everything except interactive tools
   if (permissionMode === 'bypassPermissions') {
     return { behavior: 'allow', updatedInput: toolInput };
   }
 
-  // acceptEdits mode - allow edit tools
   if (permissionMode === 'acceptEdits' && ACCEPT_EDITS_TOOLS.has(toolName)) {
     return { behavior: 'allow', updatedInput: toolInput };
   }
 
-  // Request permission from Java
   const id = ++responseId;
   send({
     type: 'permission_request',
@@ -272,15 +203,10 @@ async function canUseTool(toolName, toolInput, permissionMode) {
   return { behavior: 'deny', message: response.message || `Permission denied for ${toolName}` };
 }
 
-// ============================================================================
-// SDK Loading
-// ============================================================================
-
 async function loadClaudeSdk() {
   const errors = [];
   const SDK_PACKAGE = '@anthropic-ai/claude-agent-sdk';
 
-  // 1. Try standard import (works if in local node_modules or NODE_PATH)
   try {
     const sdk = await import(SDK_PACKAGE);
     return sdk;
@@ -311,13 +237,8 @@ async function loadClaudeSdk() {
   throw new Error(`Claude Agent SDK not installed. Tried:\n${errors.join('\n')}\n\nInstall with: npm install -g @anthropic-ai/claude-agent-sdk`);
 }
 
-// ============================================================================
-// Main Query Execution
-// ============================================================================
-
 async function main() {
   try {
-    // Wait for initial command from Java
     const initialLine = await new Promise((resolve, reject) => {
       const timeout = setTimeout(() => reject(new Error('Timeout waiting for initial command')), 30000);
 
@@ -335,10 +256,8 @@ async function main() {
       process.exit(1);
     }
 
-    // Set up authentication
     setupAuthentication();
 
-    // Load SDK
     const sdk = await loadClaudeSdk();
     const query = sdk.query;
 
@@ -347,7 +266,6 @@ async function main() {
       process.exit(1);
     }
 
-    // Extract parameters
     const {
       message,
       sessionId,
@@ -356,28 +274,21 @@ async function main() {
       model,
       openedFiles,
       agentPrompt,
-      streaming = false
+      streaming = false,
+      attachments
     } = input;
 
-    // Debug: log the permissionMode being used
     debug(`[E2E DEBUG] permissionMode received: "${permissionMode}" (raw input.permissionMode: "${input.permissionMode}")`);
-    // Also send to frontend for visibility
     send({ type: 'console.log', args: [`[Bridge] permissionMode: ${permissionMode}`] });
 
-    // Change to working directory
     const workingDirectory = cwd || process.cwd();
     try {
       process.chdir(workingDirectory);
     } catch {
-      // Ignore if can't change directory
     }
 
-    // Set CLAUDE_CODE_TMPDIR to working directory so Claude writes files there
-    // instead of /tmp. This was added in SDK v2.1.5 and eliminates the need
-    // for path rewriting in permission-handler.
     process.env.CLAUDE_CODE_TMPDIR = workingDirectory;
 
-    // Build system prompt append
     let systemPromptAppend = '';
     if (agentPrompt) {
       systemPromptAppend = agentPrompt;
@@ -387,7 +298,41 @@ async function main() {
       systemPromptAppend += `\n\nCurrently open files in IDE:\n${filesInfo}`;
     }
 
-    // Build query options
+    const buildPrompt = (message, attachments) => {
+      if (!attachments || attachments.length === 0) {
+        return message;
+      }
+
+      const content = [];
+      for (const att of attachments) {
+        if (att.mediaType?.startsWith('image/')) {
+          content.push({
+            type: 'image',
+            source: { type: 'base64', media_type: att.mediaType, data: att.data }
+          });
+        }
+      }
+      if (message?.trim()) {
+        content.push({ type: 'text', text: message });
+      }
+
+      async function* createUserMessageStream() {
+        yield {
+          type: 'user',
+          message: {
+            role: 'user',
+            content: content
+          },
+          parent_tool_use_id: null,
+          session_id: sessionId || ''
+        };
+      }
+
+      return createUserMessageStream();
+    };
+
+    const prompt = buildPrompt(message, attachments);
+
     const options = {
       cwd: workingDirectory,
       permissionMode: permissionMode === '' ? 'default' : permissionMode,
@@ -405,19 +350,15 @@ async function main() {
       }
     };
 
-    // Resume session if provided
     if (sessionId && sessionId !== '') {
       options.resume = sessionId;
     }
 
-    // Execute query
-    const result = query({ prompt: message, options });
+    const result = query({ prompt, options });
 
-    // Stream events
     let currentSessionId = sessionId;
 
     for await (const msg of result) {
-      // Handle stream events (for streaming mode)
       if (streaming && msg.type === 'stream_event') {
         const event = msg.event;
         if (event?.type === 'content_block_delta' && event.delta) {
@@ -430,10 +371,8 @@ async function main() {
         continue;
       }
 
-      // Forward all messages as events
       send({ type: 'event', event: msg });
 
-      // Extract specific message types for convenience
       if (msg.type === 'system' && msg.session_id) {
         currentSessionId = msg.session_id;
         send({ type: 'session_id', sessionId: msg.session_id });
@@ -465,16 +404,13 @@ async function main() {
         }
       }
 
-      // Check for errors
       if (msg.type === 'result' && msg.is_error) {
         sendError(msg.result || 'Query failed');
       }
     }
 
-    // Query complete
     send({ type: 'done', sessionId: currentSessionId });
 
-    // Exit explicitly - SDK may keep handles open (MCP servers, etc.)
     process.exit(0);
 
   } catch (error) {
@@ -482,10 +418,6 @@ async function main() {
     process.exit(1);
   }
 }
-
-// ============================================================================
-// Entry Point
-// ============================================================================
 
 main().catch((e) => {
   sendError('Unhandled error: ' + (e.message || String(e)));

@@ -59,7 +59,7 @@ public class SessionHandler extends BaseMessageHandler {
         String nodeVersion = context.getClaudeSDKBridge().getCachedNodeVersion();
         if (nodeVersion == null) {
             ApplicationManager.getApplication().invokeLater(() -> {
-                callJavaScript("addErrorMessage", escapeJs("未检测到有效的 Node.js 版本，请在设置中配置或重新打开工具窗口。"));
+                callJavaScript("addErrorMessage", escapeJs("No valid Node.js version detected. Please configure in Settings or reopen the tool window."));
             });
             return;
         }
@@ -67,7 +67,7 @@ public class SessionHandler extends BaseMessageHandler {
             int minVersion = NodeDetector.MIN_NODE_MAJOR_VERSION;
             ApplicationManager.getApplication().invokeLater(() -> {
                 callJavaScript("addErrorMessage", escapeJs(
-                    "Node.js 版本过低 (" + nodeVersion + ")，插件需要 v" + minVersion + " 或更高版本才能正常运行。请在设置中配置正确的 Node.js 路径。"));
+                    "Node.js version too low (" + nodeVersion + "). Plugin requires v" + minVersion + " or higher. Please configure the correct Node.js path in Settings."));
             });
             return;
         }
@@ -79,9 +79,8 @@ public class SessionHandler extends BaseMessageHandler {
             JsonObject payload = gson.fromJson(content, JsonObject.class);
             prompt = payload != null && payload.has("text") && !payload.get("text").isJsonNull()
                 ? payload.get("text").getAsString()
-                : content; // Fallback to raw content if not JSON
+                : content;
 
-            // Extract agent prompt from the message
             if (payload != null && payload.has("agent") && !payload.get("agent").isJsonNull()) {
                 JsonObject agent = payload.getAsJsonObject("agent");
                 if (agent.has("prompt") && !agent.get("prompt").isJsonNull()) {
@@ -91,7 +90,6 @@ public class SessionHandler extends BaseMessageHandler {
                 }
             }
         } catch (Exception e) {
-            // If parsing fails, treat content as plain text (backward compatibility)
             LOG.debug("[SessionHandler] Message is plain text, not JSON: " + e.getMessage());
             prompt = content;
         }
@@ -108,7 +106,6 @@ public class SessionHandler extends BaseMessageHandler {
                 LOG.info("[SessionHandler] Updated working directory: " + currentWorkingDir);
             }
 
-            // Capture project for use in async callbacks
             var project = context.getProject();
             if (project != null) {
                 ClaudeNotifier.setWaiting(project);
@@ -126,7 +123,7 @@ public class SessionHandler extends BaseMessageHandler {
                         ClaudeNotifier.showError(project, "Task failed: " + ex.getMessage());
                     }
                     ApplicationManager.getApplication().invokeLater(() -> {
-                        callJavaScript("addErrorMessage", escapeJs("发送失败: " + ex.getMessage()));
+                        callJavaScript("addErrorMessage", escapeJs("Send failed: " + ex.getMessage()));
                     });
                     return null;
                 });
@@ -177,11 +174,10 @@ public class SessionHandler extends BaseMessageHandler {
     }
 
     private void sendMessageWithAttachments(String prompt, List<ClaudeSession.Attachment> attachments, String agentPrompt) {
-        // Version check (consistent with handleSendMessage)
         String nodeVersion = context.getClaudeSDKBridge().getCachedNodeVersion();
         if (nodeVersion == null) {
             ApplicationManager.getApplication().invokeLater(() -> {
-                callJavaScript("addErrorMessage", escapeJs("未检测到有效的 Node.js 版本，请在设置中配置或重新打开工具窗口。"));
+                callJavaScript("addErrorMessage", escapeJs("No valid Node.js version detected. Please configure in Settings or reopen the tool window."));
             });
             return;
         }
@@ -189,7 +185,7 @@ public class SessionHandler extends BaseMessageHandler {
             int minVersion = NodeDetector.MIN_NODE_MAJOR_VERSION;
             ApplicationManager.getApplication().invokeLater(() -> {
                 callJavaScript("addErrorMessage", escapeJs(
-                    "Node.js 版本过低 (" + nodeVersion + ")，插件需要 v" + minVersion + " 或更高版本才能正常运行。请在设置中配置正确的 Node.js 路径。"));
+                    "Node.js version too low (" + nodeVersion + "). Plugin requires v" + minVersion + " or higher. Please configure the correct Node.js path in Settings."));
             });
             return;
         }
@@ -204,7 +200,6 @@ public class SessionHandler extends BaseMessageHandler {
                 LOG.info("[SessionHandler] Updated working directory: " + currentWorkingDir);
             }
 
-            // Capture project for use in async callbacks
             var project = context.getProject();
             if (project != null) {
                 ClaudeNotifier.setWaiting(project);
@@ -222,7 +217,7 @@ public class SessionHandler extends BaseMessageHandler {
                         ClaudeNotifier.showError(project, "Task failed: " + ex.getMessage());
                     }
                     ApplicationManager.getApplication().invokeLater(() -> {
-                        callJavaScript("addErrorMessage", escapeJs("发送失败: " + ex.getMessage()));
+                        callJavaScript("addErrorMessage", escapeJs("Send failed: " + ex.getMessage()));
                     });
                     return null;
                 });

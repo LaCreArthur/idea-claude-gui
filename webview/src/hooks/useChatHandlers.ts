@@ -72,11 +72,7 @@ export function useChatHandlers(params: UseChatHandlersParams): ChatHandlers {
     addToast,
   } = params;
 
-  /**
-   * Handle message submission from ChatInputBox
-   */
   const handleSubmit = useCallback((content: string, attachments?: Attachment[]) => {
-    // Remove zero-width spaces and other invisible characters
     const text = content.replace(/[\u200B-\u200D\uFEFF]/g, '').trim();
     const hasAttachments = Array.isArray(attachments) && attachments.length > 0;
 
@@ -87,7 +83,6 @@ export function useChatHandlers(params: UseChatHandlersParams): ChatHandlers {
       return;
     }
 
-    // Handle local slash commands that don't need to go to Claude
     if (text.toLowerCase() === '/resume') {
       setCurrentView('history');
       return;
@@ -98,7 +93,6 @@ export function useChatHandlers(params: UseChatHandlersParams): ChatHandlers {
       return;
     }
 
-    // Defensive check: don't send if SDK status unknown/not installed
     if (!sdkStatusLoaded) {
       addToast('Checking SDK status...', 'info');
       return;
@@ -113,11 +107,9 @@ export function useChatHandlers(params: UseChatHandlersParams): ChatHandlers {
       return;
     }
 
-    // Build user message content blocks (for frontend display)
     const userContentBlocks: ClaudeContentBlock[] = [];
 
     if (hasAttachments) {
-      // Add image blocks
       for (const att of attachments || []) {
         if (att.mediaType?.startsWith('image/')) {
           userContentBlocks.push({
@@ -126,7 +118,6 @@ export function useChatHandlers(params: UseChatHandlersParams): ChatHandlers {
             mediaType: att.mediaType,
           });
         } else {
-          // Non-image attachment shows filename
           userContentBlocks.push({
             type: 'text',
             text: `[Attachment: ${att.fileName}]`,
@@ -135,15 +126,12 @@ export function useChatHandlers(params: UseChatHandlersParams): ChatHandlers {
       }
     }
 
-    // Add text block
     if (text) {
       userContentBlocks.push({ type: 'text', text });
     } else if (userContentBlocks.length === 0) {
-      // If neither attachment nor text, don't send
       return;
     }
 
-    // Immediately add user message in frontend (including image preview)
     const userMessage: ClaudeMessage = {
       type: 'user',
       content: text || (hasAttachments ? '[Attachments uploaded]' : ''),
@@ -156,11 +144,9 @@ export function useChatHandlers(params: UseChatHandlersParams): ChatHandlers {
     };
     setMessages((prev) => [...prev, userMessage]);
 
-    // Set loading state immediately to avoid race condition with backend callbacks
     setLoading(true);
     setLoadingStartTime(Date.now());
 
-    // Force scroll to bottom after sending message
     isUserAtBottomRef.current = true;
     requestAnimationFrame(() => {
       if (messagesContainerRef.current) {
@@ -168,17 +154,14 @@ export function useChatHandlers(params: UseChatHandlersParams): ChatHandlers {
       }
     });
 
-    // Sync provider setting before sending message
     sendBridgeEvent('set_provider', currentProvider);
 
-    // Build agent info to send with message
     const agentInfo = selectedAgent ? {
       id: selectedAgent.id,
       name: selectedAgent.name,
       prompt: selectedAgent.prompt,
     } : null;
 
-    // Send message (agent prompt passed from frontend, not relying on backend global setting)
     if (hasAttachments) {
       try {
         const payload = JSON.stringify({
@@ -193,12 +176,10 @@ export function useChatHandlers(params: UseChatHandlersParams): ChatHandlers {
         sendBridgeEvent('send_message_with_attachments', payload);
       } catch (error) {
         console.error('[Frontend] Failed to serialize attachments payload', error);
-        // Fallback: send message with agent info
         const fallbackPayload = JSON.stringify({ text, agent: agentInfo });
         sendBridgeEvent('send_message', fallbackPayload);
       }
     } else {
-      // Pack message and agent info as JSON
       const payload = JSON.stringify({ text, agent: agentInfo });
       sendBridgeEvent('send_message', payload);
     }
@@ -218,26 +199,17 @@ export function useChatHandlers(params: UseChatHandlersParams): ChatHandlers {
     addToast,
   ]);
 
-  /**
-   * Handle mode selection
-   */
   const handleModeSelect = useCallback((mode: PermissionMode) => {
     setPermissionMode(mode);
     setClaudePermissionMode(mode);
     sendBridgeEvent('set_mode', mode);
   }, [setPermissionMode, setClaudePermissionMode]);
 
-  /**
-   * Handle model selection (Claude only)
-   */
   const handleModelSelect = useCallback((modelId: string) => {
     setSelectedClaudeModel(modelId);
     sendBridgeEvent('set_model', modelId);
   }, [setSelectedClaudeModel]);
 
-  /**
-   * Handle provider selection (Claude only)
-   */
   const handleProviderSelect = useCallback((providerId: string) => {
     setCurrentProvider(providerId);
     sendBridgeEvent('set_provider', providerId);
@@ -251,9 +223,6 @@ export function useChatHandlers(params: UseChatHandlersParams): ChatHandlers {
     setPermissionMode,
   ]);
 
-  /**
-   * Handle agent selection
-   */
   const handleAgentSelect = useCallback((agent: SelectedAgent | null) => {
     setSelectedAgent(agent);
     if (agent) {
@@ -267,9 +236,6 @@ export function useChatHandlers(params: UseChatHandlersParams): ChatHandlers {
     }
   }, [setSelectedAgent]);
 
-  /**
-   * Handle thinking mode toggle
-   */
   const handleToggleThinking = useCallback((enabled: boolean) => {
     if (!activeProviderConfig) {
       setClaudeSettingsAlwaysThinkingEnabled(enabled);
@@ -278,7 +244,6 @@ export function useChatHandlers(params: UseChatHandlersParams): ChatHandlers {
       return;
     }
 
-    // Update local state (optimistic update)
     setActiveProviderConfig(prev => prev ? {
       ...prev,
       settingsConfig: {
@@ -287,7 +252,6 @@ export function useChatHandlers(params: UseChatHandlersParams): ChatHandlers {
       }
     } : null);
 
-    // Send update to backend
     const payload = JSON.stringify({
       id: activeProviderConfig.id,
       updates: {
@@ -301,9 +265,6 @@ export function useChatHandlers(params: UseChatHandlersParams): ChatHandlers {
     addToast(enabled ? 'Thinking enabled' : 'Thinking disabled', 'success');
   }, [activeProviderConfig, setActiveProviderConfig, setClaudeSettingsAlwaysThinkingEnabled, addToast]);
 
-  /**
-   * Handle streaming enabled toggle
-   */
   const handleStreamingEnabledChange = useCallback((enabled: boolean) => {
     setStreamingEnabledSetting(enabled);
     const payload = { streamingEnabled: enabled };
@@ -311,9 +272,6 @@ export function useChatHandlers(params: UseChatHandlersParams): ChatHandlers {
     addToast(enabled ? 'Enabled' : 'Disabled', 'success');
   }, [setStreamingEnabledSetting, addToast]);
 
-  /**
-   * Handle send shortcut change
-   */
   const handleSendShortcutChange = useCallback((shortcut: 'enter' | 'cmdEnter') => {
     setSendShortcut(shortcut);
     const payload = { sendShortcut: shortcut };

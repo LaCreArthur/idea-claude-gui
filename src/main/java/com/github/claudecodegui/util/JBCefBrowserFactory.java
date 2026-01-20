@@ -5,29 +5,13 @@ import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.util.SystemInfo;
 import com.intellij.ui.jcef.JBCefBrowser;
 
-/**
- * JBCefBrowser 工厂类
- * 统一管理 JBCefBrowser 的创建，根据不同平台和 IDEA 版本设置合适的 OSR (Off-Screen Rendering) 模式
- *
- * OSR 模式说明：
- * - macOS: 关闭 OSR（使用原生渲染）
- * - Windows: 关闭 OSR
- * - Linux/Unix: IDEA 2023+ 开启 OSR，2023 以下关闭 OSR
- */
 public final class JBCefBrowserFactory {
 
     private static final Logger LOG = Logger.getInstance(JBCefBrowserFactory.class);
 
     private JBCefBrowserFactory() {
-        // 工具类，禁止实例化
     }
 
-    /**
-     * 创建 JBCefBrowser 实例
-     * 根据当前平台和 IDEA 版本自动选择合适的 OSR 设置
-     *
-     * @return JBCefBrowser 实例
-     */
     public static JBCefBrowser create() {
         boolean isOffScreenRendering = determineOsrMode();
         LOG.info("Creating JBCefBrowser with OSR=" + isOffScreenRendering
@@ -45,12 +29,6 @@ public final class JBCefBrowserFactory {
         }
     }
 
-    /**
-     * 创建 JBCefBrowser 实例并加载指定 URL
-     *
-     * @param url 要加载的 URL
-     * @return JBCefBrowser 实例
-     */
     public static JBCefBrowser create(String url) {
         boolean isOffScreenRendering = determineOsrMode();
         LOG.info("Creating JBCefBrowser with URL and OSR=" + isOffScreenRendering);
@@ -72,33 +50,18 @@ public final class JBCefBrowserFactory {
         }
     }
 
-    /**
-     * 根据平台和 IDEA 版本确定是否启用 OSR 模式
-     *
-     * @return true 表示启用 OSR，false 表示禁用
-     */
     private static boolean determineOsrMode() {
         if (SystemInfo.isMac) {
-            // macOS: 关闭 OSR
             return false;
         } else if (SystemInfo.isLinux || SystemInfo.isUnix) {
-            // Linux/Unix: 根据 IDEA 版本决定
             int version = getIdeaMajorVersion();
-            // IDEA 2023+ 开启 OSR
             return version >= 2023;
         } else if (SystemInfo.isWindows) {
-            // Windows: 关闭 OSR
             return false;
         }
-        // 未知平台，默认关闭 OSR
         return false;
     }
 
-    /**
-     * 获取 IDEA 主版本号
-     *
-     * @return IDEA 主版本号（如 2023, 2024 等），解析失败返回 0
-     */
     private static int getIdeaMajorVersion() {
         try {
             ApplicationInfo appInfo = ApplicationInfo.getInstance();
@@ -110,11 +73,6 @@ public final class JBCefBrowserFactory {
         return 0;
     }
 
-    /**
-     * 获取当前平台名称（用于日志）
-     *
-     * @return 平台名称
-     */
     private static String getPlatformName() {
         if (SystemInfo.isMac) {
             return "macOS";
@@ -128,11 +86,6 @@ public final class JBCefBrowserFactory {
         return "Unknown";
     }
 
-    /**
-     * 检查 JCEF 是否可用
-     *
-     * @return true 表示 JCEF 可用
-     */
     public static boolean isJcefSupported() {
         try {
             return com.intellij.ui.jcef.JBCefApp.isSupported();

@@ -56,7 +56,6 @@ export const MessageItem = ({
 
   return (
     <div className={`message ${message.type}`}>
-      {/* Copy button for assistant messages - floating position */}
       {message.type === 'assistant' && !isMessageStreaming && (
         <button
           className={`message-copy-btn ${copiedMessageIndex === messageIndex ? 'copied' : ''}`}
@@ -105,7 +104,6 @@ export const MessageItem = ({
                 <div
                   className={`message-image-block ${message.type === 'user' ? 'user-image' : ''}`}
                   onClick={() => {
-                    // Open image preview
                     const previewRoot = document.getElementById('image-preview-root');
                     if (previewRoot && block.src) {
                       previewRoot.innerHTML = `

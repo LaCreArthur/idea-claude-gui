@@ -2,19 +2,11 @@ import type { DropdownItemData } from '../types';
 import type { AgentConfig } from '../../../types/agent';
 import { sendBridgeEvent } from '../../../utils/bridge';
 
-// ============================================================================
-// Type Definitions
-// ============================================================================
-
 export interface AgentItem {
   id: string;
   name: string;
   prompt?: string;
 }
-
-// ============================================================================
-// State Management
-// ============================================================================
 
 type LoadingState = 'idle' | 'loading' | 'success' | 'failed';
 
@@ -26,12 +18,8 @@ let retryCount = 0;
 let pendingWaiters: Array<{ resolve: () => void; reject: (error: unknown) => void }> = [];
 
 const MIN_REFRESH_INTERVAL = 2000;
-const LOADING_TIMEOUT = 3000; // 3 seconds for faster timeout feedback
-const MAX_RETRY_COUNT = 2; // Max 2 retries to avoid infinite loops
-
-// ============================================================================
-// Core Functions
-// ============================================================================
+const LOADING_TIMEOUT = 3000;
+const MAX_RETRY_COUNT = 2;
 
 export function resetAgentsState() {
   cachedAgents = [];
@@ -40,7 +28,6 @@ export function resetAgentsState() {
   retryCount = 0;
   pendingWaiters.forEach(w => w.reject(new Error('Agents state reset')));
   pendingWaiters = [];
-  console.log('[AgentProvider] State reset');
 }
 
 export function setupAgentsCallback() {
@@ -48,8 +35,6 @@ export function setupAgentsCallback() {
   if (callbackRegistered && window.updateAgents) return;
 
   const handler = (json: string) => {
-    console.log('[AgentProvider] Received data from backend, length=' + json.length);
-
     try {
       const parsed = JSON.parse(json);
       let agents: AgentItem[] = [];
@@ -64,30 +49,24 @@ export function setupAgentsCallback() {
 
       cachedAgents = agents;
       loadingState = 'success';
-      retryCount = 0; // Reset retry count on success
+      retryCount = 0;
       pendingWaiters.forEach(w => w.resolve());
       pendingWaiters = [];
-      console.log('[AgentProvider] Successfully loaded ' + agents.length + ' agents');
     } catch (error) {
       loadingState = 'failed';
       pendingWaiters.forEach(w => w.reject(error));
       pendingWaiters = [];
-      console.error('[AgentProvider] Failed to parse agents:', error);
     }
   };
 
-  // Save original callback
   const originalHandler = window.updateAgents;
 
   window.updateAgents = (json: string) => {
-    // Call our handler
     handler(json);
-    // Also call original handler if exists
     originalHandler?.(json);
   };
 
   callbackRegistered = true;
-  console.log('[AgentProvider] Callback registered');
 }
 
 function waitForAgents(signal: AbortSignal, timeoutMs: number): Promise<void> {
@@ -139,12 +118,10 @@ function requestRefresh(): boolean {
   const now = Date.now();
 
   if (now - lastRefreshTime < MIN_REFRESH_INTERVAL) {
-    console.log('[AgentProvider] Skipping refresh (too soon)');
     return false;
   }
 
   if (retryCount >= MAX_RETRY_COUNT) {
-    console.warn('[AgentProvider] Max retry count reached, giving up');
     loadingState = 'failed';
     return false;
   }
@@ -152,7 +129,6 @@ function requestRefresh(): boolean {
   const attempt = retryCount + 1;
   const sent = sendBridgeEvent('get_agents');
   if (!sent) {
-    console.log('[AgentProvider] Bridge not available yet, refresh not sent');
     return false;
   }
 
@@ -160,7 +136,6 @@ function requestRefresh(): boolean {
   loadingState = 'loading';
   retryCount = attempt;
 
-  console.log('[AgentProvider] Requesting refresh from backend (attempt ' + retryCount + '/' + MAX_RETRY_COUNT + ')');
   return true;
 }
 
@@ -189,7 +164,6 @@ export async function agentProvider(
 
   const now = Date.now();
 
-  // Create agent item
   const createNewAgentItem: AgentItem = {
     id: CREATE_NEW_AGENT_ID,
     name: 'Create Agent',
@@ -199,7 +173,6 @@ export async function agentProvider(
   if (loadingState === 'idle' || loadingState === 'failed') {
     requestRefresh();
   } else if (loadingState === 'loading' && now - lastRefreshTime > LOADING_TIMEOUT) {
-    console.warn('[AgentProvider] Loading timeout');
     loadingState = 'failed';
     requestRefresh();
   }
@@ -230,7 +203,6 @@ export async function agentProvider(
 }
 
 export function agentToDropdownItem(agent: AgentItem): DropdownItemData {
-  // Special handling for loading and empty states
   if (agent.id === '__loading__' || agent.id === '__empty__' || agent.id === EMPTY_STATE_ID) {
     return {
       id: agent.id,
@@ -242,7 +214,6 @@ export function agentToDropdownItem(agent: AgentItem): DropdownItemData {
     };
   }
 
-  // Special handling for create agent
   if (agent.id === CREATE_NEW_AGENT_ID) {
     return {
       id: agent.id,
@@ -267,10 +238,9 @@ export function agentToDropdownItem(agent: AgentItem): DropdownItemData {
 }
 
 export function forceRefreshAgents(): void {
-  console.log('[AgentProvider] Force refresh requested');
   loadingState = 'idle';
   lastRefreshTime = 0;
-  retryCount = 0; // Reset retry count
+  retryCount = 0;
   pendingWaiters.forEach(w => w.reject(new Error('Agents refresh requested')));
   pendingWaiters = [];
   requestRefresh();

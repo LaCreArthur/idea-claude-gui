@@ -38,10 +38,7 @@ export function useRewindLogic({
   handleRewindSelectCancel,
   addToast,
 }: UseRewindLogicOptions): UseRewindLogicReturn {
-  // Merge adjacent Assistant messages to fix styling inconsistency in history
-  // where Thinking and ToolUse are separated
   const mergedMessages = useMemo(() => {
-    // Filter messages that should not be displayed
     const visible = messages.filter(shouldShowMessage);
     if (visible.length === 0) return [];
 
@@ -55,18 +52,15 @@ export function useRewindLogic({
       }
 
       if (current.type === 'assistant' && msg.type === 'assistant') {
-        // Merge logic
         const blocks1 = normalizeBlocks(current.raw) || [];
         const blocks2 = normalizeBlocks(msg.raw) || [];
         const combinedBlocks = [...blocks1, ...blocks2];
 
-        // Build new raw object
         const newRaw: ClaudeRawMessage = {
           ...(typeof current.raw === 'object' ? current.raw : {}),
           content: combinedBlocks
         };
 
-        // If original message has message.content, update it for consistency
         if (newRaw.message && newRaw.message.content) {
             newRaw.message.content = combinedBlocks;
         }
@@ -89,7 +83,6 @@ export function useRewindLogic({
     return result;
   }, [messages]);
 
-  // Check if a user message at given index can be rewound from
   const canRewindFromMessageIndex = useCallback((userMessageIndex: number) => {
     if (userMessageIndex < 0 || userMessageIndex >= mergedMessages.length) {
       return false;
@@ -117,7 +110,6 @@ export function useRewindLogic({
           continue;
         }
         const toolName = (block.name ?? '').toLowerCase();
-        // Include all file modification tools: write (create), edit, notebookedit, etc.
         if (['write', 'edit', 'edit_file', 'replace_string', 'write_to_file', 'notebookedit', 'create_file'].includes(toolName)) {
           return true;
         }
@@ -127,7 +119,6 @@ export function useRewindLogic({
     return false;
   }, [mergedMessages]);
 
-  // Calculate rewindable messages for the select dialog
   const rewindableMessages = useMemo((): RewindableMessage[] => {
     if (currentProvider !== 'claude') {
       return [];
@@ -157,7 +148,6 @@ export function useRewindLogic({
     return result;
   }, [mergedMessages, currentProvider, canRewindFromMessageIndex]);
 
-  // Helper to check if a message is a tool-result-only user message
   const isToolResultOnlyUserMessage = useCallback((msg: ClaudeMessage) => {
     if (msg.type !== 'user') return false;
     if ((msg.content || '').trim() === '[tool_result]') return true;
@@ -168,7 +158,6 @@ export function useRewindLogic({
     return content.some((block: any) => block && block.type === 'tool_result');
   }, []);
 
-  // Prepare rewind request (depends on mergedMessages, uses hook's openRewindDialog)
   const prepareRewindRequest = useCallback((messageIndex: number, message: ClaudeMessage) => {
     if (!currentSessionId) {
       addToast('Rewind not available for this session', 'warning');
@@ -196,10 +185,8 @@ export function useRewindLogic({
       return;
     }
 
-    // Calculate messages after this one
     const messagesAfterCount = mergedMessages.length - targetIndex - 1;
 
-    // Get display content for the dialog
     const content = targetMessage.content || getMessageText(targetMessage);
     const timestamp = targetMessage.timestamp ? formatTime(targetMessage.timestamp) : undefined;
 
@@ -212,21 +199,16 @@ export function useRewindLogic({
     });
   }, [currentSessionId, mergedMessages, addToast, openRewindDialog, isToolResultOnlyUserMessage]);
 
-  // Handle selection from the rewind select dialog
   const handleRewindSelect = useCallback((item: RewindableMessage) => {
     handleRewindSelectCancel();
-    // Trigger the confirmation dialog
     prepareRewindRequest(item.messageIndex, item.message);
   }, [handleRewindSelectCancel, prepareRewindRequest]);
 
-  // Find tool result by tool use ID
   const findToolResult = useCallback((toolUseId?: string, messageIndex?: number): ToolResultBlock | null => {
     if (!toolUseId || typeof messageIndex !== 'number') {
       return null;
     }
 
-    // Search in original messages array, not mergedMessages
-    // because tool_result may be in filtered out messages
     for (let i = 0; i < messages.length; i += 1) {
       const candidate = messages[i];
       const raw = candidate.raw;
@@ -234,7 +216,6 @@ export function useRewindLogic({
       if (!raw || typeof raw === 'string') {
         continue;
       }
-      // Support raw.content and raw.message.content
       const content = raw.content ?? raw.message?.content;
 
       if (!Array.isArray(content)) {
@@ -253,7 +234,6 @@ export function useRewindLogic({
     return null;
   }, [messages]);
 
-  // Session title based on first user message
   const sessionTitle = useMemo(() => {
     if (messages.length === 0) {
       return 'New Session';

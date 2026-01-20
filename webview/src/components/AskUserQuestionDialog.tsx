@@ -32,13 +32,11 @@ const AskUserQuestionDialog = ({
   onSubmit,
   onCancel,
 }: AskUserQuestionDialogProps) => {
-  // Store answers for each question: question -> selectedLabel(s)
   const [answers, setAnswers] = useState<Record<string, Set<string>>>({});
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
 
   useEffect(() => {
     if (isOpen && request) {
-      // Initialize answer state
       const initialAnswers: Record<string, Set<string>> = {};
       request.questions.forEach((q) => {
         initialAnswers[q.question] = new Set<string>();
@@ -76,14 +74,12 @@ const AskUserQuestionDialog = ({
       const currentSet = new Set(newAnswers[questionKey] || []);
 
       if (currentQuestion.multiSelect) {
-        // Multi-select mode: toggle option
         if (currentSet.has(label)) {
           currentSet.delete(label);
         } else {
           currentSet.add(label);
         }
       } else {
-        // Single-select mode: clear and set new option
         currentSet.clear();
         currentSet.add(label);
       }
@@ -112,7 +108,6 @@ const AskUserQuestionDialog = ({
 
   const handleSubmitFinal = () => {
     console.log('[AskUserQuestion] Submitting answers');
-    // Convert Set to comma-separated string (multi) or single string (single)
     const formattedAnswers: Record<string, string> = {};
     request.questions.forEach((q) => {
       const selectedSet = answers[q.question] || new Set<string>();
@@ -137,7 +132,6 @@ const AskUserQuestionDialog = ({
   return (
     <div className="permission-dialog-overlay">
       <div className="ask-user-question-dialog">
-        {/* Header - fixed at top */}
         <div className="ask-user-question-dialog-header">
           <h3 className="ask-user-question-dialog-title">
             Claude has some questions for you
@@ -147,7 +141,6 @@ const AskUserQuestionDialog = ({
           </div>
         </div>
 
-        {/* Content - scrollable */}
         <div className="ask-user-question-dialog-content">
           <div className="ask-user-question-dialog-question">
             <div className="question-header">
@@ -155,7 +148,6 @@ const AskUserQuestionDialog = ({
             </div>
             <p className="question-text">{currentQuestion.question}</p>
 
-            {/* Options list */}
             <div className="question-options">
               {currentQuestion.options.map((option, index) => {
                 const isSelected = currentAnswerSet.has(option.label);
@@ -181,7 +173,6 @@ const AskUserQuestionDialog = ({
               })}
             </div>
 
-            {/* Hint text */}
             {currentQuestion.multiSelect && (
               <p className="question-hint">
                 You can select multiple options
@@ -190,7 +181,6 @@ const AskUserQuestionDialog = ({
           </div>
         </div>
 
-        {/* Button area - fixed at bottom */}
         <div className="ask-user-question-dialog-actions">
           <button
             className="action-button secondary"

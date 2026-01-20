@@ -24,7 +24,6 @@ interface DiffResult {
   deletions: number;
 }
 
-// Use LCS algorithm to compute real diff
 function computeDiff(oldLines: string[], newLines: string[]): DiffResult {
   if (oldLines.length === 0 && newLines.length === 0) {
     return { lines: [], additions: 0, deletions: 0 };
@@ -47,7 +46,6 @@ function computeDiff(oldLines: string[], newLines: string[]): DiffResult {
   const m = oldLines.length;
   const n = newLines.length;
 
-  // Compute LCS DP table
   const dp: number[][] = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
 
   for (let i = 1; i <= m; i++) {
@@ -60,7 +58,6 @@ function computeDiff(oldLines: string[], newLines: string[]): DiffResult {
     }
   }
 
-  // Backtrack to generate diff
   const diffLines: DiffLine[] = [];
   let i = m, j = n;
 
@@ -87,7 +84,6 @@ function computeDiff(oldLines: string[], newLines: string[]): DiffResult {
 const EditToolBlock = ({ name, input, result }: EditToolBlockProps) => {
   const [expanded, setExpanded] = useState(false);
 
-  // Determine tool call status based on result
   const isCompleted = result !== undefined && result !== null;
   const isError = isCompleted && result?.is_error === true;
 
@@ -113,7 +109,6 @@ const EditToolBlock = ({ name, input, result }: EditToolBlockProps) => {
     return computeDiff(oldLines, newLines);
   }, [oldString, newString]);
 
-  // Auto-refresh file in IDEA when the tool call completes successfully
   const hasRefreshed = useRef(false);
   useEffect(() => {
     if (filePath && isCompleted && !isError && !hasRefreshed.current) {
@@ -161,7 +156,6 @@ const EditToolBlock = ({ name, input, result }: EditToolBlockProps) => {
 
   return (
     <div style={{ margin: '12px 0' }}>
-      {/* Top Row: Buttons (Right aligned) */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '4px', paddingRight: '4px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <button
@@ -276,20 +270,15 @@ const EditToolBlock = ({ name, input, result }: EditToolBlockProps) => {
         <div className="task-details" style={{ padding: 0, borderTop: '1px solid var(--border-primary)' }}>
           <div
             style={{
-              // Use monospace font to ensure tab and space widths are consistent
               fontFamily: 'var(--idea-editor-font-family, monospace)',
               fontSize: '12px',
               lineHeight: 1.5,
               background: '#1e1e1e',
-              // Set unified tab width to avoid indentation drift
               tabSize: 4 as unknown as number,
               MozTabSize: 4 as unknown as number,
-              // Preserve whitespace and line breaks, no auto-wrap
               whiteSpace: 'pre' as const,
-              // Horizontal scroll, avoid vertical and horizontal changes causing jitter
               overflowX: 'auto' as const,
               overflowY: 'hidden' as const,
-              // Hint browser to optimize with compositing layer
               willChange: 'transform' as const,
               transform: 'translateZ(0)',
             }}
@@ -344,15 +333,12 @@ const EditToolBlock = ({ name, input, result }: EditToolBlockProps) => {
                   </div>
                   <pre
                     style={{
-                      // Preserve original whitespace and tab width
                       whiteSpace: 'pre',
                       margin: 0,
                       paddingLeft: '4px',
                       flex: 1,
-                      // Declare tabSize again to prevent highlight/wrapper layer from affecting it
                       tabSize: 4 as unknown as number,
                       MozTabSize: 4 as unknown as number,
-                      // Disable arbitrary line breaks, keep selection and scroll stable
                       overflowWrap: 'normal' as const,
                     }}
                   >

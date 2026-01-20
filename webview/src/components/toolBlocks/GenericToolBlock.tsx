@@ -20,7 +20,6 @@ const CODICON_MAP: Record<string, string> = {
   shell_command: 'codicon-terminal',
 };
 
-// Tool display name mapping
 const TOOL_DISPLAY_NAMES: Record<string, string> = {
   'augmentcontextengine': 'Context Engine',
   'task': 'Task',
@@ -52,13 +51,9 @@ const TOOL_DISPLAY_NAMES: Record<string, string> = {
   'update_plan': 'Update Plan',
 };
 
-/**
- * Check if a shell command is a file/directory viewing operation
- */
 const isFileViewingCommand = (command?: string): boolean => {
   if (!command || typeof command !== 'string') return false;
   const trimmed = command.trim();
-  // File viewing: pwd, ls, cat, head, tail, sed -n, tree
   return /^(pwd|ls|cat|head|tail|tree|file|stat)\b/.test(trimmed) ||
          /^sed\s+-n\s+/.test(trimmed);
 };
@@ -70,7 +65,6 @@ const getToolDisplayName = (name?: string, input?: ToolInput) => {
 
   const lowerName = name.toLowerCase();
 
-  // For shell_command, check the actual command to determine display name
   if (lowerName === 'shell_command' && input?.command) {
     if (isFileViewingCommand(input.command as string)) {
       return 'Read File';
@@ -81,7 +75,6 @@ const getToolDisplayName = (name?: string, input?: ToolInput) => {
     return TOOL_DISPLAY_NAMES[lowerName];
   }
 
-  // If it's snake_case, replace underscores with spaces and capitalize
   if (name.includes('_')) {
     return name
       .split('_')
@@ -89,8 +82,6 @@ const getToolDisplayName = (name?: string, input?: ToolInput) => {
       .join(' ');
   }
 
-  // If it's CamelCase (starts with uppercase), split by capital letters
-  // e.g. WebSearch -> Web Search
   if (/^[A-Z]/.test(name)) {
     return name.replace(/([A-Z])/g, ' $1').trim();
   }
@@ -98,47 +89,35 @@ const getToolDisplayName = (name?: string, input?: ToolInput) => {
   return name;
 };
 
-/**
- * Extract file/directory path from command string.
- * Returns the path with optional metadata suffix (e.g., ":700-780" for line ranges, "/" for directories)
- */
 const extractFilePathFromCommand = (command: string | undefined, workdir?: string): string | undefined => {
   if (!command || typeof command !== 'string') return undefined;
 
   let trimmed = command.trim();
 
-  // Extract actual command from shell wrapper (/bin/zsh -lc '...' or /bin/bash -c '...')
   const shellWrapperMatch = trimmed.match(/^\/bin\/(zsh|bash)\s+(?:-lc|-c)\s+['"](.+)['"]$/);
   if (shellWrapperMatch) {
     trimmed = shellWrapperMatch[2];
   }
 
-  // Remove 'cd dir &&' prefix if present
   const cdPrefixMatch = trimmed.match(/^cd\s+\S+\s+&&\s+(.+)$/);
   if (cdPrefixMatch) {
     trimmed = cdPrefixMatch[1].trim();
   }
 
-  // Match pwd command - returns current directory from workdir
   if (/^pwd\s*$/.test(trimmed)) {
     return workdir ? workdir + '/' : undefined;
   }
 
-  // Match ls command (with or without flags)
-  // Examples: ls, ls -a, ls -la, ls /path, ls -a /path
   const lsMatch = trimmed.match(/^ls\s+(?:-[a-zA-Z]+\s+)?(.+)$/);
   if (lsMatch) {
     const path = lsMatch[1].trim().replace(/^["']|["']$/g, '');
-    // Add trailing slash to indicate directory
     return path.endsWith('/') ? path : path + '/';
   }
 
-  // Match ls without path (current directory)
   if (/^ls(?:\s+-[a-zA-Z]+)*\s*$/.test(trimmed)) {
     return workdir ? workdir + '/' : undefined;
   }
 
-  // Match tree command (directory listing)
   if (/^tree\b/.test(trimmed)) {
     const treeMatch = trimmed.match(/^tree\s+(.+)$/);
     if (treeMatch) {
@@ -148,14 +127,12 @@ const extractFilePathFromCommand = (command: string | undefined, workdir?: strin
     return workdir ? workdir + '/' : undefined;
   }
 
-  // Match sed -n command (e.g., sed -n '700,780p' file.txt)
   const sedMatch = trimmed.match(/^sed\s+-n\s+['"]?(\d+)(?:,(\d+))?p['"]?\s+(.+)$/);
   if (sedMatch) {
     const startLine = sedMatch[1];
     const endLine = sedMatch[2];
     const path = sedMatch[3].trim().replace(/^["']|["']$/g, '');
 
-    // Return file path with line range info
     if (endLine) {
       return `${path}:${startLine}-${endLine}`;
     } else {
@@ -163,19 +140,15 @@ const extractFilePathFromCommand = (command: string | undefined, workdir?: strin
     }
   }
 
-  // Match cat command (simple case without flags)
   const catMatch = trimmed.match(/^cat\s+(.+)$/);
   if (catMatch) {
     const path = catMatch[1].trim();
-    // Remove quotes if present
     return path.replace(/^["']|["']$/g, '');
   }
 
-  // Match head/tail commands (may have flags like -n 10)
   const headTailMatch = trimmed.match(/^(head|tail)\s+(?:.*\s)?([^\s-][^\s]*)$/);
   if (headTailMatch) {
     const path = headTailMatch[2].trim();
-    // Remove quotes if present
     return path.replace(/^["']|["']$/g, '');
   }
 
@@ -183,7 +156,6 @@ const extractFilePathFromCommand = (command: string | undefined, workdir?: strin
 };
 
 const pickFilePath = (input: ToolInput, name?: string) => {
-  // First try standard file path fields
   const standardPath = (input.file_path as string | undefined) ??
     (input.path as string | undefined) ??
     (input.target_file as string | undefined) ??
@@ -191,7 +163,6 @@ const pickFilePath = (input: ToolInput, name?: string) => {
 
   if (standardPath) return standardPath;
 
-  // For read or shell_command commands, extract from command string
   const lowerName = (name ?? '').toLowerCase();
   if ((lowerName === 'read' || lowerName === 'shell_command') && input.command) {
     const workdir = (input.workdir as string | undefined) ?? undefined;
@@ -219,7 +190,6 @@ interface GenericToolBlockProps {
 }
 
 const GenericToolBlock = ({ name, input, result }: GenericToolBlockProps) => {
-  // Tools that should be collapsible (Grep, Glob, Write, Update Plan, Shell Command and MCP tools)
   const lowerName = (name ?? '').toLowerCase();
   const isMcpTool = lowerName.startsWith('mcp__');
   const isCollapsible = ['grep', 'glob', 'write', 'save-file', 'askuserquestion', 'update_plan', 'shell_command'].includes(lowerName) || isMcpTool;
@@ -227,7 +197,6 @@ const GenericToolBlock = ({ name, input, result }: GenericToolBlockProps) => {
 
   const filePath = input ? pickFilePath(input, name) : undefined;
 
-  // Determine tool call status based on result
   const isCompleted = result !== undefined && result !== null;
   const isError = isCompleted && result?.is_error === true;
 
@@ -255,7 +224,6 @@ const GenericToolBlock = ({ name, input, result }: GenericToolBlockProps) => {
 
   const shouldShowDetails = otherParams.length > 0 && (!isCollapsible || expanded);
 
-  // Check if it's a special file (no extension but is actually a file)
   const isSpecialFile = (fileName: string): boolean => {
     const specialFiles = [
       'makefile', 'dockerfile', 'jenkinsfile', 'vagrantfile',
@@ -266,9 +234,7 @@ const GenericToolBlock = ({ name, input, result }: GenericToolBlockProps) => {
     return specialFiles.includes(fileName.toLowerCase());
   };
 
-  // Determine if it's a directory: ends with /, is . or .., or filename has no extension (and not a special file)
   const fileName = filePath ? getFileName(filePath) : '';
-  // Remove line number suffix when checking if it's a directory
   const cleanFileName = fileName.replace(/:\d+(-\d+)?$/, '');
   const isDirectoryPath = filePath && (
     filePath.endsWith('/') ||
@@ -276,7 +242,6 @@ const GenericToolBlock = ({ name, input, result }: GenericToolBlockProps) => {
     filePath === '..' ||
     (!cleanFileName.includes('.') && !isSpecialFile(cleanFileName))
   );
-  // Determine if it's a file path (not a directory)
   const isFilePath = filePath && !isDirectoryPath;
 
   const handleFileClick = (e: React.MouseEvent) => {
@@ -291,10 +256,8 @@ const GenericToolBlock = ({ name, input, result }: GenericToolBlockProps) => {
     const name = getFileName(path);
 
     if (isDirectoryPath) {
-      // For directories, use getFolderIcon to get colored folder icon
       return getFolderIcon(name);
     } else {
-      // Remove line number suffix if present (e.g., "App.tsx:700-780" -> "App.tsx")
       const cleanName = name.replace(/:\d+(-\d+)?$/, '');
       const extension = cleanName.indexOf('.') !== -1 ? cleanName.split('.').pop() : '';
       return getFileIcon(extension, cleanName);
