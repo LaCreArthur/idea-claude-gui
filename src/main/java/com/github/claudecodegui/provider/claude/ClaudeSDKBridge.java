@@ -568,6 +568,7 @@ public class ClaudeSDKBridge extends BaseSDKBridge {
      * @param message            User message
      * @param sessionId          Session ID (null for new session)
      * @param cwd                Working directory
+     * @param attachments        List of attachments (images, etc.)
      * @param permissionMode     Permission mode (default, acceptEdits, bypassPermissions)
      * @param model              Model to use (optional)
      * @param permissionCallback Callback for handling permission requests
@@ -580,6 +581,7 @@ public class ClaudeSDKBridge extends BaseSDKBridge {
             String message,
             String sessionId,
             String cwd,
+            List<ClaudeSession.Attachment> attachments,
             String permissionMode,
             String model,
             JsonObject openedFiles,
@@ -621,6 +623,19 @@ public class ClaudeSDKBridge extends BaseSDKBridge {
                 }
                 if (streaming != null) {
                     commandJson.addProperty("streaming", streaming);
+                }
+                // Add attachments if present
+                if (attachments != null && !attachments.isEmpty()) {
+                    JsonArray attArray = new JsonArray();
+                    for (ClaudeSession.Attachment att : attachments) {
+                        if (att == null) continue;
+                        JsonObject attObj = new JsonObject();
+                        attObj.addProperty("fileName", att.fileName);
+                        attObj.addProperty("mediaType", att.mediaType);
+                        attObj.addProperty("data", att.data);
+                        attArray.add(attObj);
+                    }
+                    commandJson.add("attachments", attArray);
                 }
 
                 // Build command

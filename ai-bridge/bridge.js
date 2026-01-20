@@ -356,7 +356,8 @@ async function main() {
       model,
       openedFiles,
       agentPrompt,
-      streaming = false
+      streaming = false,
+      attachments
     } = input;
 
     // Debug: log the permissionMode being used
@@ -387,6 +388,28 @@ async function main() {
       systemPromptAppend += `\n\nCurrently open files in IDE:\n${filesInfo}`;
     }
 
+    // Build prompt - handle multimodal content if attachments present
+    const buildPrompt = (message, attachments) => {
+      if (!attachments || attachments.length === 0) {
+        return message;
+      }
+      const content = [];
+      for (const att of attachments) {
+        if (att.mediaType?.startsWith('image/')) {
+          content.push({
+            type: 'image',
+            source: { type: 'base64', media_type: att.mediaType, data: att.data }
+          });
+        }
+      }
+      if (message?.trim()) {
+        content.push({ type: 'text', text: message });
+      }
+      return content;
+    };
+
+    const prompt = buildPrompt(message, attachments);
+
     // Build query options
     const options = {
       cwd: workingDirectory,
@@ -411,7 +434,7 @@ async function main() {
     }
 
     // Execute query
-    const result = query({ prompt: message, options });
+    const result = query({ prompt, options });
 
     // Stream events
     let currentSessionId = sessionId;
