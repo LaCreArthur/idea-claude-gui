@@ -389,10 +389,14 @@ async function main() {
     }
 
     // Build prompt - handle multimodal content if attachments present
+    // SDK expects: string | AsyncIterable<SDKUserMessage>
+    // For images, we need an AsyncIterable that yields SDKUserMessage with MessageParam content
     const buildPrompt = (message, attachments) => {
       if (!attachments || attachments.length === 0) {
-        return message;
+        return message; // Simple string for text-only
       }
+
+      // Build multimodal content array (MessageParam.content format)
       const content = [];
       for (const att of attachments) {
         if (att.mediaType?.startsWith('image/')) {
@@ -405,7 +409,22 @@ async function main() {
       if (message?.trim()) {
         content.push({ type: 'text', text: message });
       }
-      return content;
+
+      // Create an async generator that yields a single SDKUserMessage
+      // This matches the SDK's expected AsyncIterable<SDKUserMessage> type
+      async function* createUserMessageStream() {
+        yield {
+          type: 'user',
+          message: {
+            role: 'user',
+            content: content
+          },
+          parent_tool_use_id: null,
+          session_id: sessionId || ''
+        };
+      }
+
+      return createUserMessageStream();
     };
 
     const prompt = buildPrompt(message, attachments);

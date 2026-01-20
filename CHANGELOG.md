@@ -1,3 +1,19 @@
+##### **v0.2.9** (2026-01-20)
+
+**Image Attachment Bug Fix**
+
+Bug Fixes:
+- Fix image attachments not working (assistant response never rendered)
+- Root cause: SDK expects `AsyncIterable<SDKUserMessage>` for multimodal, not content array
+- Fix PermissionService cross-IDE-instance bug (singleton → project service)
+
+Technical:
+- `bridge.js`: Changed `buildPrompt()` to return async generator for multimodal content
+- `PermissionService`: Converted to `@Service(Service.Level.PROJECT)` for proper isolation
+- All 16 E2E tests pass including new `test-image-attachment.mjs`
+
+---
+
 ##### **v0.2.8** (2026-01-19)
 
 **Auth Detection & E2E Testing**

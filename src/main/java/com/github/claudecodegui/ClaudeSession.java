@@ -483,7 +483,7 @@ public class ClaudeSession {
         String agentPrompt = externalAgentPrompt != null ? externalAgentPrompt : getAgentPrompt();
 
         // Get permission service for direct permission handling
-        PermissionService permissionService = PermissionService.getInstance(project);
+        PermissionService permissionService = project.getService(PermissionService.class);
 
         // Create permission callback
         ClaudeSDKBridge.PermissionCallback permissionCallback = (requestId, toolName, toolInput) -> {

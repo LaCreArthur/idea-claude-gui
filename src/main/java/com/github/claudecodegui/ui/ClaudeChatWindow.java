@@ -251,7 +251,7 @@ public class ClaudeChatWindow {
         }
 
         private void setupPermissionService() {
-            PermissionService permissionService = PermissionService.getInstance(project);
+            PermissionService permissionService = project.getService(PermissionService.class);
             // Register dialog showers for multi-project support
             permissionService.registerDialogShower(project, (toolName, inputs) ->
                 permissionHandler.showFrontendPermissionDialog(toolName, inputs));
@@ -928,7 +928,7 @@ public class ClaudeChatWindow {
 
             // 注销权限服务的 dialogShower 和 askUserQuestionDialogShower，防止内存泄漏
             try {
-                PermissionService permissionService = PermissionService.getInstance(project);
+                PermissionService permissionService = project.getService(PermissionService.class);
                 permissionService.unregisterDialogShower(project);
                 permissionService.unregisterAskUserQuestionDialogShower(project);
             } catch (Exception e) {

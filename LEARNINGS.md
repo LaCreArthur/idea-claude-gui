@@ -20,3 +20,9 @@ Greppable: `grep "#hooks" LEARNINGS.md`
 [2026-01-20] #e2e #debugging: Message counting (user=1, assistant=0) reveals rendering bugs faster than inspecting content. Check DOM state before/after.
 
 [2026-01-20] #bugs #symptoms: "Stuck on generating" can mean 2 things: (1) infinite loading, or (2) generation completes but response never renders. Count messages to distinguish.
+
+[2026-01-20] #intellij #services: Singletons cause cross-IDE-instance bugs. Convert to `@Service(Service.Level.PROJECT)` + `project.getService(Foo.class)` for per-project isolation.
+
+[2026-01-20] #e2e #automation: Full E2E flow: 1) `./gradlew buildPlugin` 2) unzip to `~/Library/.../Rider2025.3/plugins/` 3) `open -a "Rider" <project>` 4) wait ~15s 5) open Claude GUI panel 6) run tests. CDP only works after webview loads.
+
+[2026-01-20] #sdk #multimodal: Claude Agent SDK query() expects `prompt: string | AsyncIterable<SDKUserMessage>`, NOT content array. For images, yield SDKUserMessage with `message: { role: 'user', content: [...] }` via async generator.

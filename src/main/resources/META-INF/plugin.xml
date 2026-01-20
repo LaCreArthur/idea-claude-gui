@@ -36,6 +36,9 @@
     <depends optional="true" config-file="java-features.xml">com.intellij.java</depends>
 
     <extensions defaultExtensionNs="com.intellij">
+        <!-- Per-project permission service (ensures prompts appear in correct IDE instance) -->
+        <projectService serviceImplementation="com.github.claudecodegui.permission.PermissionService"/>
+
         <!-- Claude Code GUI Tool Window (includes history) -->
         <toolWindow id="Claude GUI"
                     anchor="right"
