@@ -2,14 +2,14 @@
 
 Consolidated guide for E2E testing of Claude GUI plugin.
 
-**Last Updated:** 2026-01-16
+**Last Updated:** 2026-01-20
 
 ---
 
 ## Quick Start
 
 ```bash
-# Run all E2E tests (requires Rider running with CDP enabled)
+# Run all E2E tests (auto-opens Claude GUI panel if needed)
 node tests/e2e/run-all.mjs
 
 # Or run individual tests
@@ -20,6 +20,8 @@ node tests/e2e/test-plan-approval.mjs
 # Rebuild plugin and restart Rider (after code changes)
 ./scripts/rebuild-and-test.sh
 ```
+
+**For AI agents (Claude Code):** Tests auto-open the Claude GUI panel via AppleScript. Just ensure Rider is running with CDP enabled (one-time setup).
 
 ---
 
@@ -238,6 +240,25 @@ DEBUG=1 node tests/e2e/test-permissions.mjs
 
 ---
 
+## Automation (for AI agents)
+
+The test runner auto-opens the Claude GUI panel via `scripts/open-claude-gui.sh`.
+
+**Key learnings for AppleScript automation:**
+- Process name is lowercase `"rider"` not `"Rider"`
+- `Cmd+Shift+A` action search is unreliable via AppleScript
+- Menu navigation is reliable: `View > Tool Windows > Claude GUI`
+
+**Manual open (if automation fails):**
+```bash
+./scripts/open-claude-gui.sh
+```
+
+**One-time CDP setup:**
+CDP port 9222 must be enabled in Rider settings (see Prerequisites). This persists across restarts.
+
+---
+
 ## Troubleshooting
 
 | Issue | Solution |
@@ -271,7 +292,7 @@ DEBUG=1 node tests/e2e/test-permissions.mjs
 **Run all tests:**
 ```bash
 node tests/e2e/run-all.mjs
-# Expected: Passed: 13/13
+# Expected: Passed: 15/15
 ```
 
 **Architecture:**

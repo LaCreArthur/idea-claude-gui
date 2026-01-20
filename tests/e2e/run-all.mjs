@@ -7,7 +7,7 @@
  * Usage: node tests/e2e/run-all.mjs
  */
 
-import { spawn } from 'child_process';
+import { spawn, execSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { rmSync, mkdirSync, existsSync, readdirSync } from 'fs';
@@ -86,16 +86,48 @@ async function main() {
   console.log('  - CDP port 9222 accessible');
   console.log('');
 
-  // Quick CDP check
+  // Quick CDP check and auto-open Claude GUI if needed
+  const openGuiScript = join(__dirname, '../../scripts/open-claude-gui.sh');
+  let cdpReady = false;
+
   try {
     const response = await fetch('http://localhost:9222/json/version');
     if (!response.ok) throw new Error('CDP not responding');
-    console.log('✅ CDP connection verified\n');
+    cdpReady = true;
   } catch (e) {
-    console.error('❌ CDP not available at localhost:9222');
-    console.error('   Open Claude GUI panel in Rider first.');
-    process.exit(1);
+    console.log('CDP not available, attempting to open Claude GUI panel...');
+    try {
+      execSync(openGuiScript, { stdio: 'inherit' });
+      cdpReady = true;
+    } catch (scriptErr) {
+      console.error('❌ Failed to open Claude GUI panel automatically');
+      console.error('   Please open it manually in Rider.');
+      process.exit(1);
+    }
   }
+
+  // Verify Claude webview is available (not just CDP)
+  if (cdpReady) {
+    try {
+      const listResponse = await fetch('http://localhost:9222/json/list');
+      const targets = await listResponse.json();
+      const hasClaudeWebview = targets.some(t => t.title?.includes('Claude'));
+
+      if (!hasClaudeWebview) {
+        console.log('Claude webview not found, attempting to open Claude GUI panel...');
+        try {
+          execSync(openGuiScript, { stdio: 'inherit' });
+        } catch (scriptErr) {
+          console.error('❌ Failed to open Claude GUI panel automatically');
+          process.exit(1);
+        }
+      }
+    } catch (e) {
+      // Continue anyway, individual tests will report issues
+    }
+  }
+
+  console.log('✅ CDP connection verified\n');
 
   const results = [];
   for (const test of TESTS) {

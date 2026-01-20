@@ -1,16 +1,10 @@
-# Project: idea-claude-gui
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project: idea-claude-gui
 
 IntelliJ IDEA plugin providing a GUI for Claude Code. React/TypeScript webview + Java plugin + Node.js ai-bridge.
-
-## Plugin Identity
-
-| File | Field | Value |
-|------|-------|-------|
-| `build.gradle` | `group` | `com.lacrearthur.idea-claude-gui` |
-| `plugin.xml` | `<id>` | `com.lacrearthur.idea-claude-gui` |
-| `plugin.xml` | `<name>` | `Claude GUI` |
-| `plugin.xml` | `<vendor>` | `Arthur Scheidel` |
-| `README.md` | JetBrains link | `https://plugins.jetbrains.com/plugin/29599-claude-gui` |
 
 ## Design Philosophy
 
@@ -21,17 +15,50 @@ See [docs/DESIGN.md](docs/DESIGN.md) for full design principles and reference gu
 ## Architecture
 
 ```
-webview/          # React frontend (Vite + TypeScript)
-ai-bridge/        # Node.js Claude API bridge
+webview/          # React frontend (Vite + TypeScript + Ant Design)
+ai-bridge/        # Node.js bridge to Claude Agent SDK (stdin/stdout JSON protocol)
 src/main/java/    # IntelliJ plugin (Java)
 ```
+
+### Communication Flow
+
+```
+React Webview <--JCEF bridge--> Java Plugin <--stdin/stdout JSON--> ai-bridge <--SDK--> Claude API
+     |                              |
+     |-- sendToJava('type', data)   |-- MessageDispatcher routes to handlers
+     |                              |-- PermissionService handles tool approvals
+```
+
+**Key patterns:**
+- Webview sends `type:jsonPayload` strings via `window.sendToJava()`
+- Java `MessageDispatcher` routes to registered `MessageHandler` implementations
+- ai-bridge uses JSON line protocol: one JSON object per line on stdin/stdout
+- Permission requests block in ai-bridge until Java responds
 
 ## Commands
 
 ```bash
-./scripts/test-all.sh      # Run all tests (webview + ai-bridge + Java)
-./gradlew clean runIde     # Debug plugin in sandbox IDE
-./gradlew clean buildPlugin # Build distributable
+# Full test suite
+./scripts/test-all.sh
+
+# Component-specific tests
+npm test --prefix webview           # React/TypeScript tests
+npm test --prefix ai-bridge         # Node.js tests
+./gradlew test                      # Java tests
+
+# Single test file
+npm test --prefix webview -- src/components/ChatInputBox/ChatInputBox.test.tsx
+npm test --prefix webview -- --watch  # Watch mode
+
+# Development
+./gradlew clean runIde              # Debug plugin in sandbox IDE
+./gradlew clean buildPlugin         # Build distributable (.zip in build/distributions/)
+
+# Build verification (fast, checks plugin ZIP structure)
+./gradlew testE2E
+
+# E2E tests (auto-opens Claude GUI panel, requires Rider running)
+node tests/e2e/run-all.mjs          # See docs/E2E_TESTING.md for one-time CDP setup
 ```
 
 ## Testing Guidelines
@@ -74,11 +101,20 @@ it('calls sendToJava when clicked', async () => {
 
 ## Key Files
 
-- `webview/src/App.tsx` - Main React app
-- `ai-bridge/bridge.js` - Node.js Claude SDK bridge (stdin/stdout JSON protocol)
-- `src/main/java/.../ClaudeSDKToolWindow.java` - Plugin entry
-- `src/main/java/.../handler/` - Message handlers
-- `src/main/java/.../permission/PermissionService.java` - Permission handling
+**Webview (React):**
+- `webview/src/App.tsx` - Main React app, message rendering, state management
+- `webview/src/utils/bridge.ts` - Java bridge communication (`sendToJava`)
+- `webview/src/components/PermissionDialog.tsx` - Tool permission UI
+
+**ai-bridge (Node.js):**
+- `ai-bridge/bridge.js` - Claude SDK wrapper, JSON line protocol, permission callback
+
+**Java Plugin:**
+- `src/main/java/.../ClaudeSDKToolWindow.java` - Plugin entry, JCEF webview setup
+- `src/main/java/.../handler/MessageDispatcher.java` - Routes messages to handlers
+- `src/main/java/.../handler/SessionHandler.java` - Chat session management
+- `src/main/java/.../permission/PermissionService.java` - Tool approval logic
+- `src/main/java/.../provider/claude/ClaudeSDKBridge.java` - Spawns ai-bridge process
 
 ## Release Checklist
 
