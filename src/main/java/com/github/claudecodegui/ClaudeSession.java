@@ -453,16 +453,6 @@ public class ClaudeSession {
     }
 
     /**
-     * Check if the new bridge.js protocol should be used.
-     * Can be controlled via settings or feature flag.
-     */
-    private boolean shouldUseNewBridge() {
-        // New bridge.js protocol is now the default
-        // Falls back to legacy only when attachments are present
-        return true;
-    }
-
-    /**
      * Send message using new bridge.js protocol (stdin/stdout IPC).
      * This method handles permissions directly without file-based polling.
      *
@@ -672,13 +662,6 @@ public class ClaudeSession {
             this.mediaType = mediaType;
             this.data = data;
         }
-    }
-
-    /**
-     * Get permission manager
-     */
-    public PermissionManager getPermissionManager() {
-        return permissionManager;
     }
 
     /**
