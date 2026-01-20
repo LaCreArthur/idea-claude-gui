@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { ChatInputBox } from './ChatInputBox';
 
 // Mock the providers to avoid complex dependencies
@@ -57,5 +57,44 @@ describe('ChatInputBox', () => {
     const inputArea = document.querySelector('[contenteditable]');
     // When disabled, contenteditable should be false
     expect(inputArea?.getAttribute('contenteditable')).toBe('false');
+  });
+
+  it('does not submit on Shift+Enter', () => {
+    const onSubmit = vi.fn();
+    render(<ChatInputBox onSubmit={onSubmit} />);
+
+    const inputArea = document.querySelector('[contenteditable="true"]') as HTMLElement;
+    expect(inputArea).toBeInTheDocument();
+
+    // Add some content first
+    inputArea.textContent = 'Hello world';
+    fireEvent.input(inputArea);
+
+    // Focus the input
+    inputArea.focus();
+
+    // Press Shift+Enter - should NOT submit
+    fireEvent.keyDown(inputArea, { key: 'Enter', shiftKey: true });
+
+    // Should NOT have submitted (Shift+Enter inserts newline instead)
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it('submits on Enter without Shift', () => {
+    const onSubmit = vi.fn();
+    render(<ChatInputBox onSubmit={onSubmit} />);
+
+    const inputArea = document.querySelector('[contenteditable="true"]') as HTMLElement;
+    expect(inputArea).toBeInTheDocument();
+
+    // Add some content first
+    inputArea.textContent = 'Hello world';
+    fireEvent.input(inputArea);
+
+    // Press Enter (no Shift)
+    fireEvent.keyDown(inputArea, { key: 'Enter', shiftKey: false });
+
+    // Should have submitted
+    expect(onSubmit).toHaveBeenCalled();
   });
 });

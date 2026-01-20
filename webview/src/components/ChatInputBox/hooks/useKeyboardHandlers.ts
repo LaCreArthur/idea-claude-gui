@@ -280,6 +280,25 @@ export function useKeyboardHandlers({
       return;
     }
 
+    // Shift+Enter: insert line break explicitly (JCEF doesn't handle this automatically)
+    if (isEnterKey && e.shiftKey && !isIMEComposing) {
+      e.preventDefault();
+      const selection = window.getSelection();
+      if (selection && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        range.deleteContents();
+        const br = document.createElement('br');
+        range.insertNode(br);
+        // Move cursor after the <br>
+        range.setStartAfter(br);
+        range.setEndAfter(br);
+        selection.removeAllRanges();
+        selection.addRange(range);
+        handleInput();
+      }
+      return;
+    }
+
   }, [
     isComposing,
     handleSubmit,
@@ -374,6 +393,25 @@ export function useKeyboardHandlers({
         ev.preventDefault();
         submittedOnEnterRef.current = true;
         handleSubmit();
+        return;
+      }
+
+      // Shift+Enter: insert line break explicitly (JCEF doesn't handle this automatically)
+      if (isEnterKey && shift && !isComposingRef.current && !isComposing) {
+        ev.preventDefault();
+        const selection = window.getSelection();
+        if (selection && selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0);
+          range.deleteContents();
+          const br = document.createElement('br');
+          range.insertNode(br);
+          // Move cursor after the <br>
+          range.setStartAfter(br);
+          range.setEndAfter(br);
+          selection.removeAllRanges();
+          selection.addRange(range);
+          handleInput();
+        }
       }
     };
 
