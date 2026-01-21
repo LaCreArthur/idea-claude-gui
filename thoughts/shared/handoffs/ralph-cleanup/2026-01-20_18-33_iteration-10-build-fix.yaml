@@ -1,0 +1,98 @@
+---
+session: ralph-cleanup
+date: 2026-01-20
+status: complete
+outcome: SUCCEEDED
+note: User stopped session mid-execution, but core task was already complete
+---
+
+goal: Fixed broken build from iteration 8, restored codebase to working state
+now: Resume P1 tasks - expand test suite, remove dead code (carefully), remove Chinese comments
+test: ./gradlew compileJava && ./scripts/test-all.sh
+
+done_this_session:
+  - task: Diagnosed build failure from iteration 8
+    files: [src/main/java/com/github/claudecodegui/handler/*.java]
+    details: 13 handler files had 80-92% of their code deleted (missing closing braces, methods)
+  - task: Reverted problematic commit 8412da3
+    files: [all handler files restored to commit 777d657 state]
+    commit: db631c2 "Revert 'ralph: iteration 8'"
+  - task: Verified build and tests pass
+    result: ✅ ./gradlew compileJava passes, ✅ ./scripts/test-all.sh passes
+  - task: Updated Ralph protocol with mandatory build verification
+    files: [.ralph/PROMPT.md]
+    changes: Phase 4 now requires compileJava + test-all.sh before every commit
+
+blockers: []
+
+questions: []
+
+decisions:
+  - full_revert_vs_targeted_fix: "Chose full revert of 8412da3 (safest). Iteration 8 deleted too much code across 13 files (DependencyHandler 308→62 lines, SettingsHandler 828→66 lines, PermissionHandler 417→55 lines). Targeted restoration would be error-prone."
+  - protocol_update: "Made build verification MANDATORY in PROMPT.md Phase 4. Previous protocol allowed commits without compilation checks, which caused this failure."
+
+findings:
+  - iteration_8_damage: "Commit 8412da3 deleted 80-92% of handler file content, removing closing braces and essential methods. Likely caused by over-aggressive dead code removal without per-file compilation verification."
+  - no_safety_checks: "Ralph protocol lacked mandatory build verification step. Iteration 8 committed broken code without running ./gradlew compileJava."
+  - test_suite_works: "After revert, full test suite passes cleanly. No other issues found."
+
+worked:
+  - "Full git revert approach - clean, auditable, safe"
+  - "Comparing file sizes before/after (git show 777d657:file | wc -l) to quantify damage"
+  - "Verifying both compilation AND tests before declaring success"
+
+failed:
+  - "Iteration 8's approach: automated dead code deletion without per-change compilation checks"
+
+next:
+  - "Pick next P1 task from queue: Either 'Expand Test Suite' OR 'Remove Dead Code' (with extreme caution + per-file verification)"
+  - "For dead code removal: Use tldr dead analysis BUT verify each file compiles after editing, use Edit tool (not sed), check git diff carefully"
+  - "Consider: Should we add pre-commit hook that runs ./gradlew compileJava? (prevents this in future)"
+  - "Update scratchpad with iteration 11 task selection and initialization"
+
+files:
+  created: []
+  modified:
+    - .ralph/PROMPT.md (added mandatory build verification to Phase 4)
+    - .ralph/scratchpad.md (documented iteration 10 completion)
+  restored:
+    - src/main/java/com/github/claudecodegui/handler/DependencyHandler.java (308 lines)
+    - src/main/java/com/github/claudecodegui/handler/PermissionHandler.java (417 lines)
+    - src/main/java/com/github/claudecodegui/handler/AgentHandler.java (275 lines)
+    - src/main/java/com/github/claudecodegui/handler/TabHandler.java (88 lines)
+    - src/main/java/com/github/claudecodegui/handler/McpServerHandler.java (234 lines)
+    - src/main/java/com/github/claudecodegui/handler/SkillHandler.java (221 lines)
+    - src/main/java/com/github/claudecodegui/handler/SettingsHandler.java (828 lines)
+    - src/main/java/com/github/claudecodegui/handler/DiffHandler.java (241 lines)
+    - src/main/java/com/github/claudecodegui/handler/SessionHandler.java (269 lines)
+    - src/main/java/com/github/claudecodegui/handler/FileHandler.java (715 lines)
+    - src/main/java/com/github/claudecodegui/handler/HistoryHandler.java (517 lines)
+    - src/main/java/com/github/claudecodegui/handler/RewindHandler.java (125 lines)
+    - src/main/java/com/github/claudecodegui/handler/FileExportHandler.java (142 lines)
+
+context:
+  ralph_loop_epic: "Codebase cleanup for Claude Code maintainability"
+  current_iteration: 10
+  started: 2026-01-20
+
+priority_queue:
+  P0_completed:
+    - ✅ PermissionService Singleton (v0.2.10)
+    - ✅ Image Attachments (verified correct in iter 8)
+    - ✅ Fix Broken Build from Iteration 8 (THIS ITERATION)
+
+  P1_ready:
+    - Expand Test Suite (currently low coverage)
+    - Remove Dead Code (REQUIRES: extreme caution after iter 8 failure)
+    - Remove Chinese Comments (grep for [\u4e00-\u9fa5])
+
+  P2_deferred:
+    - Gate Debug Logging (add feature flag)
+    - Reduce Large Files (<800 lines target)
+    - Add CI/CD Checks (pre-commit hooks?)
+
+meta_learning:
+  - "NEVER commit without: ./gradlew compileJava && ./scripts/test-all.sh"
+  - "Dead code removal requires per-file verification, not bulk operations"
+  - "Git revert is often safer than targeted fixes for large-scale damage"
+  - "Ralph protocol now enforces build verification in Phase 4"
