@@ -1,5 +1,7 @@
 # CLAUDE.md
 
+**Navigation:** See `.claude/INDEX.md` for keywords and file routing.
+
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project: idea-claude-gui
