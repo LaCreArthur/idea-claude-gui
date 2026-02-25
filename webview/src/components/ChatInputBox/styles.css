@@ -1553,3 +1553,24 @@
 [data-theme="light"] .sdk-warning-bar.sdk-loading .codicon-loading {
   color: #1976d2;
 }
+
+/* Auth warning bar (red/pink variant) */
+.auth-warning-bar:not(.sdk-loading) {
+  background: rgba(244, 67, 54, 0.12);
+  border-bottom-color: rgba(244, 67, 54, 0.3);
+  color: #ef9a9a;
+}
+
+.auth-warning-bar:not(.sdk-loading) .codicon-warning {
+  color: #ef9a9a;
+}
+
+[data-theme="light"] .auth-warning-bar:not(.sdk-loading) {
+  background: rgba(211, 47, 47, 0.08);
+  border-bottom-color: rgba(211, 47, 47, 0.2);
+  color: #c62828;
+}
+
+[data-theme="light"] .auth-warning-bar:not(.sdk-loading) .codicon-warning {
+  color: #c62828;
+}

@@ -133,6 +133,8 @@ const App = () => {
 
   const [sdkStatus, setSdkStatus] = useState<Record<string, { installed?: boolean; status?: string }>>({});
   const [sdkStatusLoaded, setSdkStatusLoaded] = useState(false);
+  const [authStatus, setAuthStatus] = useState<{ authenticated: boolean; authType: string } | null>(null);
+  const [authStatusLoaded, setAuthStatusLoaded] = useState(false);
 
   const [contextInfo, setContextInfo] = useState<{ file: string; startLine?: number; endLine?: number; raw: string } | null>(null);
 
@@ -408,6 +410,8 @@ const App = () => {
   useSettingsCallbacks({
     setSdkStatus,
     setSdkStatusLoaded,
+    setAuthStatus,
+    setAuthStatusLoaded,
     setUsagePercentage,
     setUsageUsedTokens,
     setUsageMaxTokens,
@@ -806,6 +810,12 @@ const App = () => {
             sdkStatusLoading={!sdkStatusLoaded}
             onInstallSdk={() => {
               setSettingsInitialTab('dependencies');
+              setCurrentView('settings');
+            }}
+            authConfigured={authStatusLoaded ? (authStatus?.authenticated ?? false) : true}
+            authStatusLoading={!authStatusLoaded}
+            onConfigureAuth={() => {
+              setSettingsInitialTab('providers');
               setCurrentView('settings');
             }}
             value={draftInput}

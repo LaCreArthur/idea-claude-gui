@@ -38,7 +38,7 @@ const AskUserQuestionDialog = ({
   useEffect(() => {
     if (isOpen && request) {
       const initialAnswers: Record<string, Set<string>> = {};
-      request.questions.forEach((q) => {
+      request.questions?.forEach((q) => {
         initialAnswers[q.question] = new Set<string>();
       });
       setAnswers(initialAnswers);
@@ -52,14 +52,20 @@ const AskUserQuestionDialog = ({
       window.addEventListener('keydown', handleKeyDown);
       return () => window.removeEventListener('keydown', handleKeyDown);
     }
-  }, [isOpen]);
+  }, [isOpen, request]);
 
   if (!isOpen || !request) {
     return null;
   }
 
-  const currentQuestion = request.questions[currentQuestionIndex];
-  const isLastQuestion = currentQuestionIndex === request.questions.length - 1;
+  if (!request.questions || request.questions.length === 0) {
+    onCancel(request.requestId);
+    return null;
+  }
+
+  const safeIndex = Math.min(currentQuestionIndex, request.questions.length - 1);
+  const currentQuestion = request.questions[safeIndex];
+  const isLastQuestion = safeIndex === request.questions.length - 1;
   const currentAnswerSet = answers[currentQuestion.question] || new Set<string>();
 
   const handleOptionToggle = (label: string) => {

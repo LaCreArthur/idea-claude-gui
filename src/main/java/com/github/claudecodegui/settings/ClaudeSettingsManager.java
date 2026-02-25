@@ -115,33 +115,32 @@ public class ClaudeSettingsManager {
     }
 
     public boolean hasCliSessionAuth() {
-        // On macOS, check Keychain first (where `claude login` stores credentials)
-        if (System.getProperty("os.name").toLowerCase().contains("mac")) {
-            if (hasKeychainCredentials()) {
-                return true;
-            }
-        }
-
-        // Fall back to file-based credentials
+        // Check file-based credentials first (fast, no OS prompts)
         try {
             Path credentialsPath = Paths.get(System.getProperty("user.home"), ".claude", ".credentials.json");
-            if (!Files.exists(credentialsPath)) {
-                return false;
-            }
-            String content = Files.readString(credentialsPath);
-            JsonObject credentials = JsonParser.parseString(content).getAsJsonObject();
-            if (credentials.has("claudeAiOauth")) {
-                JsonObject oauth = credentials.getAsJsonObject("claudeAiOauth");
-                if (oauth.has("accessToken")) {
-                    String token = oauth.get("accessToken").getAsString();
-                    return token != null && !token.isEmpty();
+            if (Files.exists(credentialsPath)) {
+                String content = Files.readString(credentialsPath);
+                JsonObject credentials = JsonParser.parseString(content).getAsJsonObject();
+                if (credentials.has("claudeAiOauth")) {
+                    JsonObject oauth = credentials.getAsJsonObject("claudeAiOauth");
+                    if (oauth.has("accessToken")) {
+                        String token = oauth.get("accessToken").getAsString();
+                        if (token != null && !token.isEmpty()) {
+                            return true;
+                        }
+                    }
                 }
             }
-            return false;
         } catch (Exception e) {
-            LOG.warn("[ClaudeSettingsManager] Failed to check CLI session auth: " + e.getMessage());
-            return false;
+            LOG.warn("[ClaudeSettingsManager] Failed to check file-based auth: " + e.getMessage());
         }
+
+        // Fall back to macOS Keychain (some installs only store credentials here)
+        if (System.getProperty("os.name").toLowerCase().contains("mac")) {
+            return hasKeychainCredentials();
+        }
+
+        return false;
     }
 
     private boolean hasKeychainCredentials() {

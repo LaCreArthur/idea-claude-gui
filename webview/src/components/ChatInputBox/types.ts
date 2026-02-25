@@ -211,6 +211,9 @@ export interface ChatInputBoxProps {
   sdkInstalled?: boolean;
   sdkStatusLoading?: boolean;
   onInstallSdk?: () => void;
+  authConfigured?: boolean;
+  authStatusLoading?: boolean;
+  onConfigureAuth?: () => void;
   addToast?: (message: string, type: 'info' | 'success' | 'warning' | 'error') => void;
 }
 

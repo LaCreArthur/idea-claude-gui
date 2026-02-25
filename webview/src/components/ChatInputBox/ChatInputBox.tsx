@@ -64,6 +64,9 @@ export const ChatInputBox = ({
   sdkInstalled = true,
   sdkStatusLoading = false,
   onInstallSdk,
+  authConfigured = true,
+  authStatusLoading = false,
+  onConfigureAuth,
   addToast,
 }: ChatInputBoxProps) => {
   const placeholder = placeholderProp ?? '@reference files, shift + enter for new line';
@@ -388,6 +391,12 @@ export const ChatInputBox = ({
       return;
     }
 
+    if (!authConfigured) {
+      addToast?.('Not authenticated. Run "claude login" in terminal or configure an API key.', 'warning');
+      onConfigureAuth?.();
+      return;
+    }
+
     if (!cleanContent && attachments.length === 0) {
       return;
     }
@@ -653,6 +662,25 @@ export const ChatInputBox = ({
               onInstallSdk?.();
             }}>
               Go to Install
+            </button>
+          )}
+        </div>
+      )}
+
+      {sdkInstalled && !sdkStatusLoading && (authStatusLoading || !authConfigured) && (
+        <div className={`sdk-warning-bar auth-warning-bar ${authStatusLoading ? 'sdk-loading' : ''}`}>
+          <span className={`codicon ${authStatusLoading ? 'codicon-loading codicon-modifier-spin' : 'codicon-warning'}`} />
+          <span className="sdk-warning-text">
+            {authStatusLoading
+              ? 'Checking authentication...'
+              : 'Not authenticated. Run "claude login" in terminal or configure an API key.'}
+          </span>
+          {!authStatusLoading && (
+            <button className="sdk-install-btn" onClick={(e) => {
+              e.stopPropagation();
+              onConfigureAuth?.();
+            }}>
+              Configure
             </button>
           )}
         </div>

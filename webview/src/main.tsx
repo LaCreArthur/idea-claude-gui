@@ -60,6 +60,12 @@ if (typeof window !== 'undefined' && !window.updateDependencyStatus) {
   };
 }
 
+if (typeof window !== 'undefined' && !window.updateAuthStatus) {
+  window.updateAuthStatus = (json: string) => {
+    window.__pendingAuthStatus = json;
+  };
+}
+
 if (typeof window !== 'undefined' && !window.dependencyUpdateAvailable) {
   console.log('[Main] Pre-registering dependencyUpdateAvailable placeholder');
   window.dependencyUpdateAvailable = (json: string) => {
@@ -104,4 +110,7 @@ waitForBridge(() => {
 
   console.log('[Main] Requesting dependency status');
   sendBridgeEvent('get_dependency_status');
+
+  console.log('[Main] Requesting auth status');
+  sendBridgeEvent('get_auth_status');
 });

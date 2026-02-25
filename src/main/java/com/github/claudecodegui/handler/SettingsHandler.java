@@ -48,7 +48,8 @@ public class SettingsHandler extends BaseMessageHandler {
         "delete_provider",
         "switch_provider",
         "get_active_provider",
-        "save_imported_providers"
+        "save_imported_providers",
+        "get_auth_status"
     };
 
     private static final Map<String, Integer> MODEL_CONTEXT_LIMITS = new HashMap<>();
@@ -153,6 +154,9 @@ public class SettingsHandler extends BaseMessageHandler {
                 return true;
             case "save_imported_providers":
                 providerOps.handleSaveImportedProviders(content);
+                return true;
+            case "get_auth_status":
+                providerOps.handleGetAuthStatus();
                 return true;
             default:
                 return false;

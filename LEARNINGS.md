@@ -23,7 +23,11 @@ Greppable: `grep "#hooks" LEARNINGS.md`
 
 [2026-01-20] #intellij #services: Singletons cause cross-IDE-instance bugs. Convert to `@Service(Service.Level.PROJECT)` + `project.getService(Foo.class)` for per-project isolation.
 
-[2026-01-20] #e2e #automation: Full E2E flow: 1) `./gradlew buildPlugin` 2) unzip to `~/Library/.../Rider2025.3/plugins/` 3) `open -a "Rider" <project>` 4) wait ~15s 5) open Claude GUI panel 6) run tests. CDP only works after webview loads.
+[2026-01-20] #e2e #automation: Full E2E flow: `./scripts/rebuild-and-test.sh` handles build→deploy→restart→open GUI. Script auto-detects last opened project from `recentSolutions.xml` to bypass Rider's welcome screen. CDP only works after webview loads (~20s after Rider start).
+
+[2026-02-25] #rider #startup: `open -a Rider` without a project path lands on the welcome/project selection screen, blocking E2E tests. Fix: `open -a Rider ~/path/to/project.sln`. Last opened project found in `~/Library/Application Support/JetBrains/Rider2025.3/options/recentSolutions.xml` — look for `opened="true"` or highest `activationTimestamp`.
+
+[2026-02-25] #e2e #auth: Auth warning bar E2E tests use CDP to inject fake auth state via `window.updateAuthStatus('{"authenticated":false,"authType":"none"}')` — no real credentials touched. Pattern: inject state → check DOM → restore state. Submit guard also testable this way (message count before/after).
 
 [2026-01-20] #sdk #multimodal: Claude Agent SDK query() expects `prompt: string | AsyncIterable<SDKUserMessage>`, NOT content array. For images, yield SDKUserMessage with `message: { role: 'user', content: [...] }` via async generator.
 

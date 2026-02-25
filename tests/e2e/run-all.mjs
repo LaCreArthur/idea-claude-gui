@@ -46,6 +46,7 @@ const TESTS = [
   'test-mcp-settings.mjs',        // US-9: MCP servers
   'test-skills.mjs',              // US-10: Skills/Agents
   'test-auth-states.mjs',         // Auth state detection
+  'test-auth-warning-bar.mjs',    // Auth warning bar (CDP-injected)
   'test-auth-validation.mjs',     // Auth validation with API calls
   'test-image-attachment.mjs',    // Image attachment flow
 ];

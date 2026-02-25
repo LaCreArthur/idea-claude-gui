@@ -104,6 +104,36 @@ public class ProviderOperationsHandler {
     }
 
     /**
+     * Get auth status (proactive check on startup).
+     */
+    public void handleGetAuthStatus() {
+        CompletableFuture.runAsync(() -> {
+            try {
+                JsonObject config = context.getSettingsService().getCurrentClaudeConfig();
+                String authType = config.has("authType") ? config.get("authType").getAsString() : "none";
+                boolean authenticated = !"none".equals(authType);
+
+                JsonObject result = new JsonObject();
+                result.addProperty("authenticated", authenticated);
+                result.addProperty("authType", authType);
+
+                String json = new Gson().toJson(result);
+                ApplicationManager.getApplication().invokeLater(() -> {
+                    jsCaller.callJavaScript("window.updateAuthStatus", jsCaller.escapeJs(json));
+                });
+            } catch (Exception e) {
+                LOG.error("[ProviderOperationsHandler] Failed to get auth status: " + e.getMessage(), e);
+                JsonObject result = new JsonObject();
+                result.addProperty("authenticated", false);
+                result.addProperty("authType", "none");
+                ApplicationManager.getApplication().invokeLater(() -> {
+                    jsCaller.callJavaScript("window.updateAuthStatus", jsCaller.escapeJs(new Gson().toJson(result)));
+                });
+            }
+        });
+    }
+
+    /**
      * Get all providers.
      */
     public void handleGetProviders() {

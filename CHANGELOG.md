@@ -1,3 +1,21 @@
+##### **v0.2.12** (2026-02-25)
+
+**Proactive Auth Status Indicator**
+
+Features:
+- Add auth status warning bar in chat input — shows immediately when not authenticated
+- Warning bar with "Configure" button redirects to Provider settings
+- Submit blocked with toast notification when unauthenticated
+- Auto-polling every 30s keeps auth status fresh
+- Loading spinner while checking authentication on startup
+
+Bug Fixes:
+- Fix crash when AskUserQuestion dialog receives empty questions array
+- Fix build script not bypassing Rider welcome screen on restart
+- Optimize auth detection: check file-based credentials before macOS Keychain to avoid slow shell-outs
+
+---
+
 ##### **v0.2.11** (2026-02-25)
 
 **Claude 4.6 Model Support**

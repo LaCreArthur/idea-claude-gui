@@ -151,6 +151,9 @@ interface Window {
 
   __pendingDependencyStatus?: string;
 
+  updateAuthStatus?: (json: string) => void;
+  __pendingAuthStatus?: string;
+
   __pendingUserMessage?: string;
 
   __pendingLoadingState?: boolean;

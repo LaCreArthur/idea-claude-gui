@@ -5,9 +5,16 @@ import { sendBridgeEvent } from '../utils/bridge';
 
 type SdkStatusRecord = Record<string, { installed?: boolean; status?: string }>;
 
+interface AuthStatus {
+  authenticated: boolean;
+  authType: string;
+}
+
 export interface UseSettingsCallbacksParams {
   setSdkStatus: Dispatch<SetStateAction<SdkStatusRecord>>;
   setSdkStatusLoaded: Dispatch<SetStateAction<boolean>>;
+  setAuthStatus: Dispatch<SetStateAction<AuthStatus | null>>;
+  setAuthStatusLoaded: Dispatch<SetStateAction<boolean>>;
 
   setUsagePercentage: Dispatch<SetStateAction<number>>;
   setUsageUsedTokens: Dispatch<SetStateAction<number | undefined>>;
@@ -30,6 +37,8 @@ export interface UseSettingsCallbacksParams {
 export function useSettingsCallbacks({
   setSdkStatus,
   setSdkStatusLoaded,
+  setAuthStatus,
+  setAuthStatusLoaded,
   setUsagePercentage,
   setUsageUsedTokens,
   setUsageMaxTokens,
@@ -68,6 +77,22 @@ export function useSettingsCallbacks({
 
     if (window.sendToJava) {
       window.sendToJava('get_dependency_status:');
+    }
+
+    window.updateAuthStatus = (jsonStr: string) => {
+      try {
+        const data = JSON.parse(jsonStr);
+        setAuthStatus({ authenticated: !!data.authenticated, authType: data.authType ?? 'none' });
+        setAuthStatusLoaded(true);
+      } catch {
+        setAuthStatusLoaded(true);
+      }
+    };
+
+    if (window.__pendingAuthStatus) {
+      const pending = window.__pendingAuthStatus;
+      delete window.__pendingAuthStatus;
+      window.updateAuthStatus(pending);
     }
 
     window.onUsageUpdate = (json) => {
@@ -207,5 +232,14 @@ export function useSettingsCallbacks({
     };
     setTimeout(requestSendShortcut, 200);
 
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (window.sendToJava) {
+        sendBridgeEvent('get_auth_status');
+      }
+    }, 30_000);
+    return () => clearInterval(interval);
   }, []);
 }
