@@ -19,14 +19,14 @@ const DEFAULT_MODEL_MAP: Record<string, ModelInfo> = AVAILABLE_MODELS.reduce(
 );
 
 const MODEL_LABELS: Record<string, string> = {
-  'claude-sonnet-4-5': 'Sonnet 4.5',
-  'claude-opus-4-5-20251101': 'Opus 4.5',
+  'claude-sonnet-4-6': 'Sonnet 4.6',
+  'claude-opus-4-6': 'Opus 4.6',
   'claude-haiku-4-5': 'Haiku 4.5',
 };
 
 const MODEL_DESCRIPTIONS: Record<string, string> = {
-  'claude-sonnet-4-5': 'Best balance of speed and intelligence',
-  'claude-opus-4-5-20251101': 'Most powerful, best for complex tasks',
+  'claude-sonnet-4-6': 'Best balance of speed and intelligence',
+  'claude-opus-4-6': 'Most powerful, 128K output, adaptive thinking',
   'claude-haiku-4-5': 'Fastest, best for simple tasks',
 };
 

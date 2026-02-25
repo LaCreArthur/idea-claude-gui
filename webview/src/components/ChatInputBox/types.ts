@@ -130,14 +130,14 @@ export interface ModelInfo {
 
 export const CLAUDE_MODELS: ModelInfo[] = [
   {
-    id: 'claude-sonnet-4-5',
-    label: 'Sonnet 4.5',
-    description: 'Sonnet 4.5 · Use the default model',
+    id: 'claude-sonnet-4-6',
+    label: 'Sonnet 4.6',
+    description: 'Sonnet 4.6 · Best balance of speed and intelligence',
   },
   {
-    id: 'claude-opus-4-5-20251101',
-    label: 'Opus 4.5',
-    description: 'Opus 4.5 · Most capable for complex work',
+    id: 'claude-opus-4-6',
+    label: 'Opus 4.6',
+    description: 'Opus 4.6 · Most capable, 128K output, adaptive thinking',
   },
   {
     id: 'claude-haiku-4-5',

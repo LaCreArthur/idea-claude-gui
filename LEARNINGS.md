@@ -26,3 +26,7 @@ Greppable: `grep "#hooks" LEARNINGS.md`
 [2026-01-20] #e2e #automation: Full E2E flow: 1) `./gradlew buildPlugin` 2) unzip to `~/Library/.../Rider2025.3/plugins/` 3) `open -a "Rider" <project>` 4) wait ~15s 5) open Claude GUI panel 6) run tests. CDP only works after webview loads.
 
 [2026-01-20] #sdk #multimodal: Claude Agent SDK query() expects `prompt: string | AsyncIterable<SDKUserMessage>`, NOT content array. For images, yield SDKUserMessage with `message: { role: 'user', content: [...] }` via async generator.
+
+[2026-02-25] #build #deploy: Java 21 not default — must `export JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.10/libexec/openjdk.jdk/Contents/Home` before `./gradlew clean buildPlugin`. Deploy: `rm -rf` then `unzip` to `~/Library/Application Support/JetBrains/Rider2025.3/plugins/`. Restart Rider after.
+
+[2026-02-25] #models #architecture: Model IDs are scattered across 9 files (TS types, selectors, defaults in 4 Java files, pricing). When adding/replacing models, grep for old IDs across `*.{ts,tsx,java}` to catch all occurrences. Pricing in ClaudeHistoryReader uses substring matching — new versions in same family match automatically.

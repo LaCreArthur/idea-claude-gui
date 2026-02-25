@@ -11,6 +11,9 @@
 
 set -e
 
+# Java 21 required for build (not the system default)
+export JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.10/libexec/openjdk.jdk/Contents/Home
+
 PLUGIN_DIR=~/Library/Application\ Support/JetBrains/Rider2025.3/plugins/idea-claude-gui
 OPEN_GUI=true
 

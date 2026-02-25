@@ -23,7 +23,7 @@ public class HandlerContext {
     // Mutable state accessed via getter/setter
     private ClaudeSession session;
     private JBCefBrowser browser;
-    private String currentModel = "claude-sonnet-4-5";
+    private String currentModel = "claude-sonnet-4-6";
     private String currentProvider = "claude";
     private volatile boolean disposed = false;
 

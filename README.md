@@ -15,7 +15,7 @@ A powerful IntelliJ IDEA plugin that provides a visual interface for **Claude Co
 ## Key Features
 
 ### Claude Code Support
-- **Claude Code** - Anthropic's official AI programming assistant, supporting Opus 4.5 and other models
+- **Claude Code** - Anthropic's official AI programming assistant, supporting Opus 4.6, Sonnet 4.6, and Haiku 4.5
 
 ### Intelligent Conversation
 - Context-aware AI coding assistant

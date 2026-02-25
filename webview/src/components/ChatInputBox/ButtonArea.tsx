@@ -7,7 +7,7 @@ export const ButtonArea = ({
   disabled = false,
   hasInputContent = false,
   isLoading = false,
-  selectedModel = 'claude-sonnet-4-5',
+  selectedModel = 'claude-sonnet-4-6',
   permissionMode = 'default',
   currentProvider = 'claude',
   onSubmit,
@@ -25,8 +25,8 @@ export const ButtonArea = ({
 }: ButtonAreaProps) => {
   const applyModelMapping = (model: ModelInfo, mapping: { haiku?: string; sonnet?: string; opus?: string }): ModelInfo => {
     const modelKeyMap: Record<string, keyof typeof mapping> = {
-      'claude-sonnet-4-5': 'sonnet',
-      'claude-opus-4-5-20251101': 'opus',
+      'claude-sonnet-4-6': 'sonnet',
+      'claude-opus-4-6': 'opus',
       'claude-haiku-4-5': 'haiku',
     };
 

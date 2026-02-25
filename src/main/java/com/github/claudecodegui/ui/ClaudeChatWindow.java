@@ -159,7 +159,7 @@ public class ClaudeChatWindow {
 
             @Override
             public String getCurrentModel() {
-                return handlerContext != null ? handlerContext.getCurrentModel() : "claude-sonnet-4-5";
+                return handlerContext != null ? handlerContext.getCurrentModel() : "claude-sonnet-4-6";
             }
         });
     }
@@ -193,7 +193,7 @@ public class ClaudeChatWindow {
                 String mode = session != null ? session.getPermissionMode() : "default";
                 com.github.claudecodegui.notifications.ClaudeNotifier.setMode(project, mode);
 
-                String model = session != null ? session.getModel() : "claude-sonnet-4-5";
+                String model = session != null ? session.getModel() : "claude-sonnet-4-6";
                 com.github.claudecodegui.notifications.ClaudeNotifier.setModel(project, model);
 
                 try {
@@ -566,7 +566,7 @@ public class ClaudeChatWindow {
                 String savedMode = settingsLoader.getSavedPermissionMode();
                 previousPermissionMode = (savedMode != null) ? savedMode : "bypassPermissions";
                 previousProvider = "claude";
-                previousModel = "claude-sonnet-4-5";
+                previousModel = "claude-sonnet-4-6";
             }
             LOG.info("Preserving session state when loading history: mode=" + previousPermissionMode + ", provider=" + previousProvider + ", model=" + previousModel);
 
@@ -683,7 +683,7 @@ public class ClaudeChatWindow {
 
             String previousPermissionMode = (session != null) ? session.getPermissionMode() : "bypassPermissions";
             String previousProvider = (session != null) ? session.getProvider() : "claude";
-            String previousModel = (session != null) ? session.getModel() : "claude-sonnet-4-5";
+            String previousModel = (session != null) ? session.getModel() : "claude-sonnet-4-6";
             LOG.info("Preserving session state: mode=" + previousPermissionMode + ", provider=" + previousProvider + ", model=" + previousModel);
 
             callJavaScript("clearMessages");

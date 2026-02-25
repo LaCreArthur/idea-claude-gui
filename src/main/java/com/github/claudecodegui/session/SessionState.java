@@ -20,7 +20,7 @@ public class SessionState {
     private String cwd = null;
 
     private String permissionMode = "default";
-    private String model = "claude-sonnet-4-5";
+    private String model = "claude-sonnet-4-6";
     private String provider = "claude";
 
     private List<String> slashCommands = new ArrayList<>();

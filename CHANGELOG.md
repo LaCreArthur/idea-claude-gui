@@ -1,3 +1,19 @@
+##### **v0.2.11** (2026-02-25)
+
+**Claude 4.6 Model Support**
+
+Features:
+- Add Claude Sonnet 4.6 and Opus 4.6 as available models
+- Sonnet 4.6 is now the default model
+- Opus 4.6 features: 128K output tokens, adaptive thinking
+
+Changes:
+- Replace Sonnet 4.5 and Opus 4.5 with their 4.6 successors in model selector
+- Update Opus pricing to match current rates ($5/$25 per MTok)
+- Fix build script to set JAVA_HOME for Java 21
+
+---
+
 ##### **v0.2.10** (2026-01-20)
 
 **Code Cleanup & Bug Fixes**

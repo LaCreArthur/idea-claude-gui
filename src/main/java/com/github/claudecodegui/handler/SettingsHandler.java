@@ -53,8 +53,8 @@ public class SettingsHandler extends BaseMessageHandler {
 
     private static final Map<String, Integer> MODEL_CONTEXT_LIMITS = new HashMap<>();
     static {
-        MODEL_CONTEXT_LIMITS.put("claude-sonnet-4-5", 200_000);
-        MODEL_CONTEXT_LIMITS.put("claude-opus-4-5-20251101", 200_000);
+        MODEL_CONTEXT_LIMITS.put("claude-sonnet-4-6", 200_000);
+        MODEL_CONTEXT_LIMITS.put("claude-opus-4-6", 200_000);
         MODEL_CONTEXT_LIMITS.put("claude-haiku-4-5", 200_000);
     }
 

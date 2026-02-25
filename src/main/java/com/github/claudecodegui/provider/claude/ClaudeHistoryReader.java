@@ -672,10 +672,10 @@ public class ClaudeHistoryReader {
     private static final Map<String, Map<String, Double>> MODEL_PRICING = new HashMap<>();
     static {
         Map<String, Double> opus = new HashMap<>();
-        opus.put("input", 15.0);
-        opus.put("output", 75.0);
-        opus.put("cacheWrite", 18.75);
-        opus.put("cacheRead", 1.50);
+        opus.put("input", 5.0);
+        opus.put("output", 25.0);
+        opus.put("cacheWrite", 6.25);
+        opus.put("cacheRead", 0.50);
         MODEL_PRICING.put("claude-opus-4", opus);
 
         Map<String, Double> sonnet = new HashMap<>();
