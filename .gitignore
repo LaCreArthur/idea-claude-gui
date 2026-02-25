@@ -67,7 +67,6 @@ logs/*.log
 .intellijPlatform/
 /.idea/
 docs-plan
-firebase-debug.log
 .ace-tool/
 .workflowtests/e2e/screenshots/
 tests/e2e/screenshots/
