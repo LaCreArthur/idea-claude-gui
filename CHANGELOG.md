@@ -1,3 +1,21 @@
+##### **v0.2.14** (2026-03-15)
+
+**Daemon Mode & Streaming Fixes**
+
+Features:
+- Switch to persistent daemon bridge process — eliminates 5-10s SDK cold start per message
+- Pre-warm daemon on plugin tab creation for instant first query
+
+Improvements:
+- Delete entire one-shot bridge path (~280 lines) — daemon is now the only code path
+- Simplify `ClaudeSDKBridge` from 914 to 635 lines with single message-handling switch
+
+Bug Fixes:
+- Fix streaming content duplication ("4\n4") — delta path now exclusively owns text accumulation during streaming
+- Fix `MessageMerger` duplicating text/thinking blocks by adding synthetic type-based keys for keyless content blocks
+
+---
+
 ##### **v0.2.13** (2026-03-15)
 
 - Add fork attribution to plugin description and README
