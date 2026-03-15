@@ -67,6 +67,9 @@ public class MessageMerger {
             return;
         }
 
+        // Track per-type occurrence counts for keyless blocks (text, thinking)
+        Map<String, Integer> incomingTypeCounters = new HashMap<>();
+
         for (int i = 0; i < incomingContent.size(); i++) {
             JsonElement element = incomingContent.get(i);
             JsonElement elementCopy = element.deepCopy();
@@ -83,6 +86,17 @@ public class MessageMerger {
                     indexByKey.put(key, baseContent.size() - 1);
                     continue;
                 }
+
+                // Keyless block (text, thinking): match by type + occurrence index
+                String type = block.has("type") ? block.get("type").getAsString() : "unknown";
+                int count = incomingTypeCounters.getOrDefault(type, 0);
+                String syntheticKey = "__" + type + ":" + count;
+                incomingTypeCounters.put(type, count + 1);
+
+                if (indexByKey.containsKey(syntheticKey)) {
+                    baseContent.set(indexByKey.get(syntheticKey), elementCopy);
+                    continue;
+                }
             }
 
             baseContent.add(elementCopy);
@@ -93,6 +107,7 @@ public class MessageMerger {
 
     private Map<String, Integer> buildContentIndex(JsonArray contentArray) {
         Map<String, Integer> index = new HashMap<>();
+        Map<String, Integer> typeCounters = new HashMap<>();
         for (int i = 0; i < contentArray.size(); i++) {
             JsonElement element = contentArray.get(i);
             if (!element.isJsonObject()) {
@@ -100,8 +115,16 @@ public class MessageMerger {
             }
             JsonObject block = element.getAsJsonObject();
             String key = getContentBlockKey(block);
-            if (key != null && !index.containsKey(key)) {
-                index.put(key, i);
+            if (key != null) {
+                if (!index.containsKey(key)) {
+                    index.put(key, i);
+                }
+            } else {
+                // Synthetic key for keyless blocks (text, thinking) to enable replacement
+                String type = block.has("type") ? block.get("type").getAsString() : "unknown";
+                int count = typeCounters.getOrDefault(type, 0);
+                index.put("__" + type + ":" + count, i);
+                typeCounters.put(type, count + 1);
             }
         }
         return index;

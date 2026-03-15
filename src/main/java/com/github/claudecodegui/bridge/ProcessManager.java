@@ -61,6 +61,16 @@ public class ProcessManager {
     }
 
     /**
+     * Mark a channel as interrupted without killing its process.
+     * Used by daemon mode where abort is sent via protocol instead of process kill.
+     */
+    public void markInterrupted(String channelId) {
+        if (channelId != null) {
+            interruptedChannels.add(channelId);
+        }
+    }
+
+    /**
      * Interrupt a channel.
      * Uses platform-aware process termination method to ensure proper termination
      * of child process trees on Windows.

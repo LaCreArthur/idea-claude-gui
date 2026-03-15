@@ -90,6 +90,7 @@ public class ClaudeChatWindow {
         setupSessionCallbacks();
         initializeSessionInfo();
         overrideBridgePathIfAvailable();
+        preWarmDaemon();
 
         createUIComponents();
         registerSessionLoadListener();
@@ -179,6 +180,17 @@ public class ClaudeChatWindow {
             } catch (Exception e) {
                 LOG.warn("Failed to override bridge path: " + e.getMessage());
             }
+        }
+
+        private void preWarmDaemon() {
+            CompletableFuture.runAsync(() -> {
+                try {
+                    claudeSDKBridge.getOrCreateDaemon();
+                    LOG.info("[Daemon] Pre-warm complete");
+                } catch (Exception e) {
+                    LOG.info("[Daemon] Pre-warm failed (will retry on first message): " + e.getMessage());
+                }
+            });
         }
 
         private void initializeSession() {
@@ -541,6 +553,7 @@ public class ClaudeChatWindow {
             LOG.info("Preserving session state when loading history: mode=" + previousPermissionMode + ", provider=" + previousProvider + ", model=" + previousModel);
 
             callJavaScript("clearMessages");
+            callJavaScript("showLoading", "false");
 
             session = new ClaudeSession(project, claudeSDKBridge);
 
@@ -663,6 +676,7 @@ public class ClaudeChatWindow {
             LOG.info("Preserving session state: mode=" + previousPermissionMode + ", provider=" + previousProvider + ", model=" + previousModel);
 
             callJavaScript("clearMessages");
+            callJavaScript("showLoading", "false");
 
             CompletableFuture<Void> interruptFuture = session != null
                 ? session.interrupt()
@@ -835,6 +849,7 @@ public class ClaudeChatWindow {
 
             try {
                 if (claudeSDKBridge != null) {
+                    claudeSDKBridge.shutdownDaemon();
                     int activeCount = claudeSDKBridge.getActiveProcessCount();
                     if (activeCount > 0) {
                         LOG.info("Cleaning up " + activeCount + " active Claude processes...");

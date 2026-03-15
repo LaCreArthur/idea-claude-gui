@@ -132,23 +132,19 @@ public class ClaudeMessageHandler implements MessageCallback {
             if (currentAssistantMessage == null) {
                 currentAssistantMessage = new Message(Message.Type.ASSISTANT, "", mergedRaw);
                 state.addMessage(currentAssistantMessage);
-            } else {
-                currentAssistantMessage.raw = mergedRaw;
             }
+            currentAssistantMessage.raw = mergedRaw;
 
-            String aggregatedText = messageParser.extractMessageContent(mergedRaw);
+            // During streaming, the delta path owns assistantContent — don't touch it here.
+            // Only update from raw in non-streaming mode (snapshot events).
             if (!isStreaming) {
+                String aggregatedText = messageParser.extractMessageContent(mergedRaw);
                 assistantContent.setLength(0);
                 if (aggregatedText != null) {
                     assistantContent.append(aggregatedText);
                 }
                 currentAssistantMessage.content = assistantContent.toString();
-            } else if (aggregatedText != null && aggregatedText.length() > assistantContent.length()) {
-                assistantContent.setLength(0);
-                assistantContent.append(aggregatedText);
-                currentAssistantMessage.content = assistantContent.toString();
             }
-            currentAssistantMessage.raw = mergedRaw;
 
             boolean hasToolUse = false;
             if (mergedRaw.has("message") && mergedRaw.getAsJsonObject("message").has("content")) {

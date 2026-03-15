@@ -9,17 +9,13 @@ import com.github.claudecodegui.provider.common.BaseSDKBridge;
 import com.github.claudecodegui.provider.common.MessageCallback;
 import com.github.claudecodegui.provider.common.SDKResult;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Claude Agent SDK bridge.
@@ -32,6 +28,12 @@ public class ClaudeSDKBridge extends BaseSDKBridge {
     private final RewindOperations rewindOperations;
     private final SessionOperations sessionOperations;
     private final SyncQueryClient syncQueryClient;
+
+    // Daemon mode: persistent bridge process
+    private volatile DaemonConnection daemon;
+    private final Object daemonLock = new Object();
+    // Maps queryId → channelId for abort routing
+    private final Map<String, String> queryToChannel = new ConcurrentHashMap<>();
 
     public ClaudeSDKBridge() {
         super(ClaudeSDKBridge.class);
@@ -219,6 +221,87 @@ public class ClaudeSDKBridge extends BaseSDKBridge {
     }
 
     // ============================================================================
+    // Daemon mode (persistent bridge process)
+    // ============================================================================
+
+    /**
+     * Get or create a daemon connection. Pre-warms the SDK on first call.
+     * Thread-safe — only one daemon per bridge instance.
+     */
+    public DaemonConnection getOrCreateDaemon() throws Exception {
+        DaemonConnection d = daemon;
+        if (d != null && d.isAlive()) {
+            return d;
+        }
+
+        synchronized (daemonLock) {
+            d = daemon;
+            if (d != null && d.isAlive()) {
+                return d;
+            }
+
+            String node = nodeDetector.findNodeExecutable();
+            File bridgeDir = getDirectoryResolver().findSdkDir();
+            if (bridgeDir == null) {
+                throw new Exception("Bridge directory not ready (extraction in progress)");
+            }
+
+            List<String> command = new ArrayList<>();
+            command.add(node);
+            command.add(new File(bridgeDir, BRIDGE_SCRIPT).getAbsolutePath());
+            command.add("--daemon");
+
+            d = new DaemonConnection(command, bridgeDir, envConfigurator, processManager, node);
+            d.start();
+            daemon = d;
+            LOG.info("[Daemon] Created and started daemon connection");
+            return d;
+        }
+    }
+
+    /**
+     * Shut down the daemon connection.
+     */
+    public void shutdownDaemon() {
+        DaemonConnection d = daemon;
+        if (d != null) {
+            daemon = null;
+            d.shutdown();
+        }
+    }
+
+    /**
+     * Override interruptChannel to use daemon abort when available.
+     */
+    @Override
+    public void interruptChannel(String channelId) {
+        DaemonConnection d = daemon;
+        if (d != null && d.isAlive()) {
+            // Find the queryId for this channelId
+            String queryId = null;
+            for (Map.Entry<String, String> entry : queryToChannel.entrySet()) {
+                if (channelId.equals(entry.getValue())) {
+                    queryId = entry.getKey();
+                    break;
+                }
+            }
+            if (queryId != null) {
+                LOG.info("[Daemon] Aborting query " + queryId + " for channel " + channelId);
+                d.abort(queryId);
+                queryToChannel.remove(queryId);
+                processManager.markInterrupted(channelId);
+                return;
+            }
+            // Daemon is alive but no query mapping — channel might have already finished
+            LOG.info("[Daemon] No active query for channel " + channelId + " (may have already completed)");
+            processManager.markInterrupted(channelId);
+            return;
+        }
+        // Safety fallback: kill any registered process
+        super.interruptChannel(channelId);
+    }
+
+    // ============================================================================
     // New Bridge Protocol (Phase 1 simplification)
     // ============================================================================
 
@@ -255,20 +338,7 @@ public class ClaudeSDKBridge extends BaseSDKBridge {
     private static final String BRIDGE_SCRIPT = "bridge.js";
 
     /**
-     * Send a message using the new bridge.js protocol with stdin/stdout IPC.
-     * This method keeps stdin open for bidirectional communication.
-     *
-     * @param channelId          Channel identifier
-     * @param message            User message
-     * @param sessionId          Session ID (null for new session)
-     * @param cwd                Working directory
-     * @param attachments        List of attachments (images, etc.)
-     * @param permissionMode     Permission mode (default, acceptEdits, bypassPermissions)
-     * @param model              Model to use (optional)
-     * @param permissionCallback Callback for handling permission requests
-     * @param askUserCallback    Callback for handling AskUserQuestion requests
-     * @param callback           Message callback for streaming events
-     * @return CompletableFuture with the result
+     * Send a message using the bridge.js protocol via the daemon connection.
      */
     public CompletableFuture<SDKResult> sendMessageWithBridge(
             String channelId,
@@ -286,308 +356,280 @@ public class ClaudeSDKBridge extends BaseSDKBridge {
             AskUserQuestionCallback askUserCallback,
             MessageCallback callback
     ) {
-        return CompletableFuture.supplyAsync(() -> {
-            SDKResult result = new SDKResult();
-            StringBuilder assistantContent = new StringBuilder();
-            String[] currentSessionId = {sessionId};
+        JsonObject commandJson = buildCommandJson(
+                message, sessionId, cwd, permissionMode, model,
+                maxThinkingTokens, openedFiles, agentPrompt, streaming, attachments);
 
-            try {
-                String node = nodeDetector.findNodeExecutable();
-                File bridgeDir = getDirectoryResolver().findSdkDir();
-                if (bridgeDir == null) {
-                    result.success = false;
-                    result.error = "Bridge directory not ready (extraction in progress)";
-                    callback.onError(result.error);
-                    return result;
-                }
-
-                // Build initial command JSON
-                JsonObject commandJson = new JsonObject();
-                commandJson.addProperty("message", message);
-                commandJson.addProperty("sessionId", sessionId != null ? sessionId : "");
-                commandJson.addProperty("cwd", cwd != null ? cwd : "");
-                commandJson.addProperty("permissionMode", permissionMode != null ? permissionMode : "default");
-                if (model != null && !model.isEmpty()) {
-                    commandJson.addProperty("model", model);
-                }
-                if (maxThinkingTokens > 0) {
-                    commandJson.addProperty("maxThinkingTokens", maxThinkingTokens);
-                }
-                if (openedFiles != null && openedFiles.size() > 0) {
-                    commandJson.add("openedFiles", openedFiles);
-                }
-                if (agentPrompt != null && !agentPrompt.isEmpty()) {
-                    commandJson.addProperty("agentPrompt", agentPrompt);
-                }
-                if (streaming != null) {
-                    commandJson.addProperty("streaming", streaming);
-                }
-                // Add attachments if present
-                if (attachments != null && !attachments.isEmpty()) {
-                    JsonArray attArray = new JsonArray();
-                    for (ClaudeSession.Attachment att : attachments) {
-                        if (att == null) continue;
-                        JsonObject attObj = new JsonObject();
-                        attObj.addProperty("fileName", att.fileName);
-                        attObj.addProperty("mediaType", att.mediaType);
-                        attObj.addProperty("data", att.data);
-                        attArray.add(attObj);
-                    }
-                    commandJson.add("attachments", attArray);
-                }
-
-                // Build command
-                List<String> command = new ArrayList<>();
-                command.add(node);
-                command.add(new File(bridgeDir, BRIDGE_SCRIPT).getAbsolutePath());
-
-                // Set up process
-                File processTempDir = processManager.prepareClaudeTempDir();
-                Set<String> existingTempMarkers = processManager.snapshotClaudeCwdFiles(processTempDir);
-
-                ProcessBuilder pb = new ProcessBuilder(command);
-
-                // Set working directory
-                if (cwd != null && !cwd.isEmpty() && !"undefined".equals(cwd) && !"null".equals(cwd)) {
-                    File userWorkDir = new File(cwd);
-                    if (userWorkDir.exists() && userWorkDir.isDirectory()) {
-                        pb.directory(userWorkDir);
-                    } else {
-                        pb.directory(bridgeDir);
-                    }
-                } else {
-                    pb.directory(bridgeDir);
-                }
-
-                Map<String, String> env = pb.environment();
-                envConfigurator.configureTempDir(env, processTempDir);
-                envConfigurator.configureProjectPath(env, cwd);
-                pb.redirectErrorStream(true);
-                envConfigurator.updateProcessEnvironment(pb, node);
-
-                Process process = null;
-                try {
-                    process = pb.start();
-                    processManager.registerProcess(channelId, process);
-                    LOG.info("[Bridge] Process started, PID: " + process.pid());
-
-                    // Keep stdin open for bidirectional communication
-                    BufferedWriter stdinWriter = new BufferedWriter(
-                            new OutputStreamWriter(process.getOutputStream(), StandardCharsets.UTF_8));
-
-                    // Write initial command
-                    stdinWriter.write(gson.toJson(commandJson));
-                    stdinWriter.newLine();
-                    stdinWriter.flush();
-                    LOG.info("[Bridge] Initial command sent");
-
-                    // Read stdout line by line
-                    try (BufferedReader reader = new BufferedReader(
-                            new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
-
-                        String line;
-                        while ((line = reader.readLine()) != null) {
-                            if (line.trim().isEmpty()) continue;
-
-                            // Try to parse as JSON
-                            JsonObject msg;
-                            try {
-                                msg = gson.fromJson(line, JsonObject.class);
-                            } catch (Exception e) {
-                                // Not JSON, log and skip
-                                LOG.debug("[Bridge] Non-JSON output: " + line);
-                                continue;
-                            }
-
-                            String type = msg.has("type") ? msg.get("type").getAsString() : "";
-
-                            switch (type) {
-                                case "permission_request":
-                                    // Handle permission request
-                                    if (permissionCallback != null) {
-                                        String reqId = msg.has("id") ? String.valueOf(msg.get("id").getAsInt()) : "0";
-                                        String toolName = msg.has("toolName") ? msg.get("toolName").getAsString() : "";
-                                        JsonObject toolInput = msg.has("toolInput") ? msg.getAsJsonObject("toolInput") : new JsonObject();
-
-                                        LOG.info("[Bridge] Permission request: " + toolName);
-
-                                        // Call permission callback and wait for response
-                                        CompletableFuture<JsonObject> responseFuture = permissionCallback.onPermissionRequest(reqId, toolName, toolInput);
-                                        JsonObject response = responseFuture.get(); // Block until user responds
-
-                                        // Send response back to bridge
-                                        JsonObject responseMsg = new JsonObject();
-                                        responseMsg.addProperty("type", "response");
-                                        responseMsg.addProperty("id", Integer.parseInt(reqId));
-                                        responseMsg.addProperty("allow", response.has("allow") && response.get("allow").getAsBoolean());
-                                        if (response.has("message")) {
-                                            responseMsg.addProperty("message", response.get("message").getAsString());
-                                        }
-                                        if (response.has("updatedInput")) {
-                                            responseMsg.add("updatedInput", response.get("updatedInput"));
-                                        }
-
-                                        stdinWriter.write(gson.toJson(responseMsg));
-                                        stdinWriter.newLine();
-                                        stdinWriter.flush();
-                                        LOG.info("[Bridge] Permission response sent: allow=" + responseMsg.get("allow").getAsBoolean());
-                                    }
-                                    break;
-
-                                case "ask_user_question":
-                                    // Handle AskUserQuestion
-                                    if (askUserCallback != null) {
-                                        String reqId = msg.has("id") ? String.valueOf(msg.get("id").getAsInt()) : "0";
-                                        JsonArray questions = msg.has("questions") ? msg.getAsJsonArray("questions") : new JsonArray();
-
-                                        LOG.info("[Bridge] AskUserQuestion request received, id=" + reqId);
-
-                                        CompletableFuture<JsonObject> responseFuture = askUserCallback.onAskUserQuestion(reqId, questions);
-                                        LOG.info("[Bridge] AskUserQuestion waiting for user response...");
-                                        JsonObject response = responseFuture.get();
-                                        LOG.info("[Bridge] AskUserQuestion got response: " + response);
-
-                                        JsonObject responseMsg = new JsonObject();
-                                        responseMsg.addProperty("type", "response");
-                                        responseMsg.addProperty("id", Integer.parseInt(reqId));
-                                        boolean allow = response != null && response.has("allow") && response.get("allow").getAsBoolean();
-                                        responseMsg.addProperty("allow", allow);
-                                        if (response != null && response.has("answers")) {
-                                            responseMsg.add("answers", response.get("answers"));
-                                        }
-
-                                        String responseMsgStr = gson.toJson(responseMsg);
-                                        LOG.info("[Bridge] AskUserQuestion sending to bridge: " + responseMsgStr);
-                                        stdinWriter.write(responseMsgStr);
-                                        stdinWriter.newLine();
-                                        stdinWriter.flush();
-                                        LOG.info("[Bridge] AskUserQuestion response sent successfully");
-                                    } else {
-                                        LOG.warn("[Bridge] AskUserQuestion received but no callback registered!");
-                                    }
-                                    break;
-
-                                case "session_id":
-                                    currentSessionId[0] = msg.has("sessionId") ? msg.get("sessionId").getAsString() : "";
-                                    callback.onMessage("session_id", currentSessionId[0]);
-                                    break;
-
-                                case "content":
-                                    String text = msg.has("text") ? msg.get("text").getAsString() : "";
-                                    assistantContent.append(text);
-                                    callback.onMessage("content", text);
-                                    break;
-
-                                case "content_delta":
-                                    String delta = msg.has("delta") ? msg.get("delta").getAsString() : "";
-                                    assistantContent.append(delta);
-                                    callback.onMessage("content_delta", delta);
-                                    break;
-
-                                case "thinking":
-                                    String thinking = msg.has("text") ? msg.get("text").getAsString() : "";
-                                    callback.onMessage("thinking", thinking);
-                                    break;
-
-                                case "thinking_delta":
-                                    String thinkingDelta = msg.has("delta") ? msg.get("delta").getAsString() : "";
-                                    callback.onMessage("thinking_delta", thinkingDelta);
-                                    break;
-
-                                case "tool_use":
-                                    callback.onMessage("tool_use", gson.toJson(msg.get("tool")));
-                                    break;
-
-                                case "tool_result":
-                                    callback.onMessage("tool_result", gson.toJson(msg.get("result")));
-                                    break;
-
-                                case "event":
-                                    // Forward raw SDK event
-                                    JsonObject event = msg.has("event") ? msg.getAsJsonObject("event") : new JsonObject();
-                                    String eventType = event.has("type") ? event.get("type").getAsString() : "unknown";
-                                    callback.onMessage(eventType, gson.toJson(event));
-                                    result.messages.add(event);
-                                    break;
-
-                                case "done":
-                                    LOG.info("[Bridge] Query complete, sessionId=" + currentSessionId[0]);
-                                    break;
-
-                                case "error":
-                                    String errorMsg = msg.has("message") ? msg.get("message").getAsString() : "Unknown error";
-                                    LOG.error("[Bridge] Error: " + errorMsg);
-                                    result.success = false;
-                                    result.error = errorMsg;
-                                    callback.onError(errorMsg);
-                                    break;
-
-                                default:
-                                    // Forward unknown message types
-                                    callback.onMessage(type, line);
-                                    break;
-                            }
-                        }
-                    }
-
-                    // Close stdin
-                    stdinWriter.close();
-
-                    // Wait for process to exit
-                    process.waitFor();
-                    int exitCode = process.exitValue();
-                    boolean wasInterrupted = processManager.wasInterrupted(channelId);
-
-                    result.finalResult = assistantContent.toString();
-                    result.messageCount = result.messages.size();
-
-                    if (wasInterrupted) {
-                        callback.onComplete(result);
-                    } else if (result.error == null) {
-                        result.success = exitCode == 0;
-                        if (result.success) {
-                            callback.onComplete(result);
-                        } else {
-                            result.error = "Bridge process exited with code: " + exitCode;
-                            callback.onError(result.error);
-                        }
-                    }
-
-                    return result;
-
-                } finally {
-                    processManager.unregisterProcess(channelId, process);
-                    processManager.waitForProcessTermination(process);
-                    processManager.cleanupClaudeTempFiles(processTempDir, existingTempMarkers);
-                }
-
-            } catch (Exception e) {
-                result.success = false;
-                result.error = e.getMessage();
-                callback.onError(e.getMessage());
-                return result;
-            }
-        }).exceptionally(ex -> {
+        try {
+            DaemonConnection d = getOrCreateDaemon();
+            return sendViaDaemon(d, channelId, commandJson, permissionCallback, askUserCallback, callback);
+        } catch (Exception e) {
+            LOG.error("[Bridge] Failed to start daemon: " + e.getMessage());
             SDKResult errorResult = new SDKResult();
             errorResult.success = false;
-            errorResult.error = ex.getCause() != null ? ex.getCause().getMessage() : ex.getMessage();
+            errorResult.error = "Failed to start bridge daemon: " + e.getMessage();
             callback.onError(errorResult.error);
-            return errorResult;
-        });
+            return CompletableFuture.completedFuture(errorResult);
+        }
     }
 
-    // ============================================================================
-    // Utility methods
-    // ============================================================================
-
-    private String extractBetween(String text, String start, String end) {
-        int startIdx = text.indexOf(start);
-        if (startIdx == -1) return null;
-        startIdx += start.length();
-
-        int endIdx = text.indexOf(end, startIdx);
-        if (endIdx == -1) return null;
-
-        return text.substring(startIdx, endIdx);
+    /**
+     * Build the command JSON for the daemon query.
+     */
+    private JsonObject buildCommandJson(
+            String message, String sessionId, String cwd, String permissionMode,
+            String model, int maxThinkingTokens, JsonObject openedFiles,
+            String agentPrompt, Boolean streaming, List<ClaudeSession.Attachment> attachments) {
+        JsonObject commandJson = new JsonObject();
+        commandJson.addProperty("message", message);
+        commandJson.addProperty("sessionId", sessionId != null ? sessionId : "");
+        commandJson.addProperty("cwd", cwd != null ? cwd : "");
+        commandJson.addProperty("permissionMode", permissionMode != null ? permissionMode : "default");
+        if (model != null && !model.isEmpty()) {
+            commandJson.addProperty("model", model);
+        }
+        if (maxThinkingTokens > 0) {
+            commandJson.addProperty("maxThinkingTokens", maxThinkingTokens);
+        }
+        if (openedFiles != null && openedFiles.size() > 0) {
+            commandJson.add("openedFiles", openedFiles);
+        }
+        if (agentPrompt != null && !agentPrompt.isEmpty()) {
+            commandJson.addProperty("agentPrompt", agentPrompt);
+        }
+        if (streaming != null) {
+            commandJson.addProperty("streaming", streaming);
+        }
+        if (attachments != null && !attachments.isEmpty()) {
+            JsonArray attArray = new JsonArray();
+            for (ClaudeSession.Attachment att : attachments) {
+                if (att == null) continue;
+                JsonObject attObj = new JsonObject();
+                attObj.addProperty("fileName", att.fileName);
+                attObj.addProperty("mediaType", att.mediaType);
+                attObj.addProperty("data", att.data);
+                attArray.add(attObj);
+            }
+            commandJson.add("attachments", attArray);
+        }
+        return commandJson;
     }
+
+    /**
+     * Send a query through the daemon connection.
+     */
+    private CompletableFuture<SDKResult> sendViaDaemon(
+            DaemonConnection d,
+            String channelId,
+            JsonObject commandJson,
+            PermissionCallback permissionCallback,
+            AskUserQuestionCallback askUserCallback,
+            MessageCallback callback
+    ) {
+        CompletableFuture<SDKResult> future = new CompletableFuture<>();
+        String queryId = UUID.randomUUID().toString();
+        queryToChannel.put(queryId, channelId);
+
+        SDKResult result = new SDKResult();
+        StringBuilder assistantContent = new StringBuilder();
+
+        DaemonConnection.DaemonQueryCallback queryCallback = new DaemonConnection.DaemonQueryCallback() {
+            @Override
+            public void onMessage(String line) {
+                // Reuse the existing line-handling switch logic
+                handleBridgeLine(line, result, assistantContent, permissionCallback, askUserCallback, callback, d);
+            }
+
+            @Override
+            public void onDone(String sessionId) {
+                LOG.info("[Daemon] onDone: queryId=" + queryId + ", channelId=" + channelId + ", sessionId=" + sessionId);
+                queryToChannel.remove(queryId);
+                result.success = true;
+                result.finalResult = assistantContent.toString();
+                result.messageCount = result.messages.size();
+                callback.onComplete(result);
+                future.complete(result);
+            }
+
+            @Override
+            public void onError(String message) {
+                LOG.warn("[Daemon] onError: queryId=" + queryId + ", channelId=" + channelId + ", message=" + message);
+                queryToChannel.remove(queryId);
+                result.success = false;
+                result.error = message;
+                callback.onError(message);
+                future.complete(result);
+            }
+        };
+
+        try {
+            d.sendQuery(commandJson, queryId, queryCallback);
+        } catch (Exception e) {
+            queryToChannel.remove(queryId);
+            result.success = false;
+            result.error = e.getMessage();
+            callback.onError(e.getMessage());
+            future.complete(result);
+        }
+
+        return future;
+    }
+
+    /**
+     * Handle a single line from bridge.js output.
+     * Permission responses are sent back through the daemon connection.
+     */
+    private void handleBridgeLine(
+            String line,
+            SDKResult result,
+            StringBuilder assistantContent,
+            PermissionCallback permissionCallback,
+            AskUserQuestionCallback askUserCallback,
+            MessageCallback callback,
+            DaemonConnection daemon
+    ) {
+        JsonObject msg;
+        try {
+            msg = gson.fromJson(line, JsonObject.class);
+        } catch (Exception e) {
+            LOG.debug("[Bridge] Non-JSON output: " + line);
+            return;
+        }
+
+        String type = msg.has("type") ? msg.get("type").getAsString() : "";
+
+        switch (type) {
+            case "permission_request":
+                if (permissionCallback != null) {
+                    try {
+                        String reqId = msg.has("id") ? String.valueOf(msg.get("id").getAsInt()) : "0";
+                        String toolName = msg.has("toolName") ? msg.get("toolName").getAsString() : "";
+                        JsonObject toolInput = msg.has("toolInput") ? msg.getAsJsonObject("toolInput") : new JsonObject();
+
+                        LOG.info("[Bridge] Permission request: " + toolName);
+
+                        CompletableFuture<JsonObject> responseFuture = permissionCallback.onPermissionRequest(reqId, toolName, toolInput);
+                        JsonObject response = responseFuture.get();
+
+                        JsonObject responseMsg = new JsonObject();
+                        responseMsg.addProperty("type", "response");
+                        responseMsg.addProperty("id", Integer.parseInt(reqId));
+                        responseMsg.addProperty("allow", response.has("allow") && response.get("allow").getAsBoolean());
+                        if (response.has("message")) {
+                            responseMsg.addProperty("message", response.get("message").getAsString());
+                        }
+                        if (response.has("updatedInput")) {
+                            responseMsg.add("updatedInput", response.get("updatedInput"));
+                        }
+
+                        daemon.sendResponse(responseMsg);
+                        LOG.info("[Bridge] Permission response sent: allow=" + responseMsg.get("allow").getAsBoolean());
+                    } catch (Exception e) {
+                        LOG.error("[Bridge] Permission handling failed: " + e.getMessage());
+                    }
+                }
+                break;
+
+            case "ask_user_question":
+                if (askUserCallback != null) {
+                    try {
+                        String reqId = msg.has("id") ? String.valueOf(msg.get("id").getAsInt()) : "0";
+                        JsonArray questions = msg.has("questions") ? msg.getAsJsonArray("questions") : new JsonArray();
+
+                        LOG.info("[Bridge] AskUserQuestion request received, id=" + reqId);
+
+                        CompletableFuture<JsonObject> responseFuture = askUserCallback.onAskUserQuestion(reqId, questions);
+                        JsonObject response = responseFuture.get();
+
+                        JsonObject responseMsg = new JsonObject();
+                        responseMsg.addProperty("type", "response");
+                        responseMsg.addProperty("id", Integer.parseInt(reqId));
+                        boolean allow = response != null && response.has("allow") && response.get("allow").getAsBoolean();
+                        responseMsg.addProperty("allow", allow);
+                        if (response != null && response.has("answers")) {
+                            responseMsg.add("answers", response.get("answers"));
+                        }
+
+                        daemon.sendResponse(responseMsg);
+                        LOG.info("[Bridge] AskUserQuestion response sent successfully");
+                    } catch (Exception e) {
+                        LOG.error("[Bridge] AskUserQuestion handling failed: " + e.getMessage());
+                    }
+                }
+                break;
+
+            case "session_id":
+                String sid = msg.has("sessionId") ? msg.get("sessionId").getAsString() : "";
+                callback.onMessage("session_id", sid);
+                break;
+
+            case "content":
+                String text = msg.has("text") ? msg.get("text").getAsString() : "";
+                assistantContent.append(text);
+                callback.onMessage("content", text);
+                break;
+
+            case "content_delta":
+                String delta = msg.has("delta") ? msg.get("delta").getAsString() : "";
+                assistantContent.append(delta);
+                callback.onMessage("content_delta", delta);
+                break;
+
+            case "thinking":
+                String thinking = msg.has("text") ? msg.get("text").getAsString() : "";
+                callback.onMessage("thinking", thinking);
+                break;
+
+            case "thinking_delta":
+                String thinkingDelta = msg.has("delta") ? msg.get("delta").getAsString() : "";
+                callback.onMessage("thinking_delta", thinkingDelta);
+                break;
+
+            case "tool_use":
+                callback.onMessage("tool_use", gson.toJson(msg.get("tool")));
+                break;
+
+            case "tool_result":
+                callback.onMessage("tool_result", gson.toJson(msg.get("result")));
+                break;
+
+            case "event":
+                JsonObject event = msg.has("event") ? msg.getAsJsonObject("event") : new JsonObject();
+                String eventType = event.has("type") ? event.get("type").getAsString() : "unknown";
+                callback.onMessage(eventType, gson.toJson(event));
+                result.messages.add(event);
+                break;
+
+            case "stream_start":
+                callback.onMessage("stream_start", "");
+                break;
+
+            case "stream_end":
+                callback.onMessage("stream_end", "");
+                break;
+
+            case "done":
+            case "query_done":
+                // Handled by DaemonQueryCallback.onDone
+                break;
+
+            case "error":
+            case "query_error":
+                String errorMsg = msg.has("message") ? msg.get("message").getAsString() : "Unknown error";
+                LOG.error("[Bridge] Error: " + errorMsg);
+                result.success = false;
+                result.error = errorMsg;
+                callback.onError(errorMsg);
+                break;
+
+            case "console.log":
+                // Ignore console.log messages
+                break;
+
+            default:
+                callback.onMessage(type, line);
+                break;
+        }
+    }
+
 }

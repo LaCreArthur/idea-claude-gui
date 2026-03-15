@@ -32,26 +32,6 @@ const rl = createInterface({
 
 const debug = (msg) => process.stderr.write(`[bridge-debug] ${msg}\n`);
 
-rl.on('line', (line) => {
-  if (!line.trim()) return;
-
-  try {
-    const msg = JSON.parse(line);
-    debug(`Received from Java: type=${msg.type}, id=${msg.id}, keys=${Object.keys(msg).join(',')}`);
-
-    if (msg.type === 'response' && pendingResponses.has(msg.id)) {
-      debug(`Found pending response for id=${msg.id}, resolving...`);
-      const resolve = pendingResponses.get(msg.id);
-      pendingResponses.delete(msg.id);
-      resolve(msg);
-    } else if (msg.type === 'response') {
-      debug(`WARNING: No pending response for id=${msg.id}, pending keys: [${[...pendingResponses.keys()].join(',')}]`);
-    }
-  } catch (e) {
-    debug(`Parse error for line: ${line.substring(0, 100)}... Error: ${e.message}`);
-  }
-});
-
 function loadClaudeSettings() {
   try {
     const settingsPath = join(homedir(), '.claude', 'settings.json');
@@ -255,7 +235,313 @@ async function loadClaudeSdk() {
   throw new Error(`Claude Agent SDK not installed. Tried:\n${errors.join('\n')}\n\nInstall with: npm install -g @anthropic-ai/claude-agent-sdk`);
 }
 
+// ============================================================================
+// Shared query execution (used by both one-shot and daemon modes)
+// ============================================================================
+
+function buildPrompt(message, attachments, sessionId) {
+  if (!attachments || attachments.length === 0) {
+    return message;
+  }
+
+  const content = [];
+  for (const att of attachments) {
+    if (att.mediaType?.startsWith('image/')) {
+      content.push({
+        type: 'image',
+        source: { type: 'base64', media_type: att.mediaType, data: att.data }
+      });
+    }
+  }
+  if (message?.trim()) {
+    content.push({ type: 'text', text: message });
+  }
+
+  async function* createUserMessageStream() {
+    yield {
+      type: 'user',
+      message: {
+        role: 'user',
+        content: content
+      },
+      parent_tool_use_id: null,
+      session_id: sessionId || ''
+    };
+  }
+
+  return createUserMessageStream();
+}
+
+async function executeQuery(queryFn, input, sendFn) {
+  const {
+    message,
+    sessionId,
+    cwd,
+    permissionMode = 'default',
+    model,
+    openedFiles,
+    agentPrompt,
+    streaming = false,
+    attachments,
+    maxThinkingTokens
+  } = input;
+
+  debug(`[E2E DEBUG] permissionMode received: "${permissionMode}" (raw input.permissionMode: "${input.permissionMode}")`);
+  sendFn({ type: 'console.log', args: [`[Bridge] permissionMode: ${permissionMode}`] });
+
+  const workingDirectory = cwd || process.cwd();
+  try {
+    process.chdir(workingDirectory);
+  } catch {
+  }
+
+  process.env.CLAUDE_CODE_TMPDIR = workingDirectory;
+
+  let systemPromptAppend = '';
+  if (agentPrompt) {
+    systemPromptAppend = agentPrompt;
+  }
+  if (openedFiles?.files?.length > 0) {
+    const filesInfo = openedFiles.files.map(f => `- ${f.path}`).join('\n');
+    systemPromptAppend += `\n\nCurrently open files in IDE:\n${filesInfo}`;
+  }
+
+  const prompt = buildPrompt(message, attachments, sessionId);
+
+  const options = {
+    cwd: workingDirectory,
+    permissionMode: permissionMode === '' ? 'default' : permissionMode,
+    model: model || undefined,
+    ...(maxThinkingTokens > 0 && { thinkingBudget: maxThinkingTokens }),
+    maxTurns: 100,
+    enableFileCheckpointing: true,
+    ...(streaming && { includePartialMessages: true }),
+    additionalDirectories: [workingDirectory].filter(Boolean),
+    canUseTool: (toolName, toolInput) => canUseTool(toolName, toolInput, permissionMode),
+    settingSources: ['user', 'project', 'local'],
+    systemPrompt: {
+      type: 'preset',
+      preset: 'claude_code',
+      ...(systemPromptAppend && { append: systemPromptAppend })
+    }
+  };
+
+  if (sessionId && sessionId !== '') {
+    options.resume = sessionId;
+  }
+
+  // Support abort via AbortController (daemon mode passes one in)
+  if (input._abortController) {
+    options.abortController = input._abortController;
+  }
+
+  const result = queryFn({ prompt, options });
+
+  let currentSessionId = sessionId;
+  let streamingStarted = false;
+
+  for await (const msg of result) {
+    if (streaming && msg.type === 'stream_event') {
+      if (!streamingStarted) {
+        sendFn({ type: 'stream_start' });
+        streamingStarted = true;
+      }
+      const event = msg.event;
+      if (event?.type === 'content_block_delta' && event.delta) {
+        if (event.delta.type === 'text_delta' && event.delta.text) {
+          sendFn({ type: 'content_delta', delta: event.delta.text });
+        } else if (event.delta.type === 'thinking_delta' && event.delta.thinking) {
+          sendFn({ type: 'thinking_delta', delta: event.delta.thinking });
+        }
+      }
+      continue;
+    }
+
+    sendFn({ type: 'event', event: msg });
+
+    if (msg.type === 'system' && msg.session_id) {
+      currentSessionId = msg.session_id;
+      sendFn({ type: 'session_id', sessionId: msg.session_id });
+    }
+
+    // Note: assistant text content is already extracted from the 'event' message
+    // by ClaudeMessageHandler.handleAssistantMessage(). Sending 'content' separately
+    // would cause double text. Only send tool_result which needs its own handler.
+    if (msg.type === 'user') {
+      const content = msg.message?.content;
+      if (Array.isArray(content)) {
+        for (const block of content) {
+          if (block.type === 'tool_result') {
+            sendFn({ type: 'tool_result', result: block });
+          }
+        }
+      }
+    }
+
+    if (msg.type === 'result' && msg.is_error) {
+      sendFn({ type: 'error', message: msg.result || 'Query failed' });
+    }
+  }
+
+  if (streamingStarted) {
+    sendFn({ type: 'stream_end' });
+  }
+
+  return currentSessionId;
+}
+
+// ============================================================================
+// Daemon mode
+// ============================================================================
+
+const isDaemon = process.argv.includes('--daemon');
+
+async function daemonMain() {
+  try {
+    setupAuthentication();
+    debug('[daemon] Authentication configured');
+
+    const sdk = await loadClaudeSdk();
+    const queryFn = sdk.query;
+
+    if (typeof queryFn !== 'function') {
+      sendError('Claude SDK query function not available');
+      process.exit(1);
+    }
+
+    debug('[daemon] SDK loaded, sending ready');
+    send({ type: 'ready' });
+
+    let activeQueryId = null;
+    let activeAbortController = null;
+
+    // In daemon mode, the rl 'line' handler dispatches all message types
+    rl.removeAllListeners('line');
+    rl.on('line', (line) => {
+      if (!line.trim()) return;
+
+      let parsed;
+      try {
+        parsed = JSON.parse(line);
+      } catch (e) {
+        debug(`[daemon] Parse error: ${e.message}`);
+        return;
+      }
+
+      const type = parsed.type;
+      debug(`[daemon] Received: type=${type}, queryId=${parsed.queryId || 'n/a'}`);
+
+      switch (type) {
+        case 'response':
+          // Permission/AskUserQuestion response — route to pending
+          if (pendingResponses.has(parsed.id)) {
+            const resolve = pendingResponses.get(parsed.id);
+            pendingResponses.delete(parsed.id);
+            resolve(parsed);
+          } else {
+            debug(`[daemon] WARNING: No pending response for id=${parsed.id}`);
+          }
+          break;
+
+        case 'query':
+          runQuery(queryFn, parsed);
+          break;
+
+        case 'ping':
+          send({ type: 'pong' });
+          break;
+
+        case 'abort':
+          if (activeAbortController && activeQueryId === parsed.queryId) {
+            debug(`[daemon] Aborting query ${parsed.queryId}`);
+            activeAbortController.abort();
+          }
+          break;
+
+        case 'shutdown':
+          debug('[daemon] Shutdown requested');
+          process.exit(0);
+          break;
+
+        default:
+          debug(`[daemon] Unknown message type: ${type}`);
+          break;
+      }
+    });
+
+    async function runQuery(qFn, cmd) {
+      const queryId = cmd.queryId;
+
+      if (activeQueryId) {
+        debug(`[daemon] Rejecting query ${queryId} — query ${activeQueryId} still in-flight`);
+        send({ type: 'query_error', queryId, message: 'Daemon busy — previous query still in-flight' });
+        return;
+      }
+
+      activeQueryId = queryId;
+      activeAbortController = new AbortController();
+
+      // Wrap send to inject queryId into all outgoing messages for this query
+      const querySend = (msg) => send({ ...msg, queryId });
+
+      // Inject the abort controller into the input so executeQuery can use it
+      const queryInput = { ...cmd, _abortController: activeAbortController };
+
+      try {
+        const finalSessionId = await executeQuery(qFn, queryInput, querySend);
+        querySend({ type: 'query_done', sessionId: finalSessionId || '' });
+      } catch (error) {
+        if (error.name === 'AbortError' || activeAbortController.signal.aborted) {
+          debug(`[daemon] Query ${queryId} aborted`);
+          querySend({ type: 'query_done', aborted: true });
+        } else {
+          debug(`[daemon] Query ${queryId} error: ${error.message}`);
+          querySend({ type: 'query_error', message: error.message || String(error) });
+        }
+      } finally {
+        activeQueryId = null;
+        activeAbortController = null;
+      }
+    }
+
+    // Keep alive — rl 'close' means stdin closed (Java side shut down)
+    rl.on('close', () => {
+      debug('[daemon] stdin closed, exiting');
+      process.exit(0);
+    });
+
+  } catch (error) {
+    sendError(error.message || String(error));
+    process.exit(1);
+  }
+}
+
+// ============================================================================
+// One-shot mode (original behavior, unchanged)
+// ============================================================================
+
 async function main() {
+  // Wire up the standard response handler for one-shot mode
+  rl.on('line', (line) => {
+    if (!line.trim()) return;
+
+    try {
+      const msg = JSON.parse(line);
+      debug(`Received from Java: type=${msg.type}, id=${msg.id}, keys=${Object.keys(msg).join(',')}`);
+
+      if (msg.type === 'response' && pendingResponses.has(msg.id)) {
+        debug(`Found pending response for id=${msg.id}, resolving...`);
+        const resolve = pendingResponses.get(msg.id);
+        pendingResponses.delete(msg.id);
+        resolve(msg);
+      } else if (msg.type === 'response') {
+        debug(`WARNING: No pending response for id=${msg.id}, pending keys: [${[...pendingResponses.keys()].join(',')}]`);
+      }
+    } catch (e) {
+      debug(`Parse error for line: ${line.substring(0, 100)}... Error: ${e.message}`);
+    }
+  });
+
   try {
     const initialLine = await new Promise((resolve, reject) => {
       const timeout = setTimeout(() => reject(new Error('Timeout waiting for initial command')), 30000);
@@ -277,166 +563,14 @@ async function main() {
     setupAuthentication();
 
     const sdk = await loadClaudeSdk();
-    const query = sdk.query;
+    const queryFn = sdk.query;
 
-    if (typeof query !== 'function') {
+    if (typeof queryFn !== 'function') {
       sendError('Claude SDK query function not available');
       process.exit(1);
     }
 
-    const {
-      message,
-      sessionId,
-      cwd,
-      permissionMode = 'default',
-      model,
-      openedFiles,
-      agentPrompt,
-      streaming = false,
-      attachments,
-      maxThinkingTokens
-    } = input;
-
-    debug(`[E2E DEBUG] permissionMode received: "${permissionMode}" (raw input.permissionMode: "${input.permissionMode}")`);
-    send({ type: 'console.log', args: [`[Bridge] permissionMode: ${permissionMode}`] });
-
-    const workingDirectory = cwd || process.cwd();
-    try {
-      process.chdir(workingDirectory);
-    } catch {
-    }
-
-    process.env.CLAUDE_CODE_TMPDIR = workingDirectory;
-
-    let systemPromptAppend = '';
-    if (agentPrompt) {
-      systemPromptAppend = agentPrompt;
-    }
-    if (openedFiles?.files?.length > 0) {
-      const filesInfo = openedFiles.files.map(f => `- ${f.path}`).join('\n');
-      systemPromptAppend += `\n\nCurrently open files in IDE:\n${filesInfo}`;
-    }
-
-    const buildPrompt = (message, attachments) => {
-      if (!attachments || attachments.length === 0) {
-        return message;
-      }
-
-      const content = [];
-      for (const att of attachments) {
-        if (att.mediaType?.startsWith('image/')) {
-          content.push({
-            type: 'image',
-            source: { type: 'base64', media_type: att.mediaType, data: att.data }
-          });
-        }
-      }
-      if (message?.trim()) {
-        content.push({ type: 'text', text: message });
-      }
-
-      async function* createUserMessageStream() {
-        yield {
-          type: 'user',
-          message: {
-            role: 'user',
-            content: content
-          },
-          parent_tool_use_id: null,
-          session_id: sessionId || ''
-        };
-      }
-
-      return createUserMessageStream();
-    };
-
-    const prompt = buildPrompt(message, attachments);
-
-    const options = {
-      cwd: workingDirectory,
-      permissionMode: permissionMode === '' ? 'default' : permissionMode,
-      model: model || undefined,
-      ...(maxThinkingTokens > 0 && { thinkingBudget: maxThinkingTokens }),
-      maxTurns: 100,
-      enableFileCheckpointing: true,
-      ...(streaming && { includePartialMessages: true }),
-      additionalDirectories: [workingDirectory].filter(Boolean),
-      canUseTool: (toolName, toolInput) => canUseTool(toolName, toolInput, permissionMode),
-      settingSources: ['user', 'project', 'local'],
-      systemPrompt: {
-        type: 'preset',
-        preset: 'claude_code',
-        ...(systemPromptAppend && { append: systemPromptAppend })
-      }
-    };
-
-    if (sessionId && sessionId !== '') {
-      options.resume = sessionId;
-    }
-
-    const result = query({ prompt, options });
-
-    let currentSessionId = sessionId;
-    let streamingStarted = false;
-
-    for await (const msg of result) {
-      if (streaming && msg.type === 'stream_event') {
-        if (!streamingStarted) {
-          send({ type: 'stream_start' });
-          streamingStarted = true;
-        }
-        const event = msg.event;
-        if (event?.type === 'content_block_delta' && event.delta) {
-          if (event.delta.type === 'text_delta' && event.delta.text) {
-            send({ type: 'content_delta', delta: event.delta.text });
-          } else if (event.delta.type === 'thinking_delta' && event.delta.thinking) {
-            send({ type: 'thinking_delta', delta: event.delta.thinking });
-          }
-        }
-        continue;
-      }
-
-      send({ type: 'event', event: msg });
-
-      if (msg.type === 'system' && msg.session_id) {
-        currentSessionId = msg.session_id;
-        send({ type: 'session_id', sessionId: msg.session_id });
-      }
-
-      if (msg.type === 'assistant') {
-        const content = msg.message?.content;
-        if (Array.isArray(content)) {
-          for (const block of content) {
-            if (block.type === 'text') {
-              send({ type: 'content', text: block.text });
-            } else if (block.type === 'thinking') {
-              send({ type: 'thinking', text: block.thinking || block.text });
-            } else if (block.type === 'tool_use') {
-              send({ type: 'tool_use', tool: block });
-            }
-          }
-        }
-      }
-
-      if (msg.type === 'user') {
-        const content = msg.message?.content;
-        if (Array.isArray(content)) {
-          for (const block of content) {
-            if (block.type === 'tool_result') {
-              send({ type: 'tool_result', result: block });
-            }
-          }
-        }
-      }
-
-      if (msg.type === 'result' && msg.is_error) {
-        sendError(msg.result || 'Query failed');
-      }
-    }
-
-    if (streamingStarted) {
-      send({ type: 'stream_end' });
-    }
+    const currentSessionId = await executeQuery(queryFn, input, send);
 
     send({ type: 'done', sessionId: currentSessionId });
 
@@ -448,7 +582,18 @@ async function main() {
   }
 }
 
-main().catch((e) => {
-  sendError('Unhandled error: ' + (e.message || String(e)));
-  process.exit(1);
-});
+// ============================================================================
+// Entry point
+// ============================================================================
+
+if (isDaemon) {
+  daemonMain().catch((e) => {
+    sendError('Unhandled daemon error: ' + (e.message || String(e)));
+    process.exit(1);
+  });
+} else {
+  main().catch((e) => {
+    sendError('Unhandled error: ' + (e.message || String(e)));
+    process.exit(1);
+  });
+}
