@@ -19,6 +19,7 @@ export interface UseStreamingStateReturn {
   seenToolUseCountRef: React.MutableRefObject<number>;
 
   streamingMessageIndexRef: React.MutableRefObject<number>;
+  turnIdRef: React.MutableRefObject<number>;
 
   contentUpdateTimeoutRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>;
   thinkingUpdateTimeoutRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>;
@@ -49,6 +50,7 @@ export function useStreamingState(): UseStreamingStateReturn {
   const seenToolUseCountRef = useRef(0);
 
   const streamingMessageIndexRef = useRef<number>(-1);
+  const turnIdRef = useRef(0);
 
   const contentUpdateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const thinkingUpdateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -102,6 +104,7 @@ export function useStreamingState(): UseStreamingStateReturn {
     seenToolUseCountRef,
 
     streamingMessageIndexRef,
+    turnIdRef,
 
     contentUpdateTimeoutRef,
     thinkingUpdateTimeoutRef,

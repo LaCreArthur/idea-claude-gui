@@ -3,6 +3,7 @@ import type { ClaudeMessage, HistoryData } from '../types';
 import type { PermissionRequest } from '../components/PermissionDialog';
 import type { AskUserQuestionRequest } from '../components/AskUserQuestionDialog';
 import { isTruthy } from '../utils/helpers';
+import { shouldPlaySound, playCompletionSound } from '../utils/soundNotification';
 import {
   findLastAssistantIndex,
   extractRawBlocks,
@@ -28,6 +29,7 @@ interface UseMessageCallbacksParams {
   activeThinkingSegmentIndexRef: RefObject<number>;
   seenToolUseCountRef: RefObject<number>;
   streamingMessageIndexRef: RefObject<number>;
+  turnIdRef: RefObject<number>;
 
   suppressNextStatusToastRef: RefObject<boolean>;
   isUserAtBottomRef: RefObject<boolean>;
@@ -59,6 +61,7 @@ export function useMessageCallbacks({
   activeThinkingSegmentIndexRef,
   seenToolUseCountRef,
   streamingMessageIndexRef,
+  turnIdRef,
   suppressNextStatusToastRef,
   isUserAtBottomRef,
   messagesContainerRef,
@@ -86,6 +89,7 @@ export function useMessageCallbacks({
   window.updateMessages = (json) => {
     try {
       const parsed = JSON.parse(json) as ClaudeMessage[];
+      const snapshotTurnId = turnIdRef.current;
 
       setMessages((prev) => {
         if (!isStreamingRef.current) {
@@ -95,6 +99,8 @@ export function useMessageCallbacks({
         if (useBackendStreamingRenderRef.current) {
           return parsed;
         }
+
+        if (turnIdRef.current !== snapshotTurnId) return prev;
 
         const lastAssistantIdx = findLastAssistantIndex(parsed);
         if (lastAssistantIdx < 0) {
@@ -153,6 +159,9 @@ export function useMessageCallbacks({
       setLoadingStartTime(Date.now());
     } else {
       setLoadingStartTime(null);
+      if (shouldPlaySound()) {
+        playCompletionSound();
+      }
     }
   };
 

@@ -19,6 +19,7 @@ export interface UseStreamingCallbacksParams {
   activeThinkingSegmentIndexRef: React.MutableRefObject<number>;
   seenToolUseCountRef: React.MutableRefObject<number>;
   streamingMessageIndexRef: React.MutableRefObject<number>;
+  turnIdRef: React.MutableRefObject<number>;
   contentUpdateTimeoutRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>;
   thinkingUpdateTimeoutRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>;
   lastContentUpdateRef: React.MutableRefObject<number>;
@@ -46,6 +47,7 @@ export function useStreamingCallbacks(params: UseStreamingCallbacksParams): void
     activeThinkingSegmentIndexRef,
     seenToolUseCountRef,
     streamingMessageIndexRef,
+    turnIdRef,
     contentUpdateTimeoutRef,
     thinkingUpdateTimeoutRef,
     lastContentUpdateRef,
@@ -68,6 +70,7 @@ export function useStreamingCallbacks(params: UseStreamingCallbacksParams): void
     };
 
     window.onStreamStart = () => {
+      turnIdRef.current += 1;
       streamingContentRef.current = '';
       isStreamingRef.current = true;
       useBackendStreamingRenderRef.current = currentProviderRef.current === 'claude';
@@ -116,7 +119,9 @@ export function useStreamingCallbacks(params: UseStreamingCallbacksParams): void
       if (timeSinceLastUpdate >= THROTTLE_INTERVAL) {
         lastContentUpdateRef.current = now;
         const currentContent = streamingContentRef.current;
+        const turnId = turnIdRef.current;
         setMessages((prev) => {
+          if (turnIdRef.current !== turnId) return prev;
           const newMessages = [...prev];
           const idx = getOrCreateStreamingAssistantIndex(newMessages, streamingRefs);
           if (idx >= 0 && newMessages[idx]?.type === 'assistant') {
@@ -131,11 +136,14 @@ export function useStreamingCallbacks(params: UseStreamingCallbacksParams): void
       } else {
         if (!contentUpdateTimeoutRef.current) {
           const remainingTime = THROTTLE_INTERVAL - timeSinceLastUpdate;
+          const turnId = turnIdRef.current;
           contentUpdateTimeoutRef.current = setTimeout(() => {
             contentUpdateTimeoutRef.current = null;
+            if (turnIdRef.current !== turnId) return;
             lastContentUpdateRef.current = Date.now();
             const currentContent = streamingContentRef.current;
             setMessages((prev) => {
+              if (turnIdRef.current !== turnId) return prev;
               const newMessages = [...prev];
               const idx = getOrCreateStreamingAssistantIndex(newMessages, streamingRefs);
               if (idx >= 0 && newMessages[idx]?.type === 'assistant') {
@@ -169,8 +177,10 @@ export function useStreamingCallbacks(params: UseStreamingCallbacksParams): void
       const now = Date.now();
       const timeSinceLastUpdate = now - lastThinkingUpdateRef.current;
 
+      const thinkingTurnId = turnIdRef.current;
       const updateThinkingUI = () => {
         setMessages((prev) => {
+          if (turnIdRef.current !== thinkingTurnId) return prev;
           const newMessages = [...prev];
           const idx = getOrCreateStreamingAssistantIndex(newMessages, streamingRefs);
           if (idx >= 0 && newMessages[idx]?.type === 'assistant') {
@@ -205,6 +215,7 @@ export function useStreamingCallbacks(params: UseStreamingCallbacksParams): void
           const remainingTime = THROTTLE_INTERVAL - timeSinceLastUpdate;
           thinkingUpdateTimeoutRef.current = setTimeout(() => {
             thinkingUpdateTimeoutRef.current = null;
+            if (turnIdRef.current !== thinkingTurnId) return;
             lastThinkingUpdateRef.current = Date.now();
             updateThinkingUI();
           }, remainingTime);
