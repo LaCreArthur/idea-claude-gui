@@ -4,37 +4,37 @@ Context gathered for upstream feature porting. Updated 2026-03-15.
 
 ## Process Spawning & Lifecycle
 
-### 6 Process Spawning Paths
+### Main Bridge: Daemon Mode
+
+The primary bridge path uses a persistent daemon process (`DaemonConnection.java`). One daemon per `ClaudeSDKBridge` instance, started on first query, kept alive across queries. No one-shot fallback — if daemon fails to start, returns error.
+
+- `ClaudeSDKBridge.getOrCreateDaemon()` — double-checked locking, spawns `node bridge.js --daemon`
+- `DaemonConnection.sendQuery()` — sends query JSON with a unique queryId, routes responses via `DaemonQueryCallback`
+- `ClaudeSDKBridge.sendViaDaemon()` — creates callback, maps queryId → channelId for abort routing
+- Abort: `DaemonConnection.abort(queryId)` sends `{"type":"abort","queryId":"..."}` to daemon stdin
+
+### Other Process Spawning Paths
 
 | Path | File | Method | Command | ProcessManager? | Timeout |
 |------|------|--------|---------|-----------------|---------|
-| Main bridge | `ClaudeSDKBridge.java:273` | `sendMessageWithBridge()` | `node bridge.js` | Yes | None (blocks on stdout) |
-| Slash commands | `SlashCommandClient.java:53` | `getSlashCommands()` | `node bridge.js claude getSlashCommands` | No (fixed channel) | 20s |
-| MCP status | `McpStatusClient.java:53` | `getMcpServerStatus()` | `node bridge.js claude getMcpServerStatus` | No (fixed channel) | 30s |
-| Sync query | `SyncQueryClient.java:63` | `executeQuerySync()` | `node simple-query.js` | No | Configurable |
-| Rewind | `RewindOperations.java:59` | `rewindFiles()` | `node bridge.js claude rewindFiles` | No | 60s |
-| Session msgs | `SessionOperations.java:51` | `getSessionMessages()` | `node bridge.js claude getSession` | No | **None** |
+| Slash commands | `SlashCommandClient.java` | `getSlashCommands()` | `node bridge.js claude getSlashCommands` | No (fixed channel) | 20s |
+| MCP status | `McpStatusClient.java` | `getMcpServerStatus()` | `node bridge.js claude getMcpServerStatus` | No (fixed channel) | 30s |
+| Sync query | `SyncQueryClient.java` | `executeQuerySync()` | `node simple-query.js` | No | Configurable |
+| Rewind | `RewindOperations.java` | `rewindFiles()` | `node bridge.js claude rewindFiles` | No | 60s |
+| Session msgs | `SessionOperations.java` | `getSessionMessages()` | `node bridge.js claude getSession` | No | **None** |
 
 ### Process Management
 
-- **ProcessManager.java**: `ConcurrentHashMap<String, Process>` keyed by channelId. `interruptedChannels` Set tracks user-aborted channels.
+- **ProcessManager.java**: `ConcurrentHashMap<String, Process>` keyed by channelId. `interruptedChannels` Set tracks user-aborted channels. Daemon process registered on start.
 - **PlatformUtils.terminateProcess()**: SIGTERM → 3s wait → SIGKILL. Windows: `taskkill /F /T`.
-- **Shutdown hook**: `ClaudeSDKToolWindow.registerShutdownHook()` (line 173) — 3s executor timeout.
-- **Window dispose**: `ClaudeChatWindow.dispose()` (line 819) — interrupt session + cleanupAllProcesses.
+- **Shutdown hook**: `ClaudeSDKToolWindow.registerShutdownHook()` — 3s executor timeout.
+- **Window dispose**: `ClaudeChatWindow.dispose()` — interrupt session + cleanupAllProcesses + shutdownDaemon.
 
 ### Zombie Process Gaps
 
 - `SessionOperations` — no ProcessManager registration, no timeout
 - `RewindOperations` — no ProcessManager registration (has 60s timeout)
 - `SyncQueryClient.executeQuerySync()` — no ProcessManager registration
-- `SyncQueryClient.executeQueryStream()` — calls waitForProcessTermination but never registers
-
-### No Heartbeat/Keepalive
-
-No periodic health monitoring of bridge processes. Liveness detected only by:
-- `process.isAlive()` checks (ad-hoc)
-- Timeout deadlines in slash/MCP clients
-- stdout EOF in main bridge
 
 ## Environment Variables
 
@@ -59,10 +59,10 @@ No periodic health monitoring of bridge processes. Liveness detected only by:
 | `ANTHROPIC_BASE_URL` | Custom API endpoint |
 | `CLAUDE_CODE_TMPDIR` | Working directory |
 
-### NOT Set (gaps)
+### Also Forwarded (EnvironmentConfigurator)
 
-- No `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY`
-- No `NODE_TLS_REJECT_UNAUTHORIZED` / `NODE_EXTRA_CA_CERTS`
+- `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY` — forwarded from system env
+- `NODE_TLS_REJECT_UNAUTHORIZED` / `NODE_EXTRA_CA_CERTS` — forwarded from system env
 
 ## Session Management
 
@@ -103,6 +103,8 @@ Java `ClaudeMessageHandler.handleStreamStart/End()` sets `isStreaming` flag whic
 ### Key state tracking
 
 - **Java**: `ClaudeMessageHandler` has `currentAssistantMessage`, `isStreaming`, `textSegmentActive/thinkingSegmentActive` booleans. Raw JSON model updated in-place by `applyTextDeltaToRaw`/`applyThinkingDeltaToRaw`.
+- **Java**: During streaming, the delta path owns `assistantContent` — `handleAssistantMessage()` does NOT update `assistantContent` or `currentAssistantMessage.content` when `isStreaming` is true.
+- **Java**: `MessageMerger` uses synthetic keys (`__text:0`, `__text:1`) for text/thinking blocks (which have no ID) to prevent duplication when merging delta-built raw with event raw.
 - **Java**: `StreamingMessageHandler` has `updateSequence` (monotonic), `STREAM_MESSAGE_UPDATE_INTERVAL_MS = 50`
 - **React**: `useStreamingCallbacks.ts` has `streamingContentRef`, `streamingMessageIndexRef`, segment arrays. For Claude provider, `useBackendStreamingRenderRef = true` — snapshots create/update messages, deltas provide smooth incremental text.
 

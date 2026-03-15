@@ -5,75 +5,31 @@
 **Analysis date:** 2026-03-15
 **Upstream versions analyzed:** v0.2.3 through v0.2.9 + open PRs
 
-## Quick Wins (Low Effort, High Impact)
+## Ported Features
 
-### 1. Zombie Node Process Fix (PR #634, v0.2.7)
-Prevents zombie node processes consuming 100% CPU. Our fork shares the same process spawning architecture so we likely have this bug.
-- **Status:** Not ported
-- **Effort:** Low
+| # | Feature | Source | Our Implementation |
+|---|---------|--------|--------------------|
+| 1 | Zombie process fix | PR #634, v0.2.7 | `ProcessManager.java`, `PlatformUtils.terminateProcess()` (SIGTERM → 3s → SIGKILL) |
+| 3 | Reasoning effort selector | PR #475 | Full-stack: `types.ts` constants → `ButtonArea.tsx` → `useChatHandlers` → `SettingsHandler` → bridge.js `thinkingBudget` |
+| 4 | UTF-8 enforcement | v0.2.7 | 56 occurrences of `StandardCharsets.UTF_8` across 22 files |
+| 5 | Proxy/TLS env forwarding | v0.2.8 | `EnvironmentConfigurator.java` — HTTP_PROXY, HTTPS_PROXY, NODE_TLS vars |
+| 6 | Session epoch isolation | PR #611, v0.2.7 | `capturedSession` reference identity guard in `ClaudeChatWindow.setupSessionCallbacks()` — stale events silently dropped |
+| 7 | Streaming race fix | PR #650, v0.2.9 | Turn ID counter in `turnIdRef`, guards all `setMessages` updaters and timeout callbacks |
+| 8 | Token usage per message | PR #606 | `MessageUsage.tsx` renders `raw.message.usage` as "Xk in (Yk cached) / Zk out" below each assistant message |
+| 9 | Clipboard image paste | v0.2.6 | `useAttachmentManagement.ts` + `WebViewInitializer.java` |
+| 10 | Sound notification | v0.2.6 | Web Audio API beep, `localStorage` toggle, settings UI |
+| 11 | Daemon mode | v0.2.3 | `DaemonConnection.java`, `bridge.js --daemon`, pre-warm on tab creation. One-shot fallback deleted — daemon-only. |
+| 12 | Enterprise apiKeyHelper auth | PR #623 | First check in `setupAuthentication()`, 10s timeout, silent fallthrough |
+
+## Not Ported
 
 ### 2. CWD Fallback Fix (PR #636)
-Crash when a non-project file (e.g. `~/.claude/plans/*.md`) is open in the editor. `SessionHandler.determineWorkingDirectory()` incorrectly uses external file's parent as cwd, causing "API request failed" crashes.
-- **Status:** Not ported
+Crash when a non-project file (e.g. `~/.claude/plans/*.md`) is open in the editor. `SessionHandler.determineWorkingDirectory()` incorrectly uses external file's parent as cwd.
 - **Effort:** Low
-
-### 3. Reasoning Effort Selector (PR #475)
-Low/Medium/High/Max reasoning effort selector for Claude models. Maps to `maxThinkingTokens` (1024/10000/32000/100000).
-- **Status:** Not ported
-- **Effort:** Low — small UI change + bridge parameter pass-through
-
-### 4. UTF-8 Enforcement for File I/O (v0.2.7)
-Enforce UTF-8 charset for all file I/O operations. Prevents encoding bugs on non-UTF-8 systems.
-- **Status:** Not ported
-- **Effort:** Low
-
-### 5. Proxy/TLS Env Var Timing Fix (v0.2.8)
-Inject proxy and TLS settings before any HTTPS connection. Fixes corporate SSL-inspection proxy issues.
-- **Status:** Not ported
-- **Effort:** Low
-
-## Medium Effort
-
-### 6. Session Epoch Isolation (PR #611, v0.2.7)
-Introduces `runtimeSessionEpoch` (per-session UUID) across all three layers (Java, Node, React) to prevent stale messages from old sessions appearing in new ones during session transitions.
-- **Status:** Not ported
-- **Effort:** Medium — touches all three layers
-
-### 7. Streaming Placeholder Race Fix (PR #650, v0.2.9)
-Prevents the streaming assistant placeholder from being lost when Java sends a snapshot during active streaming. Introduces turn ID tracking.
-- **Status:** Ported (turn ID counter in `turnIdRef`, guards all `setMessages` updaters and timeout callbacks)
-- **Effort:** Medium — frontend-focused
-
-### 8. Token Usage per Message (PR #606)
-Shows token usage stats per reply and per conversation. Status bar widget for token info.
-- **Status:** We have `UsageTracker.java` infrastructure but no per-message display
-- **Effort:** Medium
-
-### 9. Clipboard Image Paste (v0.2.6)
-Paste images from clipboard directly into chat input. Java converts clipboard data to base64 PNG.
-- **Status:** We have attachment infrastructure (`useAttachmentManagement.ts`) but no clipboard paste
-- **Effort:** Medium
-
-### 10. Sound Notification (v0.2.6)
-Play sound when task completes, with "only when unfocused" option.
-- **Status:** Ported (Web Audio API beep, `localStorage` toggle, settings UI)
-- **Effort:** Low-Medium
-
-## Big Lifts
-
-### 11. Daemon Mode (v0.2.3)
-Persistent Node.js process with NDJSON protocol, heartbeat monitoring (15s/45s timeout), auto-restart (max 3 retries), and three-phase prewarm strategy. Eliminates 5-10s SDK load time per message. Also includes abort/cancel support.
-- **Status:** Not ported — we spawn per-request
-- **Effort:** High — core architecture change to ai-bridge and Java bridge
-
-### 12. Enterprise Auth / apiKeyHelper (PR #623)
-Detects `apiKeyHelper` in `managed-settings.json` for enterprise environments where API keys are generated by shell scripts.
-- **Status:** Ported (first check in `setupAuthentication()`, 10s timeout, silent fallthrough)
-- **Effort:** Low-Medium
+- **Mitigated by:** `WorkingDirectoryManager` validates paths, but no explicit external-file guard
 
 ### 13. Tab Detach to Floating Window (v0.2.5)
 Detach chat tabs into independent floating JFrame windows for multi-monitor workflows.
-- **Status:** Not ported
 - **Effort:** High — significant Java UI work
 
 ## Skipped (Not Relevant)

@@ -155,6 +155,50 @@ For full-stack settings/features that span React → Java → bridge.js → SDK,
 
 See `.claude/skills/e2e-test.md` for the template, Page Object API, and patterns (intercepting React callbacks, writing config directly, etc.).
 
+## Self-Improving Skills
+
+Every piece of work on this project — coding, debugging, testing, exploring — is a pass through the loop: **DO → OBSERVE → IMPROVE**. Not just named skills. Everything.
+
+### The Loop
+
+After completing any task, ask: **what did I learn that the system doesn't know yet?**
+
+- Discovered an architectural pattern? → Update MEMORY.md or the relevant skill
+- Hit a gotcha that would trip me up again? → Add to LEARNINGS.md
+- User corrected a workflow mistake? → Update the skill file (guard, step, or failure mode)
+- Debugged something and found the root cause? → Capture it where the next session will find it
+- A multi-step procedure worked? → Does a skill exist for it? Should one?
+
+This is mandatory before ending any non-trivial task. The system gets smarter every session.
+
+### Skill File Format
+
+Skills in `.claude/skills/` are executable workflows with guards — not static docs. Every skill has:
+- **Guards**: Hard preconditions — STOP if any fails
+- **Steps**: Exact commands, not descriptions
+- **Verification**: Postconditions to check
+- **Known Failure Modes**: Table of symptom → cause → fix
+- **Amendment Log**: History of failures and fixes (the skill's evolution record)
+
+### Routing — What Goes Where
+
+| What you learned | Where it goes |
+|-----------------|---------------|
+| Multi-step workflow with preconditions | `.claude/skills/*.md` (create or update) |
+| Atomic fact, tool flag, one-liner gotcha | `LEARNINGS.md` |
+| Project state, configuration, current work | `memory/MEMORY.md` |
+| Architectural understanding, data flow, how subsystems connect | `memory/MEMORY.md` or dedicated topic file in memory/ |
+| Root cause of a bug you just fixed | LEARNINGS.md (the gotcha) + skill if there's a related workflow |
+
+Skills reference LEARNINGS facts in their steps — they compose, not duplicate.
+
+### Available Skills
+
+- `e2e-run.md` — Running E2E tests (rebuild guards, run commands, baseline)
+- `e2e-test.md` — Writing new E2E tests (template, Page Object API, patterns)
+- `build-deploy.md` — Build/deploy/restart cycle
+- `full-stack-feature.md` — 11-file path for new settings/features
+
 ## Fork History
 
 Originally forked from [zhukunpenglinyutong/idea-claude-code-gui](https://github.com/zhukunpenglinyutong/idea-claude-code-gui). Upstream sync abandoned January 2026. See `docs/UPSTREAM_DELTA.md` for full feature delta analysis.
