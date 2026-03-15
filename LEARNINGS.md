@@ -58,3 +58,9 @@ Greppable: `grep "#hooks" LEARNINGS.md`
 [2026-03-15] #e2e #config-write: For E2E tests that need config changes (e.g., enabling streaming), write `~/.claude-gui/config.json` directly via `fs.writeFileSync` instead of round-tripping through `sendToJava('set_streaming_enabled', ...)`. The Java handler's async response may not arrive before the test proceeds. Always restore config in cleanup.
 
 [2026-03-15] #java #packages: Java package is `com.github.claudecodegui`, NOT `com.github.nicholasgasior.intellijclaudecode`. The plan may reference old paths — always `Glob` for files first.
+
+[2026-03-15] #streaming #race: Stale `setTimeout` callbacks in `onContentDelta`/`onThinkingDelta` can fire after `onStreamEnd` clears refs, wiping final message content. Fix: `turnIdRef` counter incremented at `onStreamStart`, captured in every `setMessages` updater and timeout callback — stale callbacks see mismatched turn ID and bail. Same guard in `window.updateMessages` snapshot handler during non-backend-streaming path.
+
+[2026-03-15] #auth #enterprise: Enterprise auth via `apiKeyHelper` in `~/.claude/managed-settings.json`. Bridge executes the helper command (10s timeout), uses output as `ANTHROPIC_API_KEY`. Must be FIRST check in `setupAuthentication()` — takes priority over `settings.json`, keychain, and credentials file.
+
+[2026-03-15] #sound #notification: Sound notification uses Web Audio API (no asset files). `localStorage.getItem('sound-on-complete')` toggle. Plays only when `document.hidden === true` (window not focused). Triggered in `window.showLoading(false)` path. Settings toggle in BasicConfigSection.

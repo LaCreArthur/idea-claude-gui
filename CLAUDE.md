@@ -163,4 +163,4 @@ Originally forked from [zhukunpenglinyutong/idea-claude-code-gui](https://github
 - English-only (removed i18n)
 - Claude-only (removed Codex/multi-provider)
 - Simplified architecture
-- Ported: UTF-8 enforcement, proxy/TLS forwarding, zombie process fixes, CWD dedup, reasoning effort selector, streaming deltas, session epoch isolation, per-message token usage
+- Ported: UTF-8 enforcement, proxy/TLS forwarding, zombie process fixes, CWD dedup, reasoning effort selector, streaming deltas, session epoch isolation, per-message token usage, streaming race fix (turn ID), sound notification, enterprise apiKeyHelper auth
