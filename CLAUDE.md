@@ -164,7 +164,7 @@ Every piece of work on this project — coding, debugging, testing, exploring �
 After completing any task, ask: **what did I learn that the system doesn't know yet?**
 
 - Discovered an architectural pattern? → Update MEMORY.md or the relevant skill
-- Hit a gotcha that would trip me up again? → Add to LEARNINGS.md
+- Hit a gotcha that would trip me up again? → Add to CLAUDE.md (Known Gotchas section) or relevant skill file
 - User corrected a workflow mistake? → Update the skill file (guard, step, or failure mode)
 - Debugged something and found the root cause? → Capture it where the next session will find it
 - A multi-step procedure worked? → Does a skill exist for it? Should one?
@@ -185,12 +185,12 @@ Skills in `.claude/skills/` are executable workflows with guards — not static 
 | What you learned | Where it goes |
 |-----------------|---------------|
 | Multi-step workflow with preconditions | `.claude/skills/*.md` (create or update) |
-| Atomic fact, tool flag, one-liner gotcha | `LEARNINGS.md` |
+| Atomic fact, tool flag, one-liner gotcha | CLAUDE.md (Known Gotchas section) |
 | Project state, configuration, current work | `memory/MEMORY.md` |
 | Architectural understanding, data flow, how subsystems connect | `memory/MEMORY.md` or dedicated topic file in memory/ |
-| Root cause of a bug you just fixed | LEARNINGS.md (the gotcha) + skill if there's a related workflow |
+| Root cause of a bug you just fixed | CLAUDE.md or skill if there's a related workflow |
 
-Skills reference LEARNINGS facts in their steps — they compose, not duplicate.
+Skills reference CLAUDE.md facts in their steps — they compose, not duplicate.
 
 ### Available Skills
 
