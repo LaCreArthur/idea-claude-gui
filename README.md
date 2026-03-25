@@ -8,6 +8,15 @@ IntelliJ IDEA Plugin for Claude Code
 
 </div>
 
+> [!WARNING]
+> **This plugin is deprecated and no longer maintained.** v0.2.15 is the final release.
+>
+> Anthropic's Terms of Service now prevent third-party applications from using Claude Max/Pro subscription credentials to access premium models (Sonnet 4 / Opus 4). The direct SDK approach this plugin uses is limited to Haiku for subscription users — which defeats the entire point.
+>
+> Note: API key access technically still works, but this plugin was built specifically to leverage a Max subscription without needing a paid API plan. Without that use case, there's no reason to keep maintaining it.
+
+---
+
 A powerful IntelliJ IDEA plugin that provides a visual interface for **Claude Code**, making AI-assisted programming more efficient and intuitive.
 
 > Originally forked from [idea-claude-code-gui](https://github.com/zhukunpenglinyutong/idea-claude-code-gui) by zhukunpenglinyutong — rewritten for English-only, Claude-only use.

@@ -4,6 +4,12 @@
     <vendor>Arthur Scheidel</vendor>
 
     <description><![CDATA[
+        <p>⚠️ <strong>This plugin is deprecated and no longer maintained.</strong> v0.2.15 is the final release.</p>
+
+        <p>Anthropic's Terms of Service now prevent third-party applications from using Claude Max/Pro subscription credentials to access premium models (Sonnet 4 / Opus 4). The direct SDK approach this plugin uses is limited to Haiku for subscription users — which defeats the entire point. Note: API key access technically still works, but this plugin was built specifically to leverage a Max subscription without needing a paid API plan. Without that use case, there's no reason to keep maintaining it.</p>
+
+        <hr/>
+
         <p><strong>Claude GUI</strong> - A visual interface for <strong>Claude Code</strong> in JetBrains IDEs. Brings Anthropic's AI programming assistant directly into your workflow.</p>
 
         <p><em>Originally forked from <a href="https://github.com/zhukunpenglinyutong/idea-claude-code-gui">idea-claude-code-gui</a> by zhukunpenglinyutong — rewritten for English-only, Claude-only use.</em></p>
