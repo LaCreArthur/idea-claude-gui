@@ -2,8 +2,8 @@ package com.github.claudecodegui.handler;
 
 import com.github.claudecodegui.provider.claude.ClaudeHistoryReader;
 import com.github.claudecodegui.ClaudeSession;
-import com.github.claudecodegui.bridge.NodeDetector;
-import com.github.claudecodegui.model.NodeDetectionResult;
+
+
 import com.github.claudecodegui.util.FontConfigService;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
@@ -387,116 +387,23 @@ public class SettingsHandler extends BaseMessageHandler {
     }
 
     private void handleGetNodePath() {
-        try {
-            PropertiesComponent props = PropertiesComponent.getInstance();
-            String saved = props.getValue(NODE_PATH_PROPERTY_KEY);
-            String pathToSend = "";
-            String versionToSend = null;
-
-            if (saved != null && !saved.trim().isEmpty()) {
-                pathToSend = saved.trim();
-                NodeDetectionResult result = context.getClaudeSDKBridge().verifyAndCacheNodePath(pathToSend);
-                if (result != null && result.isFound()) {
-                    versionToSend = result.getNodeVersion();
-                }
-            } else {
-                NodeDetectionResult detected = context.getClaudeSDKBridge().detectNodeWithDetails();
-                if (detected != null && detected.isFound() && detected.getNodePath() != null) {
-                    pathToSend = detected.getNodePath();
-                    versionToSend = detected.getNodeVersion();
-                    props.setValue(NODE_PATH_PROPERTY_KEY, pathToSend);
-                    context.getClaudeSDKBridge().verifyAndCacheNodePath(pathToSend);
-                }
-            }
-
-            final String finalPath = pathToSend;
-            final String finalVersion = versionToSend;
-
-            ApplicationManager.getApplication().invokeLater(() -> {
-                JsonObject response = new JsonObject();
-                response.addProperty("path", finalPath);
-                response.addProperty("version", finalVersion);
-                response.addProperty("minVersion", NodeDetector.MIN_NODE_MAJOR_VERSION);
-                callJavaScript("window.updateNodePath", escapeJs(new Gson().toJson(response)));
-            });
-        } catch (Exception e) {
-            LOG.error("[SettingsHandler] Failed to get Node.js path: " + e.getMessage(), e);
-        }
+        // Node.js is no longer required — return info message
+        ApplicationManager.getApplication().invokeLater(() -> {
+            JsonObject response = new JsonObject();
+            response.addProperty("path", "");
+            response.addProperty("version", "N/A (Kotlin agent)");
+            response.addProperty("minVersion", 0);
+            response.addProperty("message", "Node.js is no longer required — using Kotlin agent runtime");
+            callJavaScript("window.updateNodePath", escapeJs(new Gson().toJson(response)));
+        });
     }
 
     private void handleSetNodePath(String content) {
-        LOG.debug("[SettingsHandler] ========== handleSetNodePath START ==========");
-        LOG.debug("[SettingsHandler] Received content: " + content);
-        try {
-            Gson gson = new Gson();
-            JsonObject json = gson.fromJson(content, JsonObject.class);
-            String path = null;
-            if (json != null && json.has("path") && !json.get("path").isJsonNull()) {
-                path = json.get("path").getAsString();
-            }
-
-            if (path != null) {
-                path = path.trim();
-            }
-
-            PropertiesComponent props = PropertiesComponent.getInstance();
-            String finalPath = "";
-            String versionToSend = null;
-            boolean verifySuccess = false;
-            String failureMsg = null;
-
-            if (path == null || path.isEmpty()) {
-                props.unsetValue(NODE_PATH_PROPERTY_KEY);
-                context.getClaudeSDKBridge().setNodeExecutable(null);
-                LOG.info("[SettingsHandler] Cleared manual Node.js path from settings");
-
-                NodeDetectionResult detected = context.getClaudeSDKBridge().detectNodeWithDetails();
-                if (detected != null && detected.isFound() && detected.getNodePath() != null) {
-                    finalPath = detected.getNodePath();
-                    versionToSend = detected.getNodeVersion();
-                    props.setValue(NODE_PATH_PROPERTY_KEY, finalPath);
-                    context.getClaudeSDKBridge().verifyAndCacheNodePath(finalPath);
-                    verifySuccess = true;
-                }
-            } else {
-                props.setValue(NODE_PATH_PROPERTY_KEY, path);
-                NodeDetectionResult result = context.getClaudeSDKBridge().verifyAndCacheNodePath(path);
-                LOG.info("[SettingsHandler] Updated manual Node.js path from settings: " + path);
-                finalPath = path;
-                if (result != null && result.isFound()) {
-                    versionToSend = result.getNodeVersion();
-                    verifySuccess = true;
-                } else {
-                    failureMsg = result != null ? result.getErrorMessage() : "Unable to verify specified Node.js path";
-                }
-            }
-
-            final boolean successFlag = verifySuccess;
-            final String failureMsgFinal = failureMsg;
-            final String finalPathToSend = finalPath;
-            final String finalVersionToSend = versionToSend;
-
-            ApplicationManager.getApplication().invokeLater(() -> {
-                JsonObject response = new JsonObject();
-                response.addProperty("path", finalPathToSend);
-                response.addProperty("version", finalVersionToSend);
-                response.addProperty("minVersion", NodeDetector.MIN_NODE_MAJOR_VERSION);
-                callJavaScript("window.updateNodePath", escapeJs(gson.toJson(response)));
-
-                if (successFlag) {
-                    callJavaScript("window.showSwitchSuccess", escapeJs("Node.js path saved.\n\nIf environment check still fails, please close and reopen the tool window."));
-                } else {
-                    String msg = failureMsgFinal != null ? failureMsgFinal : "Cannot verify specified Node.js path";
-                    callJavaScript("window.showError", escapeJs("Saved Node.js path is invalid: " + msg));
-                }
-            });
-        } catch (Exception e) {
-            LOG.error("[SettingsHandler] Failed to set Node.js path: " + e.getMessage(), e);
-            ApplicationManager.getApplication().invokeLater(() -> {
-                callJavaScript("window.showError", escapeJs("Failed to save Node.js path: " + e.getMessage()));
-            });
-        }
-        LOG.debug("[SettingsHandler] ========== handleSetNodePath END ==========");
+        // Node.js path setting is a no-op now
+        ApplicationManager.getApplication().invokeLater(() -> {
+            callJavaScript("window.showSwitchSuccess",
+                escapeJs("Node.js is no longer required. The plugin uses Kotlin agent runtime."));
+        });
     }
 
     private void handleGetUsageStatistics(String content) {

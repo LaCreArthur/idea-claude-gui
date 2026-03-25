@@ -1,71 +1,20 @@
 package com.github.claudecodegui;
 
-import com.github.claudecodegui.bridge.NodeDetector;
-import com.github.claudecodegui.cache.SlashCommandCache;
-import com.github.claudecodegui.provider.claude.ClaudeSDKBridge;
-import com.github.claudecodegui.provider.common.MessageCallback;
-import com.github.claudecodegui.provider.common.SDKResult;
-import com.github.claudecodegui.handler.*;
-import com.github.claudecodegui.permission.PermissionRequest;
-import com.github.claudecodegui.permission.PermissionService;
-import com.github.claudecodegui.startup.BridgePreloader;
-import com.github.claudecodegui.ui.ErrorPanelBuilder;
-import com.github.claudecodegui.util.FontConfigService;
-import com.github.claudecodegui.util.HtmlLoader;
-import com.github.claudecodegui.util.JBCefBrowserFactory;
-import com.github.claudecodegui.util.JsUtils;
-import com.google.gson.Gson;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.intellij.ide.util.PropertiesComponent;
-import com.intellij.openapi.application.ApplicationManager;
+import com.github.claudecodegui.ui.ClaudeChatWindow;
 import com.intellij.openapi.diagnostic.Logger;
-import com.intellij.openapi.editor.Editor;
-import com.intellij.openapi.editor.EditorFactory;
-import com.intellij.openapi.editor.event.SelectionEvent;
-import com.intellij.openapi.editor.event.SelectionListener;
-import com.intellij.openapi.fileEditor.FileDocumentManager;
-import com.intellij.openapi.fileEditor.FileEditorManager;
-import com.intellij.openapi.fileEditor.FileEditorManagerEvent;
-import com.intellij.openapi.fileEditor.FileEditorManagerListener;
 import com.intellij.openapi.project.DumbAware;
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.vfs.VirtualFile;
-import com.intellij.openapi.vfs.VirtualFileManager;
 import com.intellij.openapi.wm.ToolWindow;
 import com.intellij.openapi.wm.ToolWindowFactory;
-import com.intellij.openapi.wm.ToolWindowManager;
 import com.intellij.ui.content.Content;
 import com.intellij.ui.content.ContentFactory;
 import com.intellij.ui.content.ContentManager;
 import com.intellij.ui.content.ContentManagerEvent;
 import com.intellij.ui.content.ContentManagerListener;
-import com.intellij.ui.jcef.JBCefBrowser;
-import com.intellij.ui.jcef.JBCefBrowserBase;
-import com.intellij.ui.jcef.JBCefJSQuery;
-import com.intellij.util.Alarm;
-import com.intellij.util.concurrency.AppExecutorUtil;
-import com.intellij.util.messages.MessageBusConnection;
-import org.cef.browser.CefBrowser;
-import org.cef.browser.CefFrame;
-import org.cef.handler.CefLoadHandlerAdapter;
 import org.jetbrains.annotations.NotNull;
 
-import javax.swing.*;
-import java.awt.*;
-import java.awt.datatransfer.Clipboard;
-import java.awt.datatransfer.DataFlavor;
-import java.awt.datatransfer.Transferable;
-import java.awt.dnd.DnDConstants;
-import java.awt.dnd.DropTarget;
-import java.awt.dnd.DropTargetAdapter;
-import java.awt.dnd.DropTargetDropEvent;
-import java.io.File;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
-import com.github.claudecodegui.ui.ClaudeChatWindow;
 
 public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
 
@@ -177,7 +126,7 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
         shutdownHookRegistered = true;
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            LOG.info("[ShutdownHook] IDE is shutting down, cleaning up all Node.js processes...");
+            LOG.info("[ShutdownHook] IDE is shutting down, cleaning up all agent processes...");
 
             ExecutorService executor = Executors.newSingleThreadExecutor();
             try {
@@ -194,7 +143,7 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
                 });
 
                 future.get(3, TimeUnit.SECONDS);
-                LOG.info("[ShutdownHook] Node.js process cleanup complete");
+                LOG.info("[ShutdownHook] Agent process cleanup complete");
             } catch (TimeoutException e) {
                 LOG.warn("[ShutdownHook] Process cleanup timed out (3 seconds), forcing exit");
             } catch (Exception e) {

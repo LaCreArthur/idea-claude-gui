@@ -1,197 +1,129 @@
 # Codebase Architecture Map
 
-Context gathered for upstream feature porting. Updated 2026-03-15.
+Updated 2026-03-24 after Phase 2 bridge deletion. The Node.js ai-bridge is gone. Kotlin agent runtime is the sole execution path.
 
-## Process Spawning & Lifecycle
+## Session Lifecycle
 
-### Main Bridge: Daemon Mode
+```
+ClaudeChatWindow.createNewSession()
+  → ClaudeSession (per-session state: sessionId, epoch, CWD, model)
+    → ClaudeSDKBridge.sendQuery()
+      → KotlinAgentLauncher.launch(AgentRuntime, AgentConfig, userMessage)
+        → AgentRuntime.run() — coroutine, calls Anthropic SDK directly
+          → Anthropic SDK (streaming beta messages API)
+```
 
-The primary bridge path uses a persistent daemon process (`DaemonConnection.java`). One daemon per `ClaudeSDKBridge` instance, started on first query, kept alive across queries. No one-shot fallback — if daemon fails to start, returns error.
-
-- `ClaudeSDKBridge.getOrCreateDaemon()` — double-checked locking, spawns `node bridge.js --daemon`
-- `DaemonConnection.sendQuery()` — sends query JSON with a unique queryId, routes responses via `DaemonQueryCallback`
-- `ClaudeSDKBridge.sendViaDaemon()` — creates callback, maps queryId → channelId for abort routing
-- Abort: `DaemonConnection.abort(queryId)` sends `{"type":"abort","queryId":"..."}` to daemon stdin
-
-### Other Process Spawning Paths
-
-| Path | File | Method | Command | ProcessManager? | Timeout |
-|------|------|--------|---------|-----------------|---------|
-| Slash commands | `SlashCommandClient.java` | `getSlashCommands()` | `node bridge.js claude getSlashCommands` | No (fixed channel) | 20s |
-| MCP status | `McpStatusClient.java` | `getMcpServerStatus()` | `node bridge.js claude getMcpServerStatus` | No (fixed channel) | 30s |
-| Sync query | `SyncQueryClient.java` | `executeQuerySync()` | `node simple-query.js` | No | Configurable |
-| Rewind | `RewindOperations.java` | `rewindFiles()` | `node bridge.js claude rewindFiles` | No | 60s |
-| Session msgs | `SessionOperations.java` | `getSessionMessages()` | `node bridge.js claude getSession` | No | **None** |
-
-### Process Management
-
-- **ProcessManager.java**: `ConcurrentHashMap<String, Process>` keyed by channelId. `interruptedChannels` Set tracks user-aborted channels. Daemon process registered on start.
-- **PlatformUtils.terminateProcess()**: SIGTERM → 3s wait → SIGKILL. Windows: `taskkill /F /T`.
-- **Shutdown hook**: `ClaudeSDKToolWindow.registerShutdownHook()` — 3s executor timeout.
-- **Window dispose**: `ClaudeChatWindow.dispose()` — interrupt session + cleanupAllProcesses + shutdownDaemon.
-
-### Zombie Process Gaps
-
-- `SessionOperations` — no ProcessManager registration, no timeout
-- `RewindOperations` — no ProcessManager registration (has 60s timeout)
-- `SyncQueryClient.executeQuerySync()` — no ProcessManager registration
-
-## Environment Variables
-
-### Set by Java (EnvironmentConfigurator.java)
-
-| Variable | Purpose |
-|----------|---------|
-| `PATH` | Adds Node.js dir + system paths |
-| `HOME` | For SDK to find `~/.claude/` |
-| `NODE_PATH` | `~/.claude-gui/dependencies/node_modules` + global npm |
-| `CLAUDE_PERMISSION_DIR` | `<tmpdir>/claude-permission/` |
-| `TMPDIR/TEMP/TMP` | `<tmpdir>/claude-agent-tmp/` |
-| `IDEA_PROJECT_PATH` | User's working directory |
-| `CLAUDE_USE_STDIN` | `"true"` for stdin-based input |
-
-### Set by Node (bridge.js)
-
-| Variable | Purpose |
-|----------|---------|
-| `ANTHROPIC_AUTH_TOKEN` | From settings.json env |
-| `ANTHROPIC_API_KEY` | From settings.json env |
-| `ANTHROPIC_BASE_URL` | Custom API endpoint |
-| `CLAUDE_CODE_TMPDIR` | Working directory |
-
-### Also Forwarded (EnvironmentConfigurator)
-
-- `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY` — forwarded from system env
-- `NODE_TLS_REJECT_UNAUTHORIZED` / `NODE_EXTRA_CA_CERTS` — forwarded from system env
-
-## Session Management
-
-### Session IDs
-
-- **channelId**: Java-generated UUID per bridge process launch (`ClaudeSession.launchClaude()` line 195). Maps to OS process.
-- **sessionId**: From Claude SDK. Received via `{ type: "session_id" }` event. Used for resume.
-- **Epoch guard**: `setupSessionCallbacks()` captures `final ClaudeSession capturedSession`. All state-mutating callbacks check `this.session == capturedSession` (reference identity) — stale events from old bridge threads silently dropped. See `SessionCallbackFactory.java`.
-
-### Session Lifecycle
-
-1. **Create**: `ClaudeChatWindow.createNewSession()` (line 681) — interrupts old session, creates new ClaudeSession, re-determines CWD
-2. **Load history**: `ClaudeChatWindow.loadHistorySession()` (line 554) — creates new ClaudeSession with persisted sessionId
-3. **Dispose**: `ClaudeChatWindow.dispose()` (line 819) — interrupt + cleanup
-
-### determineWorkingDirectory() — Two Copies
-
-Exists in both `SessionHandler.java:239` and `ClaudeChatWindow.java:520` (identical logic):
-1. `project.getBasePath()` → if null/missing, fall back to `user.home`
-2. Check `PluginSettingsService.getCustomWorkingDirectory(projectPath)` — supports relative paths
-3. Validate exists + is directory → return, else return raw projectPath
-
-**CWD bug**: No validation that the path is within the project. External files (e.g. `~/.claude/plans/*.md`) as active editor could produce wrong CWD.
+- **Epoch guard**: `SessionCallbackFactory` captures `capturedSession` at setup time. All state-mutating callbacks check `this.session == capturedSession` (reference identity) — stale events from old sessions are silently dropped.
+- **Cancellation**: `KotlinAgentLauncher.LaunchResult` holds a `Job`. `ClaudeSDKBridge.interrupt()` cancels it.
+- **CWD**: Resolved by `WorkingDirectoryManager` — `project.getBasePath()` → custom override → `user.home` fallback.
 
 ## Streaming
 
-### Architecture (active since 0.2.13)
+```
+AgentRuntime (SDK event loop)
+  → StreamEmitter.contentDelta() / thinkingDelta() / toolUse() / streamStart() / streamEnd()
+    → MessageCallback.onMessage(type, payload)
+      → ClaudeMessageHandler.handle*(...)
+        → CallbackHandler.notify*(...)
+          → SessionCallback (epoch-guarded)
+            → UI: window.onContentDelta() / window.onMessage() / etc.
+```
 
-Two parallel data paths during streaming:
-- **Delta path** (lightweight): `bridge.js` → `content_delta`/`thinking_delta` → Java `notifyContentDelta()` → frontend `window.onContentDelta()` — character-level updates via refs + 50ms throttle
-- **Snapshot path** (structural): Full message JSON on `tool_use`, `stream_end`, and `result` events — ensures in-memory model consistency
+Two parallel data paths:
+- **Delta path** (lightweight): `content_delta` / `thinking_delta` events → `notifyContentDelta()` → `window.onContentDelta()` — character-level updates, 50ms throttle via `StreamingMessageHandler`.
+- **Snapshot path** (structural): Full message JSON on `tool_use`, `stream_end`, `result` — ensures in-memory model consistency.
 
-### Lifecycle events
+`ClaudeMessageHandler` state: `currentAssistantMessage`, `isStreaming`, `textSegmentActive`, `thinkingSegmentActive`. During streaming, the delta path owns `assistantContent` — `handleAssistantMessage()` skips content updates while `isStreaming` is true.
 
-`bridge.js` emits `stream_start` before first delta, `stream_end` after the `for await` loop ends.
-Java `ClaudeMessageHandler.handleStreamStart/End()` sets `isStreaming` flag which gates whether `handleContent`/`handleAssistantMessage` send full snapshots.
+`MessageMerger` uses synthetic keys (`__text:0`, `__text:1`) for text/thinking blocks (no SDK ID) to prevent duplication when merging delta-built raw with event raw.
 
-### Key state tracking
+## Permission Flow
 
-- **Java**: `ClaudeMessageHandler` has `currentAssistantMessage`, `isStreaming`, `textSegmentActive/thinkingSegmentActive` booleans. Raw JSON model updated in-place by `applyTextDeltaToRaw`/`applyThinkingDeltaToRaw`.
-- **Java**: During streaming, the delta path owns `assistantContent` — `handleAssistantMessage()` does NOT update `assistantContent` or `currentAssistantMessage.content` when `isStreaming` is true.
-- **Java**: `MessageMerger` uses synthetic keys (`__text:0`, `__text:1`) for text/thinking blocks (which have no ID) to prevent duplication when merging delta-built raw with event raw.
-- **Java**: `StreamingMessageHandler` has `updateSequence` (monotonic), `STREAM_MESSAGE_UPDATE_INTERVAL_MS = 50`
-- **React**: `useStreamingCallbacks.ts` has `streamingContentRef`, `streamingMessageIndexRef`, segment arrays. For Claude provider, `useBackendStreamingRenderRef = true` — snapshots create/update messages, deltas provide smooth incremental text.
+```
+AgentRuntime — tool call requires permission
+  → PermissionGate.check(toolName, input) — suspendCancellableCoroutine
+    → PermissionService.requestPermission(toolName, input, callback)
+      → frontend: window.onPermissionRequest(json) → PermissionDialog
+        → user clicks Allow/Deny → sendToJava('permission_response', ...)
+          → PermissionService resolves callback
+            → PermissionGate.resume(PermissionResult)
+              → AgentRuntime proceeds or skips tool
+```
 
-### Config
+`PermissionGate` short-circuits to `allowed=true` when `permissionMode == "acceptEdits"` or `"bypassPermissions"`.
 
-Streaming defaults OFF. Config: `~/.claude-gui/config.json` → `streaming.default` (boolean). Read at query time by `ClaudeSession.launchClaude()` → `PluginSettingsService.getStreamingEnabled()`.
+## Authentication
+
+`AuthProvider.createClient(enable1MContext: Boolean = false)` resolves credentials in priority order:
+
+| Tier | Source | Detail |
+|------|--------|--------|
+| 1 | `apiKeyHelper` | Runs helper script, reads stdout as bearer token |
+| 2 | `settings.json` token | `~/.claude/settings.json` → `env.ANTHROPIC_AUTH_TOKEN` |
+| 3 | `settings.json` key | `~/.claude/settings.json` → `env.ANTHROPIC_API_KEY` |
+| 4 | Env vars | `ANTHROPIC_AUTH_TOKEN` / `ANTHROPIC_API_KEY` from process env |
+| 5 | Keychain / file | macOS Keychain (`Claude Code-credentials` / `Claude Code`), then `~/.claude/.credentials.json` |
+
+**OAuth token handling**:
+- `CLI_SESSION` and `AUTH_TOKEN` types require `anthropic-beta: oauth-2025-04-20` header or the API rejects them.
+- Expired tokens: checks `expiresAt`, calls `POST /v1/oauth/token` with `refresh_token` + `client_id: 9d1c250a-e61b-44d9-88ed-5944d1962f5e`. Falls back to `console.anthropic.com/api/oauth/token` if primary fails. Logs error body on failure.
+- Persists refreshed tokens back to Keychain or `.credentials.json`.
+
+**1M context**: when `enable1MContext=true`, appends `,context-1m-2025-08-07` to the OAuth beta header (or sets it standalone for API key). Client is recreated in `ClaudeSession` when this flag changes.
+
+Returns a configured `AnthropicOkHttpClient`. Throws `IllegalStateException` if no auth found.
+
+## Key Classes
+
+| Class | Role |
+|-------|------|
+| `AgentRuntime` | Core agentic loop — calls SDK, dispatches tool use, manages conversation history across turns |
+| `KotlinAgentLauncher` | Launches `AgentRuntime` on a `CoroutineScope`, returns cancellable `LaunchResult` |
+| `AuthProvider` | 5-tier auth resolution, builds `AnthropicClient` |
+| `StreamEmitter` | Translates SDK streaming events to typed `MessageCallback.onMessage()` calls |
+| `PermissionGate` | Suspends coroutine on permission requests; resumes when `PermissionService` resolves |
+| `ToolRegistry` | Registers built-in tools (bash, read, write, edit, glob, grep), dispatches by name |
+| `AgentConfig` | Value object: sessionId, cwd, model, permissionMode, maxThinkingTokens, streaming, attachments, enable1MContext |
+| `ClaudeSDKBridge` | Gutted Java stub — wires `KotlinAgentLauncher`, handles slash commands and history |
+| `ClaudeMessageHandler` | Consumes `MessageCallback` events, maintains streaming state, routes to `CallbackHandler` |
+| `CallbackHandler` | Dispatches to `SessionCallback` (epoch-guarded UI callbacks) |
+| `SessionCallbackFactory` | Creates epoch-guarded `SessionCallback` instances |
+| `PermissionService` | Java side of permission handshake — bridges frontend dialog to `PermissionGate` |
+| `MessageDispatcher` | Routes `type:payload` strings from JCEF to registered `MessageHandler` implementations |
 
 ## Model Selection Flow
 
 ```
-React ModelSelect → sendBridgeEvent('set_model', id)
+React ModelSelect → sendToJava('set_model', id)
   → MessageDispatcher → SettingsHandler.handleSetModel()
     → resolveActualModelName() (checks env overrides)
     → HandlerContext.setCurrentModel() + SessionState.setModel()
     → window.onModelConfirmed() → React
 ```
 
-### Model Defaults
+Default model is `claude-sonnet-4-6` in `ChatInputBox.tsx`, `HandlerContext.java`, and `SessionState.java`.
 
-All three locations default to `claude-sonnet-4-6`:
-- `ChatInputBox.tsx:32`, `ButtonArea.tsx:10`
-- `HandlerContext.java:26`
-- `SessionState.java:23`
+## Parameters Passed to AgentRuntime (via AgentConfig)
 
-### Parameters Passed to ai-bridge
-
-| Parameter | Source |
-|-----------|--------|
-| `message` | User input |
-| `sessionId` | SessionState (empty string if new) |
-| `cwd` | SessionState |
-| `permissionMode` | SessionState |
-| `model` | SessionState |
-| `openedFiles` | EditorContextCollector |
+| Field | Source |
+|-------|--------|
+| `sessionId` | `SessionState` (empty if new) |
+| `cwd` | `SessionState` |
+| `model` | `SessionState` |
+| `permissionMode` | `SessionState` |
+| `maxThinkingTokens` | `SessionState` |
+| `streaming` | `PluginSettingsService` |
+| `openedFiles` | `EditorContextCollector` |
 | `agentPrompt` | Selected agent |
-| `streaming` | PluginSettingsService |
 | `attachments` | Base64-encoded array |
-
-**Not passed**: `maxTokens`, `reasoningEffort` — not configurable via SDK. `maxThinkingTokens` IS passed (as `thinkingBudget` in SDK options).
-
-### SDK query() options (bridge.js lines 336-351)
-
-```javascript
-options = { cwd, permissionMode, model, maxTurns: 100,
-  enableFileCheckpointing: true, includePartialMessages: true,
-  additionalDirectories: [cwd], canUseTool, settingSources, systemPrompt, resume }
-```
-
-## File I/O Charset Issues
-
-### Using UTF-8 (correct)
-
-- `ClaudeSDKBridge.java` — bridge process I/O
-- `DependencyManager.java` — all file ops
-- `HtmlLoader.java` — resource loading
-- `ClaudeHistoryReader.java` — session files
-- `BridgeDirectoryResolver.java` — version files
-
-### Using platform default (broken on non-UTF-8 systems)
-
-- `PluginSettingsService.java:126,141` — plugin config.json
-- `ClaudeSettingsManager.java:42,62,81` — Claude settings.json
-- `AgentManager.java:37,55` — agent JSON
-- `McpServerManager.java:56,174,243,302,322` — MCP server configs
-- `FileExportHandler.java:87` — exported files
-
-## Attachment System
-
-**useAttachmentManagement.ts**: Handles paste, drop, and file input.
-- Clipboard images: `item.type.startsWith('image/')` → base64 via FileReader
-- Clipboard text: plain text insertion
-- Clipboard files: `window.getClipboardFilePath()` (Java-injected)
-- Supported image types: jpeg, png, gif, webp, svg+xml
-
-Already handles image paste from clipboard at the React level. The gap for upstream's clipboard paste feature may be smaller than expected — need to verify if `window.getClipboardFilePath()` is implemented on the Java side.
+| `enable1MContext` | `SessionState` (default false; UI toggle pending) |
 
 ## Token Usage Tracking
 
-- **UsageTracker.java**: Extracts `input_tokens`, `cache_*_tokens`, `output_tokens` from last assistant message, computes % against model context limit, pushes via `window.onUsageUpdate(json)`
-- **ClaudeNotifier/StatusBarWidget**: Shows token info in IDE status bar
-- **SettingsHandler.getModelContextLimit()**: All models = 200K. Supports `[NNNk]`/`[NNNm]` suffix parsing.
-- **Per-message display**: `MessageUsage.tsx` renders `raw.message.usage` as "Xk in (Yk cached) / Zk out" below each assistant message. Hidden during streaming.
+- `UsageTracker.java`: Extracts `input_tokens`, `cache_*_tokens`, `output_tokens` from last assistant message, pushes via `window.onUsageUpdate(json)`.
+- `MessageUsage.tsx`: Renders per-message usage as "Xk in (Yk cached) / Zk out". Hidden during streaming.
+- `SettingsHandler.getModelContextLimit()`: All models = 200K.
 
-## Timeout Config
+## File I/O Charset
 
-`TimeoutConfig.java`:
-- `QUICK_OPERATION_TIMEOUT` = 30s
-- `MESSAGE_TIMEOUT` = 180s (unused)
-- `LONG_OPERATION_TIMEOUT` = 600s (unused)
-- bridge.js: 30s timeout for initial stdin
+UTF-8 enforced on SDK/bridge I/O. Still using platform default (broken on non-UTF-8 systems): `PluginSettingsService`, `ClaudeSettingsManager`, `AgentManager`, `McpServerManager`, `FileExportHandler`.

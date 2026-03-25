@@ -27,6 +27,7 @@ public class SessionState {
 
     private boolean psiContextEnabled = true;
     private int maxThinkingTokens = 0;
+    private boolean enable1MContext = false;
 
     public String getSessionId() {
         return sessionId;
@@ -146,6 +147,14 @@ public class SessionState {
 
     public void setMaxThinkingTokens(int maxThinkingTokens) {
         this.maxThinkingTokens = maxThinkingTokens;
+    }
+
+    public boolean isEnable1MContext() {
+        return enable1MContext;
+    }
+
+    public void setEnable1MContext(boolean enable1MContext) {
+        this.enable1MContext = enable1MContext;
     }
 
     public void addMessage(ClaudeSession.Message message) {

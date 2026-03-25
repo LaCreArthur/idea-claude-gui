@@ -1,6 +1,5 @@
 package com.github.claudecodegui.util;
 
-import com.github.claudecodegui.model.PathCheckResult;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -50,39 +49,6 @@ public class PathUtils {
             return false;
         }
         return path.startsWith("\\\\") || path.startsWith("//");
-    }
-
-    public static PathCheckResult checkPathLength(String path) {
-        if (path == null || path.isEmpty()) {
-            return PathCheckResult.ok();
-        }
-
-        if (!PlatformUtils.isWindows()) {
-            return PathCheckResult.ok();
-        }
-
-        int pathLength = path.length();
-
-        if (pathLength >= WINDOWS_MAX_PATH) {
-            return PathCheckResult.error(
-                "Project path too long (" + pathLength + " characters)\n" +
-                "Windows limits path length to 260 characters.\n" +
-                "Suggestion: Move project to a shorter path, e.g., D:\\projects\\",
-                path,
-                pathLength
-            );
-        }
-
-        if (pathLength >= SAFE_PATH_LENGTH) {
-            return PathCheckResult.warning(
-                "Project path is long (" + pathLength + " characters)\n" +
-                "May exceed Windows path limit when creating deeply nested files.",
-                path,
-                pathLength
-            );
-        }
-
-        return PathCheckResult.ok(path, pathLength);
     }
 
     public static List<String> getTempPaths() {

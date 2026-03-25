@@ -387,109 +387,42 @@ public class HistoryHandler extends BaseMessageHandler {
     }
 
     /**
-     * Call Node.js favorites-service
+     * Favorites service stub — Node.js bridge removed.
+     * Returns empty results; favorites feature deferred to future Kotlin implementation.
      */
     private String callNodeJsFavoritesService(String functionName, String sessionId) throws Exception {
-        String bridgePath = context.getClaudeSDKBridge().getSdkTestDir().getAbsolutePath();
-        String nodePath = context.getClaudeSDKBridge().getNodeExecutable();
-
-        String nodeScript = String.format(
-            "const { %s } = require('%s/services/favorites-service.cjs'); " +
-            "const result = %s('%s'); " +
-            "console.log(JSON.stringify(result));",
-            functionName,
-            bridgePath.replace("\\", "\\\\"),
-            functionName,
-            sessionId
-        );
-
-        return executeNodeScript(nodePath, nodeScript);
+        LOG.info("[HistoryHandler] Favorites service stub: " + functionName + " (Node.js removed)");
+        if ("loadFavorites".equals(functionName)) {
+            return "[]";
+        }
+        return "{\"success\": true}";
     }
 
     /**
-     * Call Node.js session-titles-service (no params, for loadTitles)
+     * Titles service stub (no params) — Node.js bridge removed.
      */
     private String callNodeJsTitlesService(String functionName, String dummy1, String dummy2) throws Exception {
-        String bridgePath = context.getClaudeSDKBridge().getSdkTestDir().getAbsolutePath();
-        String nodePath = context.getClaudeSDKBridge().getNodeExecutable();
-
-        String nodeScript = String.format(
-            "const { %s } = require('%s/services/session-titles-service.cjs'); " +
-            "const result = %s(); " +
-            "console.log(JSON.stringify(result));",
-            functionName,
-            bridgePath.replace("\\", "\\\\"),
-            functionName
-        );
-
-        return executeNodeScript(nodePath, nodeScript);
+        LOG.info("[HistoryHandler] Titles service stub: " + functionName + " (Node.js removed)");
+        if ("loadTitles".equals(functionName)) {
+            return "{}";
+        }
+        return "{}";
     }
 
     /**
-     * Call Node.js session-titles-service (with params, for updateTitle)
+     * Titles service stub (with params) — Node.js bridge removed.
      */
     private String callNodeJsTitlesServiceWithParams(String functionName, String sessionId, String customTitle) throws Exception {
-        String bridgePath = context.getClaudeSDKBridge().getSdkTestDir().getAbsolutePath();
-        String nodePath = context.getClaudeSDKBridge().getNodeExecutable();
-        String escapedTitle = customTitle.replace("\\", "\\\\").replace("'", "\\'");
-
-        String nodeScript = String.format(
-            "const { %s } = require('%s/services/session-titles-service.cjs'); " +
-            "const result = %s('%s', '%s'); " +
-            "console.log(JSON.stringify(result));",
-            functionName,
-            bridgePath.replace("\\", "\\\\"),
-            functionName,
-            sessionId,
-            escapedTitle
-        );
-
-        return executeNodeScript(nodePath, nodeScript);
+        LOG.info("[HistoryHandler] Titles service stub: " + functionName + " (Node.js removed)");
+        return "{\"success\": true}";
     }
 
     /**
-     * Delete session title
+     * Delete title stub — Node.js bridge removed.
      */
     private String callNodeJsDeleteTitle(String sessionId) throws Exception {
-        String bridgePath = context.getClaudeSDKBridge().getSdkTestDir().getAbsolutePath();
-        String nodePath = context.getClaudeSDKBridge().getNodeExecutable();
-
-        String nodeScript = String.format(
-            "const { deleteTitle } = require('%s/services/session-titles-service.cjs'); " +
-            "const result = deleteTitle('%s'); " +
-            "console.log(JSON.stringify({ success: result }));",
-            bridgePath.replace("\\", "\\\\"),
-            sessionId
-        );
-
-        return executeNodeScript(nodePath, nodeScript);
-    }
-
-    /**
-     * Execute Node.js script and return last line of output
-     */
-    private String executeNodeScript(String nodePath, String nodeScript) throws Exception {
-        ProcessBuilder pb = new ProcessBuilder(nodePath, "-e", nodeScript);
-        pb.redirectErrorStream(true);
-
-        Process process = pb.start();
-
-        StringBuilder output = new StringBuilder();
-        try (java.io.BufferedReader reader = new java.io.BufferedReader(
-                new java.io.InputStreamReader(process.getInputStream()))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                output.append(line).append("\n");
-            }
-        }
-
-        int exitCode = process.waitFor();
-        if (exitCode != 0) {
-            throw new Exception("Node.js process exited with code " + exitCode + ": " + output);
-        }
-
-        String[] lines = output.toString().split("\n");
-        return lines.length > 0 ? lines[lines.length - 1] : "{}";
+        LOG.info("[HistoryHandler] Delete title stub (Node.js removed)");
+        return "{\"success\": true}";
     }
 
     /**

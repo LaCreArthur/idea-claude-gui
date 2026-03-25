@@ -48,10 +48,7 @@
                     icon="/icons/cc-gui-icon.svg"
                     canCloseContents="true"/>
 
-        <!-- Pre-extract AI Bridge on project open to avoid EDT freeze -->
-        <postStartupActivity implementation="com.github.claudecodegui.startup.BridgePreloader"/>
-
-        <!-- Cleanup old ai-bridge cache when plugin version changes -->
+        <!-- Detect plugin version changes -->
         <postStartupActivity implementation="com.github.claudecodegui.startup.PluginUpdateListener"/>
 
         <!-- StatusBar widget for task notification -->

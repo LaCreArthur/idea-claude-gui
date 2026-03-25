@@ -1,6 +1,6 @@
 package com.github.claudecodegui.settings;
 
-import com.github.claudecodegui.bridge.NodeDetector;
+
 import com.github.claudecodegui.model.DeleteResult;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
@@ -374,36 +374,6 @@ public class ProviderManager {
             return;
         }
         claudeSettingsManager.applyProviderToClaudeSettings(activeProvider);
-    }
-
-    private String getAiBridgePath() throws IOException {
-        com.github.claudecodegui.bridge.BridgeDirectoryResolver resolver =
-                com.github.claudecodegui.startup.BridgePreloader.getSharedResolver();
-
-        File aiBridgeDir = resolver.findSdkDir();
-
-        if (aiBridgeDir == null) {
-            if (resolver.isExtractionInProgress()) {
-                LOG.info("[ProviderManager] ai-bridge extraction in progress, waiting...");
-                try {
-                    Boolean ready = resolver.getExtractionFuture().get(60, java.util.concurrent.TimeUnit.SECONDS);
-                    if (ready != null && ready) {
-                        aiBridgeDir = resolver.getSdkDir();
-                    }
-                } catch (java.util.concurrent.TimeoutException e) {
-                    throw new IOException("ai-bridge extraction timed out, please try again later", e);
-                } catch (Exception e) {
-                    throw new IOException("Error waiting for ai-bridge extraction: " + e.getMessage(), e);
-                }
-            }
-        }
-
-        if (aiBridgeDir == null || !aiBridgeDir.exists()) {
-            throw new IOException("Cannot find ai-bridge directory, please check plugin installation");
-        }
-
-        LOG.info("[ProviderManager] ai-bridge directory: " + aiBridgeDir.getAbsolutePath());
-        return aiBridgeDir.getAbsolutePath();
     }
 
     private JsonObject extractEnvConfig(JsonObject provider) {

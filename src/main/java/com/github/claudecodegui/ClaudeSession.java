@@ -5,19 +5,24 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.intellij.openapi.diagnostic.Logger;
+import com.github.claudecodegui.agent.AgentConfig;
+import com.github.claudecodegui.agent.AgentRuntime;
+import com.github.claudecodegui.agent.AuthProvider;
+import com.github.claudecodegui.agent.KotlinAgentLauncher;
+import com.github.claudecodegui.agent.PermissionGate;
+import com.github.claudecodegui.agent.StreamEmitter;
+import com.github.claudecodegui.agent.ToolRegistry;
 import com.github.claudecodegui.permission.PermissionManager;
 import com.github.claudecodegui.permission.PermissionRequest;
 import com.github.claudecodegui.permission.PermissionService;
 import com.github.claudecodegui.provider.claude.ClaudeSDKBridge;
 import com.github.claudecodegui.session.ClaudeMessageHandler;
-import com.github.claudecodegui.util.EditorFileUtils;
-import com.intellij.openapi.application.ReadAction;
+import com.anthropic.client.AnthropicClient;
+import kotlinx.coroutines.CoroutineScope;
 import com.intellij.openapi.project.Project;
-import com.intellij.util.concurrency.AppExecutorUtil;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -51,6 +56,12 @@ public class ClaudeSession {
 
     // Permission management
     private final PermissionManager permissionManager = new PermissionManager();
+
+    // Kotlin agent runtime — client is cached for connection pooling; scope is per-query for abort.
+    // Cached alongside the 1M-context flag: if the flag changes, the client is recreated.
+    @Nullable private volatile AnthropicClient kotlinAgentClient = null;
+    private volatile boolean kotlinAgentClientHas1MContext = false;
+    @Nullable private volatile CoroutineScope activeKotlinAgentScope = null;
 
     /**
      * Message class
@@ -446,58 +457,114 @@ public class ClaudeSession {
         JsonObject openedFilesJson,
         String externalAgentPrompt
     ) {
-        // Always use bridge.js protocol - it now handles attachments
-        LOG.info("[ClaudeSession] Using bridge.js protocol" +
+        LOG.info("[ClaudeSession] Using Kotlin agent runtime" +
             (attachments != null && !attachments.isEmpty() ? " (with attachments)" : ""));
-        return sendMessageWithBridge(channelId, input, attachments, openedFilesJson, externalAgentPrompt);
+        return sendMessageWithKotlinAgent(channelId, input, attachments, openedFilesJson, externalAgentPrompt);
     }
 
     /**
-     * Check if the new bridge.js protocol should be used.
-     * Can be controlled via settings or feature flag.
-     */
-    private boolean shouldUseNewBridge() {
-        // New bridge.js protocol is now the default
-        // Falls back to legacy only when attachments are present
-        return true;
-    }
-
-    /**
-     * Send message using new bridge.js protocol (stdin/stdout IPC).
-     * This method handles permissions directly without file-based polling.
+     * Send message using the Kotlin agent runtime (direct Anthropic SDK).
      *
-     * @param channelId           Channel ID
+     * This is the sole execution path (Node.js bridge removed in Phase 2). This method:
+     *  1. Lazily creates and caches an {@link AnthropicClient} per session.
+     *  2. Creates per-query {@link ToolRegistry}, {@link PermissionGate}, and {@link StreamEmitter}.
+     *  3. Launches the {@link AgentRuntime#execute} coroutine on Dispatchers.IO.
+     *  4. Stores the {@link CoroutineScope} so {@link #interrupt()} can cancel it.
+     *
+     * @param channelId           Channel ID (not used by the Kotlin path but kept for signature symmetry)
      * @param input               User message
      * @param attachments         List of attachments (images, etc.)
-     * @param openedFilesJson     Open files context
+     * @param openedFilesJson     Open files context (injected as openedFiles list in AgentConfig)
      * @param externalAgentPrompt Agent prompt (optional)
-     * @return CompletableFuture that completes when message is processed
+     * @return CompletableFuture that completes when the agent run finishes
      */
-    private CompletableFuture<Void> sendMessageWithBridge(
+    private CompletableFuture<Void> sendMessageWithKotlinAgent(
         String channelId,
         String input,
         List<Attachment> attachments,
         JsonObject openedFilesJson,
         String externalAgentPrompt
     ) {
+        // Lazily create and cache the Anthropic client (connection pooling).
+        // Recreate if the 1M-context setting has changed since last creation.
+        boolean want1MContext = state.isEnable1MContext();
+        if (kotlinAgentClient == null || kotlinAgentClientHas1MContext != want1MContext) {
+            synchronized (this) {
+                if (kotlinAgentClient == null || kotlinAgentClientHas1MContext != want1MContext) {
+                    try {
+                        kotlinAgentClient = new AuthProvider().createClient(want1MContext);
+                        kotlinAgentClientHas1MContext = want1MContext;
+                        LOG.info("[KotlinAgent] Anthropic client created (1MContext=" + want1MContext + ")");
+                    } catch (Exception e) {
+                        LOG.error("[KotlinAgent] Failed to create Anthropic client: " + e.getMessage(), e);
+                        return CompletableFuture.failedFuture(e);
+                    }
+                }
+            }
+        }
+
+        // Build the list of currently open file paths from the JSON context blob.
+        List<String> openedFilesList = new java.util.ArrayList<>();
+        if (openedFilesJson != null && openedFilesJson.has("files") && openedFilesJson.get("files").isJsonArray()) {
+            for (com.google.gson.JsonElement el : openedFilesJson.getAsJsonArray("files")) {
+                if (el.isJsonPrimitive()) {
+                    openedFilesList.add(el.getAsString());
+                }
+            }
+        }
+
+        // Convert Java attachments → Kotlin agent Attachments.
+        List<com.github.claudecodegui.agent.Attachment> agentAttachments = new java.util.ArrayList<>();
+        if (attachments != null) {
+            for (Attachment att : attachments) {
+                if (att != null && att.fileName != null && att.mediaType != null && att.data != null) {
+                    agentAttachments.add(new com.github.claudecodegui.agent.Attachment(
+                        att.fileName, att.mediaType, att.data
+                    ));
+                }
+            }
+        }
+
         String agentPrompt = externalAgentPrompt != null ? externalAgentPrompt : getAgentPrompt();
 
-        // Get permission service for direct permission handling
+        // Read streaming configuration (mirrors sendMessageWithBridge).
+        boolean streaming = true;
+        try {
+            String projectPath = project.getBasePath();
+            if (projectPath != null) {
+                PluginSettingsService settingsService = new PluginSettingsService();
+                Boolean streamingEnabled = settingsService.getStreamingEnabled(projectPath);
+                if (streamingEnabled != null) {
+                    streaming = streamingEnabled;
+                }
+            }
+        } catch (Exception e) {
+            LOG.warn("[KotlinAgent] Failed to read streaming config: " + e.getMessage());
+        }
+
+        // Build AgentConfig from the current SessionState.
+        String cwd = state.getCwd();
+        if (cwd == null || cwd.isEmpty()) {
+            cwd = System.getProperty("user.home", ".");
+        }
+        AgentConfig config = new AgentConfig(
+            state.getSessionId(),
+            cwd,
+            state.getModel() != null ? state.getModel() : "claude-sonnet-4-6",
+            state.getPermissionMode() != null ? state.getPermissionMode() : "default",
+            state.getMaxThinkingTokens(),
+            streaming,
+            openedFilesList,
+            agentPrompt,
+            agentAttachments,
+            100,     // maxTurns
+            16384,   // maxOutputTokens
+            state.isEnable1MContext()
+        );
+
+        // Build PermissionGate, StreamEmitter, ToolRegistry, and AgentRuntime.
         PermissionService permissionService = project.getService(PermissionService.class);
-
-        // Create permission callback
-        ClaudeSDKBridge.PermissionCallback permissionCallback = (requestId, toolName, toolInput) -> {
-            LOG.info("[Bridge] Permission request: " + toolName);
-            return permissionService.requestPermissionDirect(toolName, toolInput);
-        };
-
-        // Create AskUserQuestion callback
-        ClaudeSDKBridge.AskUserQuestionCallback askUserCallback = (requestId, questions) -> {
-            LOG.info("[Bridge] AskUserQuestion request");
-            return permissionService.requestAskUserQuestionDirect(questions);
-        };
-
-        // Create message handler for streaming callbacks
+        PermissionGate permissionGate = new PermissionGate(permissionService, config.getPermissionMode(), gson);
         ClaudeMessageHandler handler = new ClaudeMessageHandler(
             project,
             state,
@@ -506,35 +573,21 @@ public class ClaudeSession {
             messageMerger,
             gson
         );
+        StreamEmitter emitter = new StreamEmitter(handler, gson);
+        ToolRegistry toolRegistry = new ToolRegistry(cwd);
+        AgentRuntime runtime = new AgentRuntime(kotlinAgentClient, toolRegistry, permissionGate, emitter);
 
-        // Read streaming configuration
-        Boolean streaming = null;
-        try {
-            String projectPath = project.getBasePath();
-            if (projectPath != null) {
-                PluginSettingsService settingsService = new PluginSettingsService();
-                streaming = settingsService.getStreamingEnabled(projectPath);
+        // Launch via the Java-friendly Kotlin helper. Stores scope for abort support.
+        KotlinAgentLauncher.LaunchResult launch = KotlinAgentLauncher.launch(runtime, config, input);
+        activeKotlinAgentScope = launch.getScope();
+
+        // When the future completes, clear the stored scope.
+        return launch.getFuture().whenComplete((v, cause) -> {
+            activeKotlinAgentScope = null;
+            if (cause != null) {
+                LOG.error("[KotlinAgent] Session failed: " + cause.getMessage(), cause);
             }
-        } catch (Exception e) {
-            LOG.warn("[Streaming] Failed to read streaming config: " + e.getMessage());
-        }
-
-        return claudeSDKBridge.sendMessageWithBridge(
-            channelId,
-            input,
-            state.getSessionId(),
-            state.getCwd(),
-            attachments,
-            state.getPermissionMode(),
-            state.getModel(),
-            openedFilesJson,
-            agentPrompt,
-            streaming,
-            state.getMaxThinkingTokens(),
-            permissionCallback,
-            askUserCallback,
-            handler
-        ).thenApply(result -> null);
+        }).thenApply(v -> (Void) null);
     }
 
     /**
@@ -568,24 +621,24 @@ public class ClaudeSession {
     }
 
     /**
-     * Interrupt current execution
+     * Interrupt current execution.
+     *
+     * When the Kotlin agent is active, cancels its coroutine scope instead of
+     * sending an abort to the bridge daemon. The bridge path is unchanged.
      */
     public CompletableFuture<Void> interrupt() {
-        if (state.getChannelId() == null) {
-            return CompletableFuture.completedFuture(null);
+        // Cancel the active Kotlin agent coroutine scope.
+        CoroutineScope kotlinScope = activeKotlinAgentScope;
+        if (kotlinScope != null) {
+            LOG.info("[KotlinAgent] Cancelling active coroutine scope");
+            KotlinAgentLauncher.cancel(kotlinScope);
+            activeKotlinAgentScope = null;
         }
 
-        return CompletableFuture.runAsync(() -> {
-            try {
-                claudeSDKBridge.interruptChannel(state.getChannelId());
-                state.setError(null);  // Clear previous error state
-                state.setBusy(false);
-                updateState();
-            } catch (Exception e) {
-                state.setError(e.getMessage());
-                updateState();
-            }
-        });
+        state.setError(null);
+        state.setBusy(false);
+        updateState();
+        return CompletableFuture.completedFuture(null);
     }
 
     /**

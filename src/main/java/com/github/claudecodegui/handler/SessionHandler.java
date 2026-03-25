@@ -1,7 +1,6 @@
 package com.github.claudecodegui.handler;
 
 import com.github.claudecodegui.ClaudeSession;
-import com.github.claudecodegui.bridge.NodeDetector;
 import com.github.claudecodegui.notifications.ClaudeNotifier;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
@@ -55,22 +54,6 @@ public class SessionHandler extends BaseMessageHandler {
     }
 
     private void handleSendMessage(String content) {
-        String nodeVersion = context.getClaudeSDKBridge().getCachedNodeVersion();
-        if (nodeVersion == null) {
-            ApplicationManager.getApplication().invokeLater(() -> {
-                callJavaScript("addErrorMessage", escapeJs("No valid Node.js version detected. Please configure in Settings or reopen the tool window."));
-            });
-            return;
-        }
-        if (!NodeDetector.isVersionSupported(nodeVersion)) {
-            int minVersion = NodeDetector.MIN_NODE_MAJOR_VERSION;
-            ApplicationManager.getApplication().invokeLater(() -> {
-                callJavaScript("addErrorMessage", escapeJs(
-                    "Node.js version too low (" + nodeVersion + "). Plugin requires v" + minVersion + " or higher. Please configure the correct Node.js path in Settings."));
-            });
-            return;
-        }
-
         String prompt;
         String agentPrompt = null;
         try {
@@ -173,22 +156,6 @@ public class SessionHandler extends BaseMessageHandler {
     }
 
     private void sendMessageWithAttachments(String prompt, List<ClaudeSession.Attachment> attachments, String agentPrompt) {
-        String nodeVersion = context.getClaudeSDKBridge().getCachedNodeVersion();
-        if (nodeVersion == null) {
-            ApplicationManager.getApplication().invokeLater(() -> {
-                callJavaScript("addErrorMessage", escapeJs("No valid Node.js version detected. Please configure in Settings or reopen the tool window."));
-            });
-            return;
-        }
-        if (!NodeDetector.isVersionSupported(nodeVersion)) {
-            int minVersion = NodeDetector.MIN_NODE_MAJOR_VERSION;
-            ApplicationManager.getApplication().invokeLater(() -> {
-                callJavaScript("addErrorMessage", escapeJs(
-                    "Node.js version too low (" + nodeVersion + "). Plugin requires v" + minVersion + " or higher. Please configure the correct Node.js path in Settings."));
-            });
-            return;
-        }
-
         final String finalAgentPrompt = agentPrompt;
 
         CompletableFuture.runAsync(() -> {

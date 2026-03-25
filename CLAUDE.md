@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project: idea-claude-gui
 
-IntelliJ IDEA plugin providing a GUI for Claude Code. React/TypeScript webview + Java plugin + Node.js ai-bridge.
+IntelliJ IDEA plugin providing a GUI for Claude Code. React/TypeScript webview + Java plugin + Kotlin agent runtime.
 
 ## Design Philosophy
 
@@ -17,15 +17,15 @@ See [docs/DESIGN.md](docs/DESIGN.md) for full design principles and reference gu
 ## Architecture
 
 ```
-webview/          # React frontend (Vite + TypeScript + Ant Design)
-ai-bridge/        # Node.js bridge to Claude Agent SDK (stdin/stdout JSON protocol)
-src/main/java/    # IntelliJ plugin (Java)
+webview/              # React frontend (Vite + TypeScript + Ant Design)
+src/main/java/        # IntelliJ plugin (Java)
+src/main/kotlin/      # Kotlin agent runtime (sole execution path)
 ```
 
 ### Communication Flow
 
 ```
-React Webview <--JCEF bridge--> Java Plugin <--stdin/stdout JSON--> ai-bridge <--SDK--> Claude API
+React Webview <--JCEF bridge--> Java Plugin (Kotlin agent) <--Anthropic SDK--> Claude API
      |                              |
      |-- sendToJava('type', data)   |-- MessageDispatcher routes to handlers
      |                              |-- PermissionService handles tool approvals
@@ -34,8 +34,8 @@ React Webview <--JCEF bridge--> Java Plugin <--stdin/stdout JSON--> ai-bridge <-
 **Key patterns:**
 - Webview sends `type:jsonPayload` strings via `window.sendToJava()`
 - Java `MessageDispatcher` routes to registered `MessageHandler` implementations
-- ai-bridge uses JSON line protocol: one JSON object per line on stdin/stdout
-- Permission requests block in ai-bridge until Java responds
+- Kotlin `AgentRuntime` calls the Anthropic SDK directly (no subprocess)
+- Permission requests suspend in `PermissionGate` until Java/frontend responds
 
 ## Commands
 
@@ -45,8 +45,7 @@ React Webview <--JCEF bridge--> Java Plugin <--stdin/stdout JSON--> ai-bridge <-
 
 # Component-specific tests
 npm test --prefix webview           # React/TypeScript tests
-npm test --prefix ai-bridge         # Node.js tests
-./gradlew test                      # Java tests
+./gradlew test                      # Java/Kotlin tests
 
 # Single test file
 npm test --prefix webview -- src/components/ChatInputBox/ChatInputBox.test.tsx
@@ -78,8 +77,7 @@ For non-trivial features, write failing tests first:
 
 ### What to Test
 - **React components**: User interactions, state changes, bridge calls
-- **ai-bridge**: Message handling, API responses
-- **Java handlers**: Message routing, file operations
+- **Java/Kotlin handlers**: Message routing, file operations, agent lifecycle
 
 ### Test Patterns
 
@@ -113,8 +111,13 @@ it('calls sendToJava when clicked', async () => {
 - `webview/src/components/MessageItem/MessageUsage.tsx` - Per-message token usage badge
 - `webview/src/components/PermissionDialog.tsx` - Tool permission UI
 
-**ai-bridge (Node.js):**
-- `ai-bridge/bridge.js` - Claude SDK wrapper, JSON line protocol, streaming lifecycle
+**Kotlin Agent Runtime:**
+- `src/main/kotlin/.../agent/AgentRuntime.kt` - Core agentic loop: calls Anthropic SDK, handles tool use, manages conversation history
+- `src/main/kotlin/.../agent/KotlinAgentLauncher.kt` - Launches `AgentRuntime` on a coroutine scope, returns cancellable `LaunchResult`
+- `src/main/kotlin/.../agent/AuthProvider.kt` - 5-tier auth resolution (apiKeyHelper → settings.json token → settings.json key → env vars → Keychain)
+- `src/main/kotlin/.../agent/StreamEmitter.kt` - Translates SDK streaming events to `MessageCallback` calls consumed by Java layer
+- `src/main/kotlin/.../agent/PermissionGate.kt` - Suspends coroutine on tool permission requests until `PermissionService` resolves
+- `src/main/kotlin/.../agent/ToolRegistry.kt` - Registers built-in tools (bash, read, write, edit, glob, grep) and dispatches tool calls
 
 **Java Plugin:**
 - `src/main/java/.../ClaudeSDKToolWindow.java` - Plugin entry, JCEF webview setup
@@ -127,13 +130,12 @@ it('calls sendToJava when clicked', async () => {
 - `src/main/java/.../session/CallbackHandler.java` - Callback dispatch to UI layer
 - `src/main/java/.../ui/SessionCallbackFactory.java` - Session callback creation with epoch guards
 - `src/main/java/.../permission/PermissionService.java` - Tool approval logic
-- `src/main/java/.../provider/claude/ClaudeSDKBridge.java` - Spawns ai-bridge process
+- `src/main/java/.../provider/claude/ClaudeSDKBridge.java` - Gutted stub — slash commands, history, interrupt (Kotlin agent is sole execution path)
 - `src/main/java/.../provider/claude/ProcessManager.java` - Process registry, cleanup
-- `src/main/java/.../bridge/EnvironmentConfigurator.java` - Env vars for spawned processes
 - `src/main/java/.../settings/WorkingDirectoryManager.java` - CWD resolution
 
 **Architecture docs:**
-- `docs/CODEBASE_MAP.md` - Process spawning paths, lifecycle, env vars, session architecture, streaming
+- `docs/CODEBASE_MAP.md` - Session lifecycle, streaming, permission flow, authentication
 - `docs/UPSTREAM_DELTA.md` - Upstream feature analysis and port candidates
 
 ## Release Checklist

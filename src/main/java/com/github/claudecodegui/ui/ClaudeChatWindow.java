@@ -6,6 +6,7 @@ import com.github.claudecodegui.SessionLoadService;
 import com.github.claudecodegui.PluginSettingsService;
 import com.github.claudecodegui.provider.claude.ClaudeSDKBridge;
 import com.github.claudecodegui.provider.common.MessageCallback;
+
 import com.github.claudecodegui.handler.*;
 import com.github.claudecodegui.permission.PermissionRequest;
 import com.github.claudecodegui.permission.PermissionService;
@@ -80,7 +81,6 @@ public class ClaudeChatWindow {
         initializeQuickFixHandler();
         initializeUsageTracker();
         initializeSession();
-        settingsLoader.loadNodePathFromSettings();
         syncActiveProvider();
         setupPermissionService();
         initializeHandlers();
@@ -89,8 +89,6 @@ public class ClaudeChatWindow {
         initializeEditorContextManager();
         setupSessionCallbacks();
         initializeSessionInfo();
-        overrideBridgePathIfAvailable();
-        preWarmDaemon();
 
         createUIComponents();
         registerSessionLoadListener();
@@ -164,34 +162,6 @@ public class ClaudeChatWindow {
             }
         });
     }
-
-    private void overrideBridgePathIfAvailable() {
-            try {
-                String basePath = project.getBasePath();
-                if (basePath == null) return;
-                File bridgeDir = new File(basePath, "ai-bridge");
-                File channelManager = new File(bridgeDir, "bridge.js");
-                if (bridgeDir.exists() && bridgeDir.isDirectory() && channelManager.exists()) {
-                    claudeSDKBridge.setSdkTestDir(bridgeDir.getAbsolutePath());
-                    LOG.info("Overriding ai-bridge path to project directory: " + bridgeDir.getAbsolutePath());
-                } else {
-                    LOG.info("Project ai-bridge not found, using default resolver");
-                }
-            } catch (Exception e) {
-                LOG.warn("Failed to override bridge path: " + e.getMessage());
-            }
-        }
-
-        private void preWarmDaemon() {
-            CompletableFuture.runAsync(() -> {
-                try {
-                    claudeSDKBridge.getOrCreateDaemon();
-                    LOG.info("[Daemon] Pre-warm complete");
-                } catch (Exception e) {
-                    LOG.info("[Daemon] Pre-warm failed (will retry on first message): " + e.getMessage());
-                }
-            });
-        }
 
         private void initializeSession() {
             this.session = new ClaudeSession(project, claudeSDKBridge);
@@ -407,116 +377,31 @@ public class ClaudeChatWindow {
                 @Override
                 public void onInitializationFailed(WebViewInitializer.FailureReason reason, String details) {
                     switch (reason) {
-                        case NODE_NOT_FOUND:
-                            showErrorPanel();
-                            break;
-                        case NODE_VERSION_UNSUPPORTED:
-                            showVersionErrorPanel(details);
-                            break;
-                        case INVALID_NODE_PATH:
-                            String[] parts = details != null ? details.split("\\|", 2) : new String[]{"", null};
-                            showInvalidNodePathPanel(parts[0], parts.length > 1 ? parts[1] : null);
-                            break;
-                        case BRIDGE_ERROR:
-                            showBridgeErrorPanel();
-                            break;
                         case JCEF_NOT_SUPPORTED:
                             showJcefNotSupportedPanel();
                             break;
                         case GENERAL_ERROR:
                         default:
-                            showErrorPanel();
+                            showJcefNotSupportedPanel();
                             break;
                     }
                 }
 
                 @Override
                 public void onExtractionInProgress() {
-                    showLoadingPanel();
+                    // No longer applicable — Kotlin agent doesn't need extraction
                 }
 
                 @Override
                 public void onExtractionComplete() {
-                    reinitializeAfterExtraction();
+                    // No longer applicable
                 }
             });
-        }
-
-        private void showErrorPanel() {
-            JPanel errorPanel = ErrorPanelManager.buildNodeNotFoundPanel(
-                claudeSDKBridge.getNodeExecutable(),
-                this::handleNodePathSave
-            );
-            mainPanel.add(errorPanel, BorderLayout.CENTER);
-        }
-
-        private void showVersionErrorPanel(String currentVersion) {
-            JPanel errorPanel = ErrorPanelManager.buildVersionErrorPanel(
-                currentVersion,
-                claudeSDKBridge.getNodeExecutable(),
-                this::handleNodePathSave
-            );
-            mainPanel.add(errorPanel, BorderLayout.CENTER);
-        }
-
-        private void showInvalidNodePathPanel(String path, String errMsg) {
-            JPanel errorPanel = ErrorPanelManager.buildInvalidNodePathPanel(
-                path,
-                errMsg,
-                this::handleNodePathSave
-            );
-            mainPanel.add(errorPanel, BorderLayout.CENTER);
-        }
-
-        private void showBridgeErrorPanel() {
-            JPanel errorPanel = ErrorPanelManager.buildBridgeErrorPanel(
-                claudeSDKBridge.getNodeExecutable(),
-                claudeSDKBridge.getCachedNodeVersion(),
-                this::handleNodePathSave
-            );
-            mainPanel.add(errorPanel, BorderLayout.CENTER);
         }
 
         private void showJcefNotSupportedPanel() {
             JPanel errorPanel = ErrorPanelManager.buildJcefNotSupportedPanel();
             mainPanel.add(errorPanel, BorderLayout.CENTER);
-        }
-
-        private void showLoadingPanel() {
-            JPanel loadingPanel = ErrorPanelManager.buildLoadingPanel();
-            mainPanel.add(loadingPanel, BorderLayout.CENTER);
-        }
-
-        private void reinitializeAfterExtraction() {
-            ApplicationManager.getApplication().invokeLater(() -> {
-                LOG.info("[ClaudeSDKToolWindow] Bridge extraction complete, reinitializing UI...");
-                mainPanel.removeAll();
-                createUIComponents();
-                mainPanel.revalidate();
-                mainPanel.repaint();
-            });
-        }
-
-        private void handleNodePathSave(String manualPath) {
-            try {
-                if (manualPath == null || manualPath.isEmpty()) {
-                    settingsLoader.clearNodePath();
-                } else {
-                    settingsLoader.saveNodePath(manualPath);
-                }
-
-                ApplicationManager.getApplication().invokeLater(() -> {
-                    mainPanel.removeAll();
-                    createUIComponents();
-                    mainPanel.revalidate();
-                    mainPanel.repaint();
-                });
-
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(mainPanel,
-                    "Error saving or applying Node.js path: " + ex.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
-            }
         }
 
         private void handleJavaScriptMessage(String message) {
@@ -849,11 +734,6 @@ public class ClaudeChatWindow {
 
             try {
                 if (claudeSDKBridge != null) {
-                    claudeSDKBridge.shutdownDaemon();
-                    int activeCount = claudeSDKBridge.getActiveProcessCount();
-                    if (activeCount > 0) {
-                        LOG.info("Cleaning up " + activeCount + " active Claude processes...");
-                    }
                     claudeSDKBridge.cleanupAllProcesses();
                 }
             } catch (Exception e) {

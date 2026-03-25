@@ -1,14 +1,9 @@
 package com.github.claudecodegui.ui;
 
-import com.github.claudecodegui.bridge.BridgeDirectoryResolver;
-import com.github.claudecodegui.bridge.NodeDetector;
-import com.github.claudecodegui.model.NodeDetectionResult;
 import com.github.claudecodegui.provider.claude.ClaudeSDKBridge;
-import com.github.claudecodegui.startup.BridgePreloader;
 import com.github.claudecodegui.util.FontConfigService;
 import com.github.claudecodegui.util.HtmlLoader;
 import com.github.claudecodegui.util.JBCefBrowserFactory;
-import com.intellij.ide.util.PropertiesComponent;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.ui.jcef.JBCefBrowser;
@@ -37,7 +32,6 @@ import java.util.function.Consumer;
  */
 public class WebViewInitializer {
     private static final Logger LOG = Logger.getInstance(WebViewInitializer.class);
-    private static final String NODE_PATH_PROPERTY_KEY = "claude.code.node.path";
 
     /**
      * Callback interface for WebView initialization events.
@@ -53,10 +47,6 @@ public class WebViewInitializer {
      * Reasons why initialization might fail.
      */
     public enum FailureReason {
-        NODE_NOT_FOUND,
-        NODE_VERSION_UNSUPPORTED,
-        INVALID_NODE_PATH,
-        BRIDGE_ERROR,
         JCEF_NOT_SUPPORTED,
         GENERAL_ERROR
     }
@@ -81,96 +71,10 @@ public class WebViewInitializer {
 
     /**
      * Initialize the WebView browser component.
-     * This handles all the complex initialization logic including:
-     * - Bridge extraction checking
-     * - Node.js path validation
-     * - JCEF browser creation
-     * - JavaScript bridge setup
-     * - Load handler configuration
-     *
-     * @param callback Callback for initialization events
-     * @return The created JBCefBrowser, or null if initialization is deferred or failed
+     * With the Kotlin agent runtime, no Node.js or bridge checks are needed.
+     * Only JCEF availability matters.
      */
     public JBCefBrowser initialize(InitCallback callback) {
-        ClaudeSDKBridge claudeSDKBridge = deps.getClaudeSDKBridge();
-        BridgeDirectoryResolver sharedResolver = BridgePreloader.getSharedResolver();
-
-        // Check if bridge extraction is in progress (non-blocking check)
-        if (sharedResolver.isExtractionInProgress()) {
-            LOG.info("[WebViewInitializer] Bridge extraction in progress, showing loading panel...");
-            callback.onExtractionInProgress();
-
-            // Register async callback to reinitialize when extraction completes
-            sharedResolver.getExtractionFuture().thenAcceptAsync(ready -> {
-                if (ready) {
-                    callback.onExtractionComplete();
-                } else {
-                    ApplicationManager.getApplication().invokeLater(() ->
-                        callback.onInitializationFailed(FailureReason.BRIDGE_ERROR, null));
-                }
-            });
-            return null;
-        }
-
-        // Validate Node.js path
-        PropertiesComponent props = PropertiesComponent.getInstance();
-        String savedNodePath = props.getValue(NODE_PATH_PROPERTY_KEY);
-        NodeDetectionResult nodeResult = null;
-
-        if (savedNodePath != null && !savedNodePath.trim().isEmpty()) {
-            String trimmed = savedNodePath.trim();
-            claudeSDKBridge.setNodeExecutable(trimmed);
-            nodeResult = claudeSDKBridge.verifyAndCacheNodePath(trimmed);
-            if (nodeResult == null || !nodeResult.isFound()) {
-                callback.onInitializationFailed(FailureReason.INVALID_NODE_PATH,
-                    trimmed + "|" + (nodeResult != null ? nodeResult.getErrorMessage() : null));
-                return null;
-            }
-        } else {
-            nodeResult = claudeSDKBridge.detectNodeWithDetails();
-            if (nodeResult != null && nodeResult.isFound() && nodeResult.getNodePath() != null) {
-                props.setValue(NODE_PATH_PROPERTY_KEY, nodeResult.getNodePath());
-                claudeSDKBridge.setNodeExecutable(nodeResult.getNodePath());
-                claudeSDKBridge.verifyAndCacheNodePath(nodeResult.getNodePath());
-            }
-        }
-
-        // Check environment
-        if (!claudeSDKBridge.checkEnvironment()) {
-            if (sharedResolver.isExtractionInProgress() || !sharedResolver.isExtractionComplete()) {
-                LOG.info("[WebViewInitializer] checkEnvironment failed, bridge not ready. Showing loading panel...");
-                callback.onExtractionInProgress();
-
-                ApplicationManager.getApplication().executeOnPooledThread(() -> {
-                    sharedResolver.findSdkDir();
-                });
-
-                sharedResolver.getExtractionFuture().thenAcceptAsync(ready -> {
-                    if (ready) {
-                        callback.onExtractionComplete();
-                    } else {
-                        ApplicationManager.getApplication().invokeLater(() ->
-                            callback.onInitializationFailed(FailureReason.BRIDGE_ERROR, null));
-                    }
-                });
-                return null;
-            }
-            callback.onInitializationFailed(FailureReason.BRIDGE_ERROR, null);
-            return null;
-        }
-
-        // Validate Node.js version
-        if (nodeResult == null) {
-            nodeResult = claudeSDKBridge.detectNodeWithDetails();
-        }
-        if (nodeResult != null && nodeResult.isFound() && nodeResult.getNodeVersion() != null) {
-            if (!NodeDetector.isVersionSupported(nodeResult.getNodeVersion())) {
-                callback.onInitializationFailed(FailureReason.NODE_VERSION_UNSUPPORTED,
-                    nodeResult.getNodeVersion());
-                return null;
-            }
-        }
-
         // Check JCEF support
         if (!JBCefBrowserFactory.isJcefSupported()) {
             LOG.warn("JCEF is not supported in this environment");

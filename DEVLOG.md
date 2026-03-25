@@ -2,6 +2,79 @@
 > Agentic hindsight - reverse chronological
 ---
 
+## 2026-03-24: Phase 2 Bridge Deletion + Auth Hardening + 1M Context Plumbing
+
+**What happened**: Deleted the entire Node.js ai-bridge (~6,200 LOC, 21 files), rewired Java layer, made Kotlin agent the sole execution path. Fixed three blocking bugs discovered during first E2E test. Hardened OAuth auth and wired 1M context support.
+
+### Phase 2: Bridge Deletion
+
+**Deleted (21 files)**:
+- `bridge/`: NodeDetector, ProcessManager, EnvironmentConfigurator, BridgeDirectoryResolver
+- `provider/common/`: BaseSDKBridge, SessionInfo
+- `provider/claude/`: DaemonConnection, SlashCommandClient, McpStatusClient, RewindOperations, SessionOperations, SyncQueryClient, JsonOutputParser
+- `dependency/`: DependencyManager, NpmPermissionHelper, InstallResult, SdkDefinition, UpdateInfo
+- `model/`: NodeDetectionResult, PathCheckResult
+- `startup/BridgePreloader.java`, `ui/ErrorPanelBuilder.java`
+- `ai-bridge/` directory entirely
+- `BridgeDirectoryResolverTest.java`
+
+**Simplified**:
+- `build.gradle`: removed `packageAiBridge` task (~150 LOC), no more npm for ai-bridge
+- `plugin.xml`: removed `BridgePreloader` postStartupActivity
+- `ClaudeSession.java`: removed bridge path, `sendMessageToClaude()` always calls Kotlin agent
+- `ClaudeChatWindow.java`: removed `overrideBridgePathIfAvailable()`, `preWarmDaemon()`, error panels
+- `WebViewInitializer.java`: removed Node.js checks, only JCEF availability remains
+- `ClaudeSDKBridge.java`: gutted 635→~150 LOC stub (slash commands, history, interrupt only)
+
+### Bug Fixes (found during first E2E run)
+
+**Bug 1: Gson/Jackson boundary in `buildBetaTool()`**
+- `JsonValue.from(gsonElement)` silently wraps Gson types that Jackson can't serialize → runtime crash
+- Fix: `gsonToJsonValue()` helper round-trips through `gson.fromJson<Any>()` to get plain Java types first
+- Location: `AgentRuntime.kt`
+
+**Bug 2: DependencyHandler wrong JSON shape**
+- `handleGetStatus()` returned `{ success: false, error: "..." }` but frontend expected `{ "claude-sdk": { "installed": true } }`
+- This caused `currentSdkInstalled` to always be `false` → all sends silently blocked
+- Fix: rewrote to return correct shape
+- Location: `DependencyHandler.java`
+
+**Bug 3: OAuth beta header missing**
+- Kotlin SDK sends OAuth tokens without `anthropic-beta: oauth-2025-04-20`
+- API rejects with "OAuth authentication is currently not supported"
+- Fix: `builder.putHeader("anthropic-beta", OAUTH_BETA_HEADER)` for `CLI_SESSION` and `AUTH_TOKEN` types
+- Location: `AuthProvider.kt`
+
+### OAuth Auth Hardening
+
+- **Token refresh**: `AuthProvider` now checks `expiresAt`, calls `/v1/oauth/token` with `grant_type=refresh_token` + Claude Code `client_id: 9d1c250a-e61b-44d9-88ed-5944d1962f5e`
+- **Dual endpoint**: tries `api.anthropic.com` first, falls back to `console.anthropic.com`
+- **Error body logging**: response body logged on non-200 so failures are diagnosable
+- **Persistence**: refreshed tokens written back to Keychain (macOS) or `.credentials.json`
+- **Uses `/usr/bin/curl`** not bare `curl` to avoid RTK mangling
+
+### 1M Context Support (plumbing complete, UI toggle pending)
+
+- `AuthProvider.createClient(enable1MContext: Boolean = false)`: appends `,context-1m-2025-08-07` for OAuth/CLI paths, standalone for API key
+- `AgentConfig.enable1MContext`: field passed through to client creation
+- `SessionState.enable1MContext`: getter/setter ready for frontend toggle
+- `ClaudeSession`: client recreated when `enable1MContext` changes between sends
+- **To activate**: frontend toggle → `SettingsHandler` → `state.setEnable1MContext(true)` — all plumbing done
+
+### Cheap Auth Test
+
+- `tests/verify-auth.mjs`: reads Keychain/credentials → refreshes if expired → tiny Haiku API call
+- Runs in ~2s, zero IDE needed, replaces the expensive E2E screenshot approach for auth validation
+- Confirmed working: expired token detected, refreshed via primary endpoint, API responded 200
+
+**Gotchas**:
+- RTK hook mangles `curl` output — always use `/usr/bin/curl` in subprocesses
+- React contenteditable dispatch doesn't trigger React handlers — use `window.sendToJava()` directly for E2E tests
+- JCEF page must be found by URL pattern `jbcefbrowser` not title (browser tabs can match "Claude")
+- `ClaudeHistoryReader.getSessionMessagesAsJson()` is an instance method, not static
+
+---
+
 ## 2026-01-16: v0.2.7 Released - Ralph Loop Complete
 
 **Summary:** Completed 16 Ralph Loop iterations. All bugs fixed. Ready for architecture focus.

@@ -10,8 +10,7 @@ import java.util.*;
 import java.util.concurrent.*;
 
 /**
- * Permission service - handles permission requests via direct API (stdin/stdout protocol).
- * File-based IPC has been removed in favor of the new stdin/stdout bridge protocol.
+ * Permission service - handles permission requests via direct API.
  *
  * This is a per-project service to ensure permission prompts appear in the correct IDE instance.
  */
@@ -380,12 +379,12 @@ public final class PermissionService {
     }
 
     // ============================================================================
-    // Direct permission request API (for stdin/stdout bridge protocol)
+    // Direct permission request API
     // ============================================================================
 
     /**
      * Request permission directly (no file-based IPC).
-     * Used by the new bridge.js stdin/stdout protocol.
+     * Used by the Kotlin agent runtime via PermissionGate.
      *
      * @param toolName Tool name requesting permission
      * @param inputs   Tool input parameters
@@ -459,7 +458,7 @@ public final class PermissionService {
 
     /**
      * Request AskUserQuestion directly (no file-based IPC).
-     * Used by the new bridge.js stdin/stdout protocol.
+     * Used by the Kotlin agent runtime via PermissionGate.
      *
      * @param questions Questions array from the AskUserQuestion tool
      * @return CompletableFuture resolving to JsonObject with { allow: boolean, answers?: object }
@@ -504,7 +503,7 @@ public final class PermissionService {
 
     /**
      * Request PlanApproval directly (no file-based IPC).
-     * Used by the new bridge.js stdin/stdout protocol.
+     * Used by the Kotlin agent runtime via PermissionGate.
      *
      * @param planData Plan data containing the plan text
      * @return CompletableFuture resolving to JsonObject with { approved: boolean, newMode?: string }

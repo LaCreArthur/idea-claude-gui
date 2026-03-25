@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Switch } from 'antd';
+import { ToggleSwitch } from './ToggleSwitch';
 import { ClaudeIcon } from '../../../assets/ClaudeIcon';
 import { AVAILABLE_PROVIDERS } from '../types';
 import { agentProvider, CREATE_NEW_AGENT_ID, EMPTY_STATE_ID, type AgentItem } from '../providers/agentProvider';
@@ -378,12 +378,11 @@ export const ConfigSelect = ({
               <span className="codicon codicon-sync" />
               <span>Streaming</span>
             </div>
-            <Switch
-              size="small"
+            <ToggleSwitch
               checked={streamingEnabled ?? false}
               onClick={(checked, e) => {
-                 e.stopPropagation();
-                 onStreamingEnabledChange?.(checked);
+                e.stopPropagation();
+                onStreamingEnabledChange?.(checked);
               }}
             />
           </div>
@@ -403,12 +402,11 @@ export const ConfigSelect = ({
               <span className="codicon codicon-lightbulb" />
               <span>Thinking</span>
             </div>
-            <Switch
-              size="small"
+            <ToggleSwitch
               checked={alwaysThinkingEnabled ?? false}
               onClick={(checked, e) => {
-                 e.stopPropagation();
-                 onToggleThinking?.(checked);
+                e.stopPropagation();
+                onToggleThinking?.(checked);
               }}
             />
           </div>
