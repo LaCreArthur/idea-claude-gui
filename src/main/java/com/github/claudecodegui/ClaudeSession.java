@@ -165,6 +165,14 @@ public class ClaudeSession {
         return state.getLastModifiedTime();
     }
 
+    public boolean isEnable1MContext() {
+        return state.isEnable1MContext();
+    }
+
+    public void setEnable1MContext(boolean enabled) {
+        state.setEnable1MContext(enabled);
+    }
+
     /**
      * Set session ID and working directory (for session restoration)
      */

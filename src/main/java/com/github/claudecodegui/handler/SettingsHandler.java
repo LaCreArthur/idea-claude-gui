@@ -47,7 +47,9 @@ public class SettingsHandler extends BaseMessageHandler {
         "get_active_provider",
         "save_imported_providers",
         "get_auth_status",
-        "set_reasoning_effort"
+        "set_reasoning_effort",
+        "set_enable_1m_context",
+        "get_enable_1m_context"
     };
 
     private static final Map<String, Integer> MODEL_CONTEXT_LIMITS = new HashMap<>();
@@ -152,6 +154,12 @@ public class SettingsHandler extends BaseMessageHandler {
                 return true;
             case "set_reasoning_effort":
                 handleSetReasoningEffort(content);
+                return true;
+            case "set_enable_1m_context":
+                handleSetEnable1MContext(content);
+                return true;
+            case "get_enable_1m_context":
+                handleGetEnable1MContext();
                 return true;
             default:
                 return false;
@@ -727,5 +735,41 @@ public class SettingsHandler extends BaseMessageHandler {
                 callJavaScript("window.showError", escapeJs("Failed to save send shortcut: " + e.getMessage()));
             });
         }
+    }
+
+    private void handleSetEnable1MContext(String content) {
+        try {
+            Gson gson = new Gson();
+            JsonObject json = gson.fromJson(content, JsonObject.class);
+            boolean enabled = json != null && json.has("enabled") && json.get("enabled").getAsBoolean();
+
+            ClaudeSession session = context.getSession();
+            if (session != null) {
+                session.setEnable1MContext(enabled);
+            }
+
+            LOG.info("[SettingsHandler] Set 1M context: " + enabled);
+
+            final boolean finalEnabled = enabled;
+            ApplicationManager.getApplication().invokeLater(() -> {
+                JsonObject response = new JsonObject();
+                response.addProperty("enabled", finalEnabled);
+                callJavaScript("window.update1MContextEnabled", escapeJs(gson.toJson(response)));
+            });
+        } catch (Exception e) {
+            LOG.error("[SettingsHandler] Failed to set 1M context: " + e.getMessage(), e);
+        }
+    }
+
+    private void handleGetEnable1MContext() {
+        Gson gson = new Gson();
+        ClaudeSession session = context.getSession();
+        boolean enabled = session != null && session.isEnable1MContext();
+
+        ApplicationManager.getApplication().invokeLater(() -> {
+            JsonObject response = new JsonObject();
+            response.addProperty("enabled", enabled);
+            callJavaScript("window.update1MContextEnabled", escapeJs(gson.toJson(response)));
+        });
     }
 }

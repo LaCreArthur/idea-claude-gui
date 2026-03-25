@@ -1,229 +1,134 @@
-# Simplification & Design Roadmap
+# Simplification Roadmap
 
-**Created:** 2026-03-24
-**Status:** Planning
-**Ship strategy:** Single release, clean break
+**Updated:** 2026-03-25
+**Status:** Phase 1 complete, Phase 2 in progress
+
+## North Star
+
+**Kotlin everywhere, JCEF only for chat rendering, native UI for everything else.**
+
+A single-language (Kotlin) plugin with a minimal render surface (vanilla HTML/JS in one JCEF panel) that a solo developer can ship features to in an afternoon. Zero npm, zero React, zero Node.js.
 
 ## Decisions
 
-- **Auth:** Support both OAuth token (Claude Max / Copilot Pro) and API keys
-- **Platform floor:** Raise to IntelliJ 2025.x (enables modern JCEF Chromium features: CSS nesting, `:has()`)
-- **Ship cadence:** Single release combining bridge removal + frontend redesign
+- **Auth:** OAuth token (Claude Max / Copilot Pro) + API key. 5-tier resolution.
+- **Platform floor:** Raise to IntelliJ 2025.x (modern JCEF Chromium: CSS nesting, `:has()`)
+- **UI runtime:** Single JCEF panel with vanilla HTML + marked.js + highlight.js. No React, no framework.
+- **State management:** Kotlin owns all state. HTML surface is a dumb renderer. No Zustand, no window.* callback soup.
+- **Settings/dialogs:** Kotlin UI DSL + `DialogWrapper`. Not in the webview.
+- **Ship cadence:** Incremental. Each phase ships independently.
 
 ---
 
-## 1. Executive Summary & Vision
-
-45K LOC across 3 runtimes (Java, React, Node.js), 3 build systems (Gradle, Vite, npm), 216 source files. The complexity tax is compounding — every feature touches 3 languages, every bug requires debugging across process boundaries.
-
-**North Star:** A single-language (Kotlin) plugin with a native-feeling UI that a solo developer can ship features to in an afternoon, not a weekend.
-
-**OKRs:**
-1. Reduce runtime dependencies from 3 to 2 (kill Node.js bridge)
-2. Cut frontend LOC by 40%
-3. Achieve <3s cold start (currently bottlenecked by bridge extraction + daemon warmup)
-4. Ship a UI that passes the "is this native?" squint test — JetBrains theme-synced
-
----
-
-## 2. First-Principles: What Gets Discarded
-
-### Assumption #1: "You need Node.js for Claude API access"
-
-ai-bridge exists because the project started when only `@anthropic-ai/sdk` (JavaScript) was mature. Today, the Anthropic Kotlin/Java SDK is production-ready with streaming, tool use, and full API coverage. The bridge is 599 LOC of JavaScript doing what Kotlin can do natively.
-
-**Kill the bridge.** Port the agent loop to Kotlin. Deletes:
-- `ai-bridge/` (599 LOC + npm ecosystem)
-- `DependencyManager.java` (583 LOC)
-- `BridgeDirectoryResolver.java` (984 LOC)
-- `DaemonConnection.java` (365 LOC)
-- `ProcessManager.java`, `NodeDetector.java`, `EnvironmentConfigurator.java`
-- JSON line protocol + stdin/stdout plumbing
-- npm as a build dependency
-
-**Estimated deletion: ~3,500 LOC of Java + 599 LOC of JS + entire npm toolchain.**
-
-### Assumption #2: "The React webview needs a component library"
-
-Ant Design is imported for exactly **one `<Switch>` component**. Kill it, replace with a 10-line CSS toggle. -500KB bundle.
-
-### Assumption #3: "JCEF webviews can't look native"
-
-JetBrains exposes `UIManager` colors. Inject them as CSS variables. The webview inherits the IDE palette automatically — light, dark, custom themes all handled.
-
----
-
-## 3. Tech Stack: Current → Target
+## Tech Stack: Current → Target
 
 | Layer | Current | Target | Rationale |
 |-------|---------|--------|-----------|
-| Plugin language | Java (24.6K LOC, 0 Kotlin) | **Kotlin** (incremental) | Already in build.gradle; data classes, coroutines, null safety |
-| API client | Node.js bridge → `@anthropic-ai/sdk` | **Anthropic Kotlin SDK** (direct) | Eliminates entire runtime + protocol + process management |
-| UI runtime | JCEF + React 19 + Vite | **JCEF + React 19 + Vite** (keep) | Works. Markdown/code rendering is hard to replicate in Compose. |
-| UI framework | Ant Design (vestigial) | **None** — pure CSS + HTML | Already 99% there. |
-| CSS | Less + 150 CSS variables | **CSS Variables only** (drop Less) | Modern CSS has nesting, variables, `:has()`. Less adds build complexity for zero value. |
-| State mgmt | 11 hooks, refs, window callbacks | **Zustand** (1KB) | Replaces window.* callback soup with reactive stores |
-| Build | Gradle + Vite + npm | **Gradle + Vite** | npm gone with ai-bridge |
-| Concurrency | CompletableFuture + EDT | **Kotlin Coroutines** | Structured concurrency, cancellation |
+| Plugin language | Java (~18K LOC) + Kotlin (~2K LOC) | **100% Kotlin** | One language, null safety, coroutines, data classes |
+| API client | Kotlin `AgentRuntime` → Anthropic SDK | **Same** (already done) | Direct SDK, no subprocess |
+| UI runtime | JCEF + React 19 + Vite | **JCEF + vanilla HTML/JS/CSS** | No framework, no bundler, no npm |
+| Markdown | react-markdown + rehype | **marked.js + highlight.js** (~30KB each) | Zero deps, comparable quality |
+| CSS | Less + 150 CSS variables | **CSS variables only** (injected from Kotlin `UIManager`) | Native theme sync, no build step |
+| Settings UI | React components in webview | **Kotlin UI DSL + DialogWrapper** | True native, zero bridge messages |
+| Build | Gradle + Vite + npm (vestigial) | **Gradle only** | npm gone, Vite gone, HTML bundled as resources |
+| Concurrency | CompletableFuture + EDT | **Kotlin Coroutines** (already in agent) | Structured concurrency, cancellation |
 
-### Why NOT Compose + Jewel
+### Why NOT Compose for Desktop / Full Swing
 
-JCEF markdown/code rendering is too strong. Compose for Desktop markdown is immature. JCEF can look native via theme sync. Keep what works.
+JCEF markdown/code rendering is too strong. Compose for Desktop markdown is immature. A pure Swing chat UI (`JTextPane` + `EditorTextField` in `JBList`) has documented focus, sizing, and performance problems — no production AI plugin ships a rich chat this way. JetBrains AI Assistant and Continue.dev both use JCEF for their chat panels.
 
----
+### Why NOT Keep React
 
-## 4. UI/Design Strategy
-
-### Principles
-
-1. **IDE-harmonious, not IDE-cloned.** Match JetBrains palette and typography.
-2. **Content density over decoration.** Maximize content per pixel.
-3. **Progressive disclosure.** Chat default. Settings/history tucked away.
-4. **Zero chrome, maximum signal.** No unnecessary borders or containers.
-
-### Theme Sync
-
-```kotlin
-fun injectThemeVariables(browser: JBCefBrowser) {
-    val bg = UIManager.getColor("Panel.background").toCssRgb()
-    val fg = UIManager.getColor("Label.foreground").toCssRgb()
-    val accent = UIManager.getColor("Component.focusColor").toCssRgb()
-    // ... 15-20 semantic tokens
-    browser.executeJavaScript("""
-        document.documentElement.style.setProperty('--bg-primary', '$bg');
-        // ...
-    """)
-}
-```
-
-Register `LafManagerListener` for live theme switching.
-
-### Visual Target
-
-Claude.ai web interface meets JetBrains New UI:
-- Flat message layout (no bubbles), content-dense
-- Monochrome tool blocks with subtle borders
-- Permission: minimal card, inline or slide-up (not modal overlay)
-- Code blocks with IDE-matched syntax theme
-- No animations >150ms
-
-### Component Architecture Target
-
-```
-App.tsx (<200 LOC, just routing)
-├── ChatView/
-│   ├── MessageList.tsx (virtualized)
-│   ├── MessageItem.tsx (flat, tool block delegation)
-│   ├── ToolBlock/ (generic, read, edit, bash, task)
-│   ├── PermissionInline.tsx (non-modal)
-│   └── StreamingIndicator.tsx
-├── InputArea/
-│   ├── ChatInput.tsx (contenteditable + attachments)
-│   ├── ModelPill.tsx
-│   └── CompletionDropdown.tsx
-├── HistoryPanel.tsx
-├── SettingsPanel.tsx
-└── stores/
-    ├── chatStore.ts
-    ├── sessionStore.ts
-    └── settingsStore.ts
-```
+React is overkill for what the chat UI actually does: append HTML to a scrollable div, render markdown strings, handle button clicks. `marked.js` + vanilla JS event delegation handles all of it. React costs npm + Vite + node_modules + 40+ window.* callbacks + 11 hooks + a 916-LOC god component. Not worth it.
 
 ---
 
-## 5. Phased Roadmap
+## Phased Roadmap
 
-### Phase 0: Foundation & Quick Wins (1–2 weeks)
+### Phase 1: Kill Node.js Bridge ✅ Done (2026-03-24)
 
-| Epic | RICE (R/I/C/E) | Description |
-|------|----------------|-------------|
-| Kill Ant Design | 10/8/10/1 | Remove `antd`. Replace 1 `Switch` with CSS toggle. -500KB bundle. |
-| Drop Less → CSS | 8/6/9/2 | Convert 25 `.less` files to `.css`. Remove `less` from build. |
-| Fix charset globally | 10/7/10/1 | Force UTF-8 in 5 files still using platform default. |
-| Deduplicate CWD logic | 8/5/10/0.5 | Single source of truth in `WorkingDirectoryManager`. |
-| First Kotlin file | 10/3/10/0.5 | Start using Kotlin. Write bridge abstraction interface. |
+- Deleted `ai-bridge/` directory (~2,450 LOC JS)
+- Deleted 21 Java bridge/dependency classes (~6,200 LOC)
+- Built Kotlin agent runtime: `AgentRuntime`, `AuthProvider`, `StreamEmitter`, `PermissionGate`, `ToolRegistry`
+- Fixed 3 blocking bugs (Gson/Jackson boundary, DependencyHandler JSON shape, OAuth beta header)
+- Hardened OAuth token refresh with dual endpoints + Keychain persistence
+- Plumbed 1M context support (UI toggle pending)
+- Net deletion: ~8,500 LOC
 
-### Phase 1: Kill the Bridge (3–4 weeks)
+### Phase 2: Dead Code Cleanup ← Current
 
-| Epic | RICE (R/I/C/E) | Description |
-|------|----------------|-------------|
-| Anthropic Kotlin SDK integration | 10/10/8/5 | Add `com.anthropic:anthropic-java` to Gradle. Streaming client with coroutines. |
-| Port agent loop to Kotlin | 10/10/7/5 | Rewrite bridge.js: system prompt, tool defs, permission callbacks, abort. ~600→400 LOC. |
-| Auth: OAuth token + API key | 10/10/9/3 | OAuth token (Claude Max, Copilot Pro) as primary. API key fallback. Both paths in Kotlin. |
-| Direct permission flow | 10/9/9/3 | Permission callbacks via coroutine suspension. No stdin/stdout round-trip. |
-| Delete bridge infrastructure | 10/8/10/2 | Remove: ai-bridge/, DependencyManager, BridgeDirectoryResolver, DaemonConnection, ProcessManager, NodeDetector. ~4K LOC. |
-| Streaming via Kotlin Flow | 9/8/8/3 | Kotlin Flow from SDK streaming → deltas pushed directly to JCEF. |
+- Delete zombie `ClaudeSDKBridge` (199 LOC stub)
+- Delete `DependencyHandler`, `RewindHandler` (no-op stubs)
+- Remove dependency/Node.js UI from React frontend
+- Remove `currentSdkInstalled` gate that blocks sends
+- Collapse bridge indirection out of `HandlerContext`
 
-### Phase 2: Frontend Redesign (2–3 weeks, parallel with Phase 1)
+### Phase 3: Ship & Verify
 
-| Epic | RICE (R/I/C/E) | Description |
-|------|----------------|-------------|
-| IDE theme sync | 10/9/9/2 | Inject UIManager colors as CSS variables. LafManagerListener for live switching. |
-| Break up App.tsx | 9/8/9/3 | Extract ChatView, HistoryView, SettingsView, DialogManager. App.tsx → <200 LOC. |
-| Zustand state management | 8/7/8/3 | Replace 40+ window.* callbacks with reactive stores. |
-| Redesign message layout | 9/9/8/3 | Flat layout, content-dense, IDE-matched typography, collapsible tool blocks. |
-| Redesign permission dialog | 10/9/9/1 | Minimal inline card: tool name + paths + Allow/Deny/Always. |
-| Redesign input area | 8/7/8/2 | Clean input, attachment chips, model selector as minimal pill. |
-| Simplify streaming path | 7/8/7/4 | Unify delta + snapshot into single Zustand-driven flow. |
+- 1M context UI toggle (all plumbing done, just needs frontend switch)
+- Full E2E round-trip verification in Rider (auth works, UI not confirmed)
+- Bump version, tag release
 
-### Phase 3: Kotlin Migration & Polish (4–6 weeks)
+### Phase 4: Java → Kotlin Conversion
 
-| Epic | RICE (R/I/C/E) | Description |
-|------|----------------|-------------|
-| Migrate handlers to Kotlin | 8/7/8/4 | 16 handlers → ~6 Kotlin handlers. |
-| Break ClaudeChatWindow | 9/8/9/3 | 876 LOC → ChatWindowFactory + SessionManager + CallbackRegistry. |
-| Break ClaudeSession | 9/8/9/3 | 785 LOC → MessageStore + QueryExecutor + SessionConfig. |
-| Unified config layer | 7/6/8/3 | Single ConfigService reading all 5+ config sources. |
-| Raise platform floor to 2025.x | 8/5/10/1 | Update build.gradle platformVersion + sinceBuild. |
-| Accessibility pass | 6/7/9/2 | ARIA labels, keyboard nav, focus management. |
+- Incremental, file-by-file, as files are touched for features/fixes
+- Auto-converter handles ~80% of boring files (DTOs, utilities, small handlers)
+- Save `ClaudeSession` and `ClaudeChatWindow` for last (hardest, most fragile)
+- Target: 100% Kotlin for all plugin logic
+
+### Phase 5: React → Vanilla Frontend
+
+- Replace React + Vite with single HTML + vanilla TS + CSS (bundled as Gradle resources)
+- Markdown: `marked.js` + `highlight.js` (no react-markdown)
+- Streaming: `browser.executeJavaScript("appendDelta('...')")` — simpler than current React path
+- Interactivity: <1KB vanilla JS (copy buttons, collapse tool blocks, permission dialogs)
+- Theme sync: inject `UIManager` colors as CSS variables from Kotlin
+- Kill npm, Vite, node_modules, package.json entirely
+- Settings/permissions move to Kotlin UI DSL + `DialogWrapper`
+
+### Phase 6: Polish
+
+- Break up god classes (`ClaudeSession` 838 LOC, `ClaudeChatWindow` 756 LOC)
+- Unified config layer across 5+ config sources
+- Accessibility pass (ARIA labels, keyboard nav, focus management)
+- UTF-8 enforcement in 5 remaining legacy files
 
 ---
 
-## 6. Risks & Mitigations
+## Architecture Target
+
+```
+Kotlin (agent runtime + handlers + IDE integration)
+  ↕ browser.executeJavaScript() / bridge callbacks
+Single JCEF panel (vanilla HTML + marked.js + highlight.js + CSS variables)
+```
+
+- One language (Kotlin) for all logic
+- One dumb render surface (HTML/JS/CSS, no framework, no build step)
+- Zero npm, zero Node, zero React
+- Gradle is the only build system
+
+---
+
+## Risks & Mitigations
 
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|------------|
-| Kotlin SDK missing OAuth token auth | Medium | High | Audit SDK before Phase 1. Fallback: minimal HTTP client for OAuth flow. |
-| JCEF theme sync breaks on custom themes | Low | Medium | Fallback palette if UIManager colors null. Test 3+ themes. |
-| Streaming perf regression | Low | High | Benchmark time-to-first-token before/after. |
-| Phase 1 blocks Phase 2 | Medium | Medium | Bridge abstraction interface decouples the two. |
+| marked.js quality < react-markdown | Low | Medium | Test on real conversations before committing to migration |
+| Java→Kotlin auto-converter edge cases | Medium | Low | Convert incrementally, test each file |
+| JCEF theme sync imperfect on custom themes | Low | Medium | Fallback palette if UIManager colors null |
+| React→vanilla migration breaks streaming | Low | High | Benchmark time-to-first-token before/after |
 
 ---
 
-## 7. Success Metrics
+## Success Metrics
 
-| Metric | Current | After Release |
-|--------|---------|---------------|
-| Runtime dependencies | 3 (Java, Node, React) | **2** (Kotlin, React) |
-| Build systems | 3 (Gradle, Vite, npm) | **2** (Gradle, Vite) |
-| Total LOC | ~45K | **~30K** |
-| Cold start time | ~4-5s | **<2s** |
-| Largest file (LOC) | 984 | **<400** |
-| Theme fidelity | VS Code-ish | **IDE-synced** |
-| Window callbacks | 40+ | **0** (Zustand) |
-
----
-
-## 8. Current Codebase Snapshot (for reference)
-
-### Pain Points Identified
-
-1. **App.tsx is a god component** (916 LOC, 39 hook deps)
-2. **ClaudeChatWindow.java** (876 LOC, 106 methods)
-3. **ClaudeSession.java** (785 LOC, 71 methods)
-4. **16 message handlers**, several 400+ LOC
-5. **3 build systems** (Gradle, Vite, npm)
-6. **40+ window.* callbacks** (imperative, not React-idiomatic)
-7. **5+ config sources** with no unified layer
-8. **Charset bugs** in 5 files using platform default
-9. **Duplicated CWD logic** in 2 files
-10. **Ant Design dependency** for 1 Switch component
-
-### What's Well-Designed (Keep)
-
-- Bridge protocol concept (clean, minimal) — just port to Kotlin in-process
-- plugin.xml extension points
-- Gradle build orchestration
-- Session epoch isolation (reference identity guards)
-- Permission flow (three-way coordination)
-- Documentation (CODEBASE_MAP.md, DESIGN.md, CLAUDE.md)
+| Metric | Started | After Phase 1 | Target (Phase 5+) |
+|--------|---------|---------------|-------------------|
+| Runtime deps | 3 (Java, Node, React) | **2** (Kotlin, React) | **1** (Kotlin + HTML) |
+| Build systems | 3 (Gradle, Vite, npm) | **2** (Gradle, Vite) | **1** (Gradle) |
+| Total LOC | ~45K | ~35K | ~25K |
+| Languages | 3 (Java, TS, JS) | 3 (Java, Kotlin, TS) | **1+HTML** (Kotlin) |
+| Cold start | ~4-5s | ~2-3s | <2s |
+| Window callbacks | 40+ | 40+ | **0** |
+| Largest file | 984 | 838 | <400 |

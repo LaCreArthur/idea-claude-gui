@@ -70,6 +70,7 @@ The developer's working directory is: {cwd}"""
      * in-flight HTTP request.
      */
     suspend fun execute(config: AgentConfig, userMessage: String) {
+        LOG.info("[AgentRuntime] execute: model=${config.model}, cwd=${config.cwd}, streaming=${config.streaming}, 1M=${config.enable1MContext}, msg=${userMessage.take(80)}")
         val systemPrompt = buildSystemPrompt(config)
         val messages = buildInitialMessages(config, userMessage)
 
@@ -85,9 +86,10 @@ The developer's working directory is: {cwd}"""
             var turn = 0
             while (turn < config.maxTurns) {
                 turn++
-                LOG.debug("[AgentRuntime] Starting turn $turn/${config.maxTurns}")
+                LOG.info("[AgentRuntime] Starting turn $turn/${config.maxTurns}, model=${config.model}, thinking=${config.maxThinkingTokens}, maxOutput=${config.maxOutputTokens}")
 
                 val params = buildParams(config, systemPrompt, messages)
+                LOG.info("[AgentRuntime] API request: model=${params.model()}, messages=${messages.size}, tools=${tools.definitions().size()}")
                 val accumulator = BetaMessageAccumulator.create()
 
                 // Stream one model turn. Runs on IO dispatcher — blocking Java stream.

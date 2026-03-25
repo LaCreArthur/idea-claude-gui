@@ -215,6 +215,8 @@ export interface ChatInputBoxProps {
   onToggleThinking?: (enabled: boolean) => void;
   streamingEnabled?: boolean;
   onStreamingEnabledChange?: (enabled: boolean) => void;
+  enable1MContext?: boolean;
+  onEnable1MContextChange?: (enabled: boolean) => void;
 
   sendShortcut?: 'enter' | 'cmdEnter';
 
@@ -226,9 +228,6 @@ export interface ChatInputBoxProps {
   hasMessages?: boolean;
   onRewind?: () => void;
 
-  sdkInstalled?: boolean;
-  sdkStatusLoading?: boolean;
-  onInstallSdk?: () => void;
   authConfigured?: boolean;
   authStatusLoading?: boolean;
   onConfigureAuth?: () => void;
@@ -254,6 +253,8 @@ export interface ButtonAreaProps {
   onToggleThinking?: (enabled: boolean) => void;
   streamingEnabled?: boolean;
   onStreamingEnabledChange?: (enabled: boolean) => void;
+  enable1MContext?: boolean;
+  onEnable1MContextChange?: (enabled: boolean) => void;
   selectedAgent?: SelectedAgent | null;
   onAgentSelect?: (agent: SelectedAgent) => void;
   onClearAgent?: () => void;

@@ -2,6 +2,114 @@
 > Agentic hindsight - reverse chronological
 ---
 
+## 2026-03-25: Phase 3 Dead Code Cleanup + E2E Verification PASS
+
+**What happened**: Deleted remaining bridge zombie code, fixed Keychain auth resolution, and achieved first confirmed end-to-end API response in the Rider UI.
+
+### Dead Code Cleanup (commit `641e4f6`)
+
+Deleted 3 Java files, 3 webview files/dirs, ~700 LOC net:
+- `ClaudeSDKBridge.java` — vestigial 199-LOC stub, only real logic was slash command reading
+- `DependencyHandler.java` — returned hardcoded "installed" for npm SDK that doesn't exist
+- `RewindHandler.java` — returned "not implemented" for all operations
+- `DependencySection/` — React UI for installing npm packages (no npm anymore)
+- `dependency.ts` — TypeScript types for npm dependency management
+- Node.js path settings UI removed from BasicConfigSection
+
+**Structural changes:**
+- `SlashCommandCache` gained `readSlashCommands(String cwd)` static method (moved from bridge)
+- `HandlerContext` no longer holds `ClaudeSDKBridge` reference
+- `currentSdkInstalled` gate removed — sends always allowed (Kotlin agent is native)
+- `SettingsHandler` removed `get_node_path`/`set_node_path` handlers
+- `McpServerHandler` inlines empty future (was delegating to bridge stub)
+
+### Keychain Auth Fix
+
+**Bug**: AuthProvider was reading stale Keychain credentials.
+
+Claude Code now stores OAuth tokens under account name matching the OS username (e.g. `"arthur"`) instead of `"Claude Code"`. Two Keychain entries existed for service `"Claude Code-credentials"`:
+- account `"Claude Code"` — created 2026-02-16, token expired 2026-02-17 (stale)
+- account `"arthur"` — created 2026-03-24, token valid 7 hours (fresh)
+
+`security find-generic-password -s "Claude Code-credentials" -w` returns the *first* match — the stale one.
+
+**Fix**: AuthProvider now tries multiple account names (`$USER`, `"Claude Code"`, bare lookup) and picks the token with the latest `expiresAt`. This is forward-compatible with whatever account name Claude Code uses.
+
+### OAuth Model Access Limitation
+
+**Discovery**: OAuth tokens from Claude Max subscription cannot access Sonnet 4.x or Opus 4.x models via `api.anthropic.com/v1/messages`. Only Haiku 4.5 and Claude 3 Haiku work. All Sonnet 4/Opus 4 model IDs return `invalid_request_error: Error` (unhelpful generic error).
+
+Claude Code CLI works with these models — it likely uses a different auth flow or gateway internally. This needs investigation. For now, E2E tests use `claude-haiku-4-5-20251001`.
+
+### E2E Verification: PASS
+
+First confirmed API response in the actual Rider UI:
+```
+Test: "Reply with exactly: KOTLIN_AGENT_OK"
+Model: claude-haiku-4-5-20251001
+Result: "KOTLIN_AGENT_OK" (4.0s, 1.3k in / 10 out)
+```
+
+Full path verified:
+```
+React webview → JCEF bridge → Java MessageDispatcher → SessionHandler
+  → ClaudeSession → KotlinAgentLauncher → AgentRuntime
+  → AuthProvider (Keychain, account=arthur) → AnthropicOkHttpClient
+  → api.anthropic.com streaming → StreamEmitter → UI
+```
+
+### Gotchas
+
+- `security find-generic-password -s <service> -w` returns first match, not newest — always specify `-a` account
+- Claude Code stores Keychain credentials under OS username, not "Claude Code"
+- OAuth Max tokens get `invalid_request_error: Error` for Sonnet 4.x/Opus 4.x (only Haiku 4.5 works)
+- `set_model` handler expects `{"model":"..."}` not `{"modelId":"..."}`
+- JCEF page URL pattern is `jbcefbrowser`, title is "Claude Chat Webview"
+- AppleScript menu automation fails if Rider isn't fully loaded — need 25-30s delay after restart
+
+---
+
+## 2026-03-25: Architecture Decision — Kotlin + Vanilla JCEF
+
+**What happened**: First-principles review of the entire architecture. Challenged every major decision against 2026 SOTA. Arrived at a clear target architecture and phased roadmap.
+
+### Key Decisions
+
+**Keep JCEF for chat, kill React, kill npm:**
+- Evaluated pure Swing + Kotlin UI DSL for chat → rejected. `JTextPane` in `JBList` has documented perf/focus issues. No production AI plugin ships rich chat this way. JetBrains AI + Continue.dev both use JCEF.
+- Evaluated `MarkdownJCEFHtmlPanel` per-message → rejected. Each instance is a full Chromium browser. 20 messages = OOM.
+- React is overkill for what the chat does (append HTML, render markdown, handle clicks). Replace with vanilla HTML + `marked.js` + `highlight.js`. Kill npm, Vite, node_modules.
+- Settings/permissions move to Kotlin UI DSL + `DialogWrapper` (native).
+
+**Full Kotlin conversion:**
+- Java → Kotlin incrementally. Auto-converter handles ~80% of boring files. Save god classes for last.
+- Target: 100% Kotlin for all plugin logic. HTML surface is a dumb renderer.
+
+### Target Architecture
+
+```
+Kotlin (agent runtime + handlers + IDE integration)
+  ↕ browser.executeJavaScript() / bridge callbacks
+Single JCEF panel (vanilla HTML + marked.js + highlight.js + CSS variables)
+```
+
+One language, one build system (Gradle), zero npm.
+
+### Docs Updated
+- `docs/ROADMAP.md` — full rewrite with 6-phase plan
+- `docs/DESIGN.md` — added architecture boundary rationale
+- `docs/CODEBASE_MAP.md` — removed ClaudeSDKBridge from lifecycle, updated key classes
+- `CLAUDE.md` — updated architecture section, removed React/Ant Design references
+- Deleted `RALPH_LOOP_PLAN.md` (484 LOC, completed Jan 2026)
+- Deleted stale plan file `transient-sniffing-pine.md` (issues already fixed)
+
+### Phase 2 (dead code cleanup) in progress
+- ClaudeSDKBridge removed from HandlerContext (done by Arthur)
+- Node.js path UI + DependencySection removal underway
+- `currentSdkInstalled` gate to be removed
+
+---
+
 ## 2026-03-24: Phase 2 Bridge Deletion + Auth Hardening + 1M Context Plumbing
 
 **What happened**: Deleted the entire Node.js ai-bridge (~6,200 LOC, 21 files), rewired Java layer, made Kotlin agent the sole execution path. Fixed three blocking bugs discovered during first E2E test. Hardened OAuth auth and wired 1M context support.

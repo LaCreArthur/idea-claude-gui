@@ -133,6 +133,7 @@ const App = () => {
   const [selectedAgent, setSelectedAgent] = useState<SelectedAgent | null>(null);
   const [streamingEnabledSetting, setStreamingEnabledSetting] = useState(false);
   const [sendShortcut, setSendShortcut] = useState<'enter' | 'cmdEnter'>('enter');
+  const [enable1MContext, setEnable1MContext] = useState(false);
 
   const [authStatus, setAuthStatus] = useState<{ authenticated: boolean; authType: string } | null>(null);
   const [authStatusLoaded, setAuthStatusLoaded] = useState(false);
@@ -416,6 +417,7 @@ const App = () => {
     setClaudeSettingsAlwaysThinkingEnabled,
     setStreamingEnabledSetting,
     setSendShortcut,
+    setEnable1MContext,
   });
 
   useMessageCallbacks({
@@ -817,6 +819,13 @@ const App = () => {
             onToggleThinking={handleToggleThinking}
             streamingEnabled={streamingEnabledSetting}
             onStreamingEnabledChange={handleStreamingEnabledChange}
+            enable1MContext={enable1MContext}
+            onEnable1MContextChange={(enabled) => {
+              setEnable1MContext(enabled);
+              if (window.sendToJava) {
+                window.sendToJava(`set_enable_1m_context:${JSON.stringify({ enabled })}`);
+              }
+            }}
             sendShortcut={sendShortcut}
             selectedAgent={selectedAgent}
             onAgentSelect={handleAgentSelect}

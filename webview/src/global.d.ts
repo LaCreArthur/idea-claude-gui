@@ -133,6 +133,8 @@ interface Window {
 
   onRewindResult?: (json: string) => void;
 
+  update1MContextEnabled?: (json: string) => void;
+
   updateAuthStatus?: (json: string) => void;
   __pendingAuthStatus?: string;
 

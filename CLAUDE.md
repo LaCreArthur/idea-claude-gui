@@ -6,36 +6,38 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project: idea-claude-gui
 
-IntelliJ IDEA plugin providing a GUI for Claude Code. React/TypeScript webview + Java plugin + Kotlin agent runtime.
+IntelliJ IDEA plugin providing a GUI for Claude Code. Kotlin agent runtime + Java IDE integration + JCEF webview (React, migrating to vanilla HTML/JS).
 
 ## Design Philosophy
 
 **Goal: Be as close as possible to the Claude Code CLI experience, with a GUI layer on top.**
 
-See [docs/DESIGN.md](docs/DESIGN.md) for full design principles and reference guidelines.
+**North Star: Kotlin everywhere, JCEF only for chat rendering, native UI for everything else.** See [docs/DESIGN.md](docs/DESIGN.md) for full principles and [docs/ROADMAP.md](docs/ROADMAP.md) for the phased plan.
 
 ## Architecture
 
 ```
-webview/              # React frontend (Vite + TypeScript + Ant Design)
-src/main/java/        # IntelliJ plugin (Java)
-src/main/kotlin/      # Kotlin agent runtime (sole execution path)
+src/main/kotlin/      # Kotlin agent runtime (sole execution path) — ~2K LOC
+src/main/java/        # IntelliJ plugin (Java, migrating to Kotlin) — ~18K LOC
+webview/              # React frontend (migrating to vanilla HTML/JS) — ~8K LOC
 ```
 
 ### Communication Flow
 
 ```
-React Webview <--JCEF bridge--> Java Plugin (Kotlin agent) <--Anthropic SDK--> Claude API
-     |                              |
-     |-- sendToJava('type', data)   |-- MessageDispatcher routes to handlers
-     |                              |-- PermissionService handles tool approvals
+JCEF Webview <--bridge--> Java/Kotlin Plugin <--Anthropic SDK--> Claude API
+     |                         |
+     |-- sendToJava(type,data) |-- MessageDispatcher routes to handlers
+     |                         |-- Kotlin AgentRuntime (coroutines, streaming)
+     |                         |-- PermissionGate (coroutine suspension)
 ```
 
 **Key patterns:**
 - Webview sends `type:jsonPayload` strings via `window.sendToJava()`
-- Java `MessageDispatcher` routes to registered `MessageHandler` implementations
+- `MessageDispatcher` routes to registered `MessageHandler` implementations
 - Kotlin `AgentRuntime` calls the Anthropic SDK directly (no subprocess)
-- Permission requests suspend in `PermissionGate` until Java/frontend responds
+- Permission requests suspend in `PermissionGate` until frontend responds
+- All state owned by Kotlin/Java; webview is a render surface
 
 ## Commands
 
@@ -151,11 +153,13 @@ Note: `build.gradle` auto-generates `<change-notes>` from CHANGELOG.md
 
 ## Adding New Features
 
-For full-stack settings/features that span React → Java → bridge.js → SDK, see `.claude/skills/full-stack-feature.md` — documents the exact 11-file path with checklist.
+Currently: features that span React → Java → Kotlin touch many files. See `.claude/skills/full-stack-feature.md`.
+
+Target: new features should be one Kotlin file + optional JS snippet in the JCEF panel. See `docs/ROADMAP.md` Phase 5.
 
 ## Writing E2E Tests
 
-See `.claude/skills/e2e-test.md` for the template, Page Object API, and patterns (intercepting React callbacks, writing config directly, etc.).
+See `.claude/skills/e2e-test.md` for the template, Page Object API, and patterns.
 
 ## Self-Improving Skills
 

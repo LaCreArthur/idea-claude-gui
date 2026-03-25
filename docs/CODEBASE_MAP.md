@@ -1,20 +1,19 @@
 # Codebase Architecture Map
 
-Updated 2026-03-24 after Phase 2 bridge deletion. The Node.js ai-bridge is gone. Kotlin agent runtime is the sole execution path.
+Updated 2026-03-25. Node.js bridge is deleted. Kotlin agent runtime is the sole execution path. React frontend is current but targeted for replacement with vanilla HTML/JS (see ROADMAP.md Phase 5).
 
 ## Session Lifecycle
 
 ```
 ClaudeChatWindow.createNewSession()
   → ClaudeSession (per-session state: sessionId, epoch, CWD, model)
-    → ClaudeSDKBridge.sendQuery()
-      → KotlinAgentLauncher.launch(AgentRuntime, AgentConfig, userMessage)
-        → AgentRuntime.run() — coroutine, calls Anthropic SDK directly
-          → Anthropic SDK (streaming beta messages API)
+    → KotlinAgentLauncher.launch(AgentRuntime, AgentConfig, userMessage)
+      → AgentRuntime.run() — coroutine, calls Anthropic SDK directly
+        → Anthropic SDK (streaming beta messages API)
 ```
 
 - **Epoch guard**: `SessionCallbackFactory` captures `capturedSession` at setup time. All state-mutating callbacks check `this.session == capturedSession` (reference identity) — stale events from old sessions are silently dropped.
-- **Cancellation**: `KotlinAgentLauncher.LaunchResult` holds a `Job`. `ClaudeSDKBridge.interrupt()` cancels it.
+- **Cancellation**: `KotlinAgentLauncher.LaunchResult` holds a `Job`. `ClaudeSession.interrupt()` cancels it.
 - **CWD**: Resolved by `WorkingDirectoryManager` — `project.getBasePath()` → custom override → `user.home` fallback.
 
 ## Streaming
@@ -84,12 +83,13 @@ Returns a configured `AnthropicOkHttpClient`. Throws `IllegalStateException` if 
 | `PermissionGate` | Suspends coroutine on permission requests; resumes when `PermissionService` resolves |
 | `ToolRegistry` | Registers built-in tools (bash, read, write, edit, glob, grep), dispatches by name |
 | `AgentConfig` | Value object: sessionId, cwd, model, permissionMode, maxThinkingTokens, streaming, attachments, enable1MContext |
-| `ClaudeSDKBridge` | Gutted Java stub — wires `KotlinAgentLauncher`, handles slash commands and history |
+| `ClaudeSession` | Orchestrator — launches Kotlin agent, manages message history, handles interrupts |
 | `ClaudeMessageHandler` | Consumes `MessageCallback` events, maintains streaming state, routes to `CallbackHandler` |
 | `CallbackHandler` | Dispatches to `SessionCallback` (epoch-guarded UI callbacks) |
 | `SessionCallbackFactory` | Creates epoch-guarded `SessionCallback` instances |
 | `PermissionService` | Java side of permission handshake — bridges frontend dialog to `PermissionGate` |
 | `MessageDispatcher` | Routes `type:payload` strings from JCEF to registered `MessageHandler` implementations |
+| `SlashCommandCache` | Static `readSlashCommands()` reads `~/.claude/commands/` + project `.claude/commands/` |
 
 ## Model Selection Flow
 

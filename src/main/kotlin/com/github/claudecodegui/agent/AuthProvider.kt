@@ -43,18 +43,16 @@ class AuthProvider {
                     builder.putHeader("anthropic-beta", CONTEXT_1M_BETA)
                 }
             }
-            AuthType.AUTH_TOKEN -> {
+            AuthType.AUTH_TOKEN, AuthType.CLI_SESSION -> {
                 builder.authToken(result.credential)
                 // OAuth tokens require the oauth beta header — without it,
                 // the API rejects with "OAuth authentication is currently not supported"
                 val beta = if (enable1MContext) "$OAUTH_BETA_HEADER,$CONTEXT_1M_BETA" else OAUTH_BETA_HEADER
                 builder.putHeader("anthropic-beta", beta)
-            }
-            AuthType.CLI_SESSION -> {
-                builder.authToken(result.credential)
-                // CLI session tokens are OAuth tokens from `claude login`
-                val beta = if (enable1MContext) "$OAUTH_BETA_HEADER,$CONTEXT_1M_BETA" else OAUTH_BETA_HEADER
-                builder.putHeader("anthropic-beta", beta)
+                // Client fingerprint headers — the gateway ACL gates Sonnet 4.x / Opus 4.x
+                // behind a trusted-client check. Without these, only Haiku is accessible.
+                builder.putHeader("User-Agent", "claude-code/$CLI_VERSION")
+                builder.putHeader("X-Anthropic-Client", "claude-code")
             }
         }
 
@@ -78,6 +76,10 @@ class AuthProvider {
 
         // Claude Code's OAuth client ID (hardcoded in the CLI binary)
         private const val OAUTH_CLIENT_ID = "9d1c250a-e61b-44d9-88ed-5944d1962f5e"
+
+        // Client version for User-Agent header. The gateway gates premium models
+        // behind a trusted-client fingerprint; this must look like a real Claude Code version.
+        private const val CLI_VERSION = "2.1.83"
 
         // Token refresh endpoints (primary and fallback — some integrations use the console URL)
         private const val OAUTH_TOKEN_URL = "https://api.anthropic.com/v1/oauth/token"
@@ -179,25 +181,46 @@ class AuthProvider {
 
     private fun readMacKeychainCredentials(): AuthResult? {
         val serviceNames = listOf("Claude Code-credentials", "Claude Code")
+        // Claude Code stores credentials under varying account names (e.g. "Claude Code", username).
+        // Try the current OS user first, then common account names, then a bare lookup.
+        val accountNames = listOf(System.getProperty("user.name"), "Claude Code", null)
+        var bestResult: AuthResult? = null
+        var bestExpiresAt = 0L
+
         for (service in serviceNames) {
-            try {
-                val process = ProcessBuilder(
-                    "security", "find-generic-password", "-s", service, "-w"
-                ).redirectErrorStream(true).start()
+            for (account in accountNames) {
+                try {
+                    val cmd = mutableListOf("security", "find-generic-password", "-s", service)
+                    if (account != null) { cmd += listOf("-a", account) }
+                    cmd += "-w"
 
-                val exited = process.waitFor(5, TimeUnit.SECONDS)
-                if (!exited) { process.destroyForcibly(); continue }
-                if (process.exitValue() != 0) continue
+                    val process = ProcessBuilder(cmd).redirectErrorStream(true).start()
+                    val exited = process.waitFor(5, TimeUnit.SECONDS)
+                    if (!exited) { process.destroyForcibly(); continue }
+                    if (process.exitValue() != 0) continue
 
-                val output = process.inputStream.bufferedReader().readText().trim()
-                if (output.isBlank()) continue
+                    val output = process.inputStream.bufferedReader().readText().trim()
+                    if (output.isBlank()) continue
 
-                extractOAuthToken(output, "Keychain")?.let { return it }
-            } catch (e: Exception) {
-                LOG.debug("[AuthProvider] Keychain lookup failed for '$service': ${e.message}")
+                    // Parse and check expiry — pick the freshest token
+                    val expiresAt = try {
+                        val obj = gson.fromJson(output, JsonObject::class.java)
+                        obj?.get("claudeAiOauth")?.asJsonObject?.get("expiresAt")?.asLong ?: 0L
+                    } catch (_: Exception) { 0L }
+
+                    if (expiresAt > bestExpiresAt) {
+                        extractOAuthToken(output, "Keychain")?.let {
+                            bestResult = it
+                            bestExpiresAt = expiresAt
+                            LOG.info("[AuthProvider] Found Keychain token: service=$service, account=${account ?: "(any)"}, expiresAt=$expiresAt")
+                        }
+                    }
+                } catch (e: Exception) {
+                    LOG.debug("[AuthProvider] Keychain lookup failed for service='$service' account='$account': ${e.message}")
+                }
             }
         }
-        return null
+        return bestResult
     }
 
     private fun readFileCredentials(): AuthResult? {

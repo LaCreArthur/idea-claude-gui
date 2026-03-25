@@ -13,6 +13,8 @@ interface ConfigSelectProps {
   onToggleThinking?: (enabled: boolean) => void;
   streamingEnabled?: boolean;
   onStreamingEnabledChange?: (enabled: boolean) => void;
+  enable1MContext?: boolean;
+  onEnable1MContextChange?: (enabled: boolean) => void;
   selectedAgent?: SelectedAgent | null;
   onAgentSelect?: (agent: SelectedAgent) => void;
   onOpenAgentSettings?: () => void;
@@ -25,6 +27,8 @@ export const ConfigSelect = ({
   onToggleThinking,
   streamingEnabled,
   onStreamingEnabledChange,
+  enable1MContext,
+  onEnable1MContextChange,
   selectedAgent,
   onAgentSelect,
   onOpenAgentSettings,
@@ -407,6 +411,30 @@ export const ConfigSelect = ({
               onClick={(checked, e) => {
                 e.stopPropagation();
                 onToggleThinking?.(checked);
+              }}
+            />
+          </div>
+
+          <div style={{ height: 1, background: 'var(--dropdown-border)', margin: '4px 0', opacity: 0.5 }} />
+
+          <div
+            className="selector-option"
+            onClick={(e) => {
+              e.stopPropagation();
+              onEnable1MContextChange?.(!enable1MContext);
+            }}
+            onMouseEnter={() => setActiveSubmenu('none')}
+            style={{ justifyContent: 'space-between', cursor: 'pointer' }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span className="codicon codicon-database" />
+              <span>1M Context</span>
+            </div>
+            <ToggleSwitch
+              checked={enable1MContext ?? false}
+              onClick={(checked, e) => {
+                e.stopPropagation();
+                onEnable1MContextChange?.(checked);
               }}
             />
           </div>

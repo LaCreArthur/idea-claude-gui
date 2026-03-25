@@ -28,6 +28,7 @@ export interface UseSettingsCallbacksParams {
   setClaudeSettingsAlwaysThinkingEnabled: Dispatch<SetStateAction<boolean>>;
   setStreamingEnabledSetting: Dispatch<SetStateAction<boolean>>;
   setSendShortcut: Dispatch<SetStateAction<'enter' | 'cmdEnter'>>;
+  setEnable1MContext: Dispatch<SetStateAction<boolean>>;
 }
 
 export function useSettingsCallbacks({
@@ -45,6 +46,7 @@ export function useSettingsCallbacks({
   setClaudeSettingsAlwaysThinkingEnabled,
   setStreamingEnabledSetting,
   setSendShortcut,
+  setEnable1MContext,
 }: UseSettingsCallbacksParams): void {
   useEffect(() => {
     window.updateAuthStatus = (jsonStr: string) => {
@@ -144,6 +146,15 @@ export function useSettingsCallbacks({
       }
     };
 
+    window.update1MContextEnabled = (jsonStr: string) => {
+      try {
+        const data = JSON.parse(jsonStr);
+        setEnable1MContext(data.enabled ?? false);
+      } catch (error) {
+        console.error('[Frontend] Failed to parse 1M context config:', error);
+      }
+    };
+
     const MAX_RETRIES = 30;
 
     let providerRetryCount = 0;
@@ -199,6 +210,19 @@ export function useSettingsCallbacks({
       }
     };
     setTimeout(requestSendShortcut, 200);
+
+    let context1MRetryCount = 0;
+    const request1MContext = () => {
+      if (window.sendToJava) {
+        sendBridgeEvent('get_enable_1m_context');
+      } else {
+        context1MRetryCount++;
+        if (context1MRetryCount < MAX_RETRIES) {
+          setTimeout(request1MContext, 100);
+        }
+      }
+    };
+    setTimeout(request1MContext, 200);
 
   }, []);
 
