@@ -134,21 +134,12 @@ const App = () => {
   const [streamingEnabledSetting, setStreamingEnabledSetting] = useState(false);
   const [sendShortcut, setSendShortcut] = useState<'enter' | 'cmdEnter'>('enter');
 
-  const [sdkStatus, setSdkStatus] = useState<Record<string, { installed?: boolean; status?: string }>>({});
-  const [sdkStatusLoaded, setSdkStatusLoaded] = useState(false);
   const [authStatus, setAuthStatus] = useState<{ authenticated: boolean; authType: string } | null>(null);
   const [authStatusLoaded, setAuthStatusLoaded] = useState(false);
 
   const [contextInfo, setContextInfo] = useState<{ file: string; startLine?: number; endLine?: number; raw: string } | null>(null);
 
   const selectedModel = selectedClaudeModel;
-
-  const currentSdkInstalled = (() => {
-    if (!sdkStatusLoaded) return false;
-    const sdkId = 'claude-sdk';
-    const status = sdkStatus[sdkId];
-    return status?.status === 'installed' || status?.installed === true;
-  })();
 
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
@@ -362,8 +353,6 @@ const App = () => {
     handleReasoningEffortChange,
   } = useChatHandlers({
     loading,
-    sdkStatusLoaded,
-    currentSdkInstalled,
     currentProvider,
     selectedClaudeModel,
     claudePermissionMode,
@@ -375,7 +364,6 @@ const App = () => {
     setLoading,
     setLoadingStartTime,
     setCurrentView,
-    setSettingsInitialTab,
     setCurrentProvider,
     setSelectedClaudeModel,
     setPermissionMode,
@@ -414,8 +402,6 @@ const App = () => {
   });
 
   useSettingsCallbacks({
-    setSdkStatus,
-    setSdkStatusLoaded,
     setAuthStatus,
     setAuthStatusLoaded,
     setUsagePercentage,
@@ -813,12 +799,6 @@ const App = () => {
             showUsage={true}
             alwaysThinkingEnabled={activeProviderConfig?.settingsConfig?.alwaysThinkingEnabled ?? claudeSettingsAlwaysThinkingEnabled}
             placeholder={'@reference files, shift + enter for new line'}
-            sdkInstalled={currentSdkInstalled}
-            sdkStatusLoading={!sdkStatusLoaded}
-            onInstallSdk={() => {
-              setSettingsInitialTab('dependencies');
-              setCurrentView('settings');
-            }}
             authConfigured={authStatusLoaded ? (authStatus?.authenticated ?? false) : true}
             authStatusLoading={!authStatusLoaded}
             onConfigureAuth={() => {

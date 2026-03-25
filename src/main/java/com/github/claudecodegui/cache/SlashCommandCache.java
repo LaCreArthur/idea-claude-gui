@@ -9,8 +9,7 @@ import com.intellij.openapi.vfs.newvfs.BulkFileListener;
 import com.intellij.openapi.vfs.newvfs.events.VFileEvent;
 import com.intellij.util.Alarm;
 import com.intellij.util.messages.MessageBusConnection;
-import com.github.claudecodegui.provider.claude.ClaudeSDKBridge;
-
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Timer;
@@ -23,7 +22,6 @@ import java.util.function.Consumer;
 public class SlashCommandCache {
     private static final Logger LOG = Logger.getInstance(SlashCommandCache.class);
     private final Project project;
-    private final ClaudeSDKBridge sdkBridge;
     private final String cwd;
 
     private volatile List<JsonObject> cachedCommands;
@@ -40,9 +38,8 @@ public class SlashCommandCache {
     private final List<Consumer<List<JsonObject>>> updateListeners;
     private final Alarm refreshAlarm;
 
-    public SlashCommandCache(Project project, ClaudeSDKBridge sdkBridge, String cwd) {
+    public SlashCommandCache(Project project, String cwd) {
         this.project = project;
-        this.sdkBridge = sdkBridge;
         this.cwd = cwd;
         this.cachedCommands = new ArrayList<>();
         this.lastLoadTime = 0;
@@ -94,7 +91,7 @@ public class SlashCommandCache {
         long startTime = System.currentTimeMillis();
         LOG.info("Loading slash commands from SDK");
 
-        sdkBridge.getSlashCommands(cwd)
+        readSlashCommands(cwd)
                 .orTimeout(LOAD_TIMEOUT_SECONDS, TimeUnit.SECONDS)
                 .thenAccept(commands -> {
                     long duration = System.currentTimeMillis() - startTime;
@@ -211,5 +208,50 @@ public class SlashCommandCache {
         refreshAlarm.dispose();
 
         updateListeners.clear();
+    }
+
+    /**
+     * Read slash commands from ~/.claude/commands/ and project .claude/commands/.
+     * Returns a future with the list of command JSON objects.
+     */
+    public static CompletableFuture<List<JsonObject>> readSlashCommands(String cwd) {
+        return CompletableFuture.supplyAsync(() -> {
+            List<JsonObject> commands = new ArrayList<>();
+            try {
+                File homeDir = new File(System.getProperty("user.home"));
+                File commandsDir = new File(homeDir, ".claude/commands");
+                if (commandsDir.isDirectory()) {
+                    File[] files = commandsDir.listFiles((dir, name) -> name.endsWith(".md"));
+                    if (files != null) {
+                        for (File f : files) {
+                            String name = f.getName().replace(".md", "");
+                            JsonObject cmd = new JsonObject();
+                            cmd.addProperty("name", "/" + name);
+                            cmd.addProperty("description", name);
+                            commands.add(cmd);
+                        }
+                    }
+                }
+                // Also check project-local .claude/commands/
+                if (cwd != null && !cwd.isEmpty()) {
+                    File projectCommands = new File(cwd, ".claude/commands");
+                    if (projectCommands.isDirectory()) {
+                        File[] files = projectCommands.listFiles((dir, name) -> name.endsWith(".md"));
+                        if (files != null) {
+                            for (File f : files) {
+                                String name = f.getName().replace(".md", "");
+                                JsonObject cmd = new JsonObject();
+                                cmd.addProperty("name", "/" + name);
+                                cmd.addProperty("description", name + " (project)");
+                                commands.add(cmd);
+                            }
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                LOG.warn("[SlashCommands] Failed to read commands: " + e.getMessage());
+            }
+            return commands;
+        });
     }
 }

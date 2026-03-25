@@ -1,5 +1,6 @@
 package com.github.claudecodegui.handler;
 
+import com.github.claudecodegui.cache.SlashCommandCache;
 import com.github.claudecodegui.model.FileSortItem;
 import com.github.claudecodegui.util.EditorFileUtils;
 import com.google.gson.Gson;
@@ -303,7 +304,7 @@ public class FileHandler extends BaseMessageHandler {
                 String cwd = getEffectiveBasePath();
                 final String finalQuery = query;
 
-                context.getClaudeSDKBridge().getSlashCommands(cwd).thenAccept(sdkCommands -> {
+                SlashCommandCache.readSlashCommands(cwd).thenAccept(sdkCommands -> {
                     try {
                         Gson gson = new Gson();
                         List<JsonObject> commands = new ArrayList<>();

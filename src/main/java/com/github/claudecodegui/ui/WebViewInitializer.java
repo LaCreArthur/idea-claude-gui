@@ -1,6 +1,5 @@
 package com.github.claudecodegui.ui;
 
-import com.github.claudecodegui.provider.claude.ClaudeSDKBridge;
 import com.github.claudecodegui.util.FontConfigService;
 import com.github.claudecodegui.util.HtmlLoader;
 import com.github.claudecodegui.util.JBCefBrowserFactory;
@@ -55,7 +54,6 @@ public class WebViewInitializer {
      * Dependencies needed for WebView initialization.
      */
     public interface Dependencies {
-        ClaudeSDKBridge getClaudeSDKBridge();
         HtmlLoader getHtmlLoader();
         Consumer<String> getJavaScriptMessageHandler();
         Runnable getOnFrontendReady();

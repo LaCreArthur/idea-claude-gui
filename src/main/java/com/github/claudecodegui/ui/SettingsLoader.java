@@ -1,7 +1,6 @@
 package com.github.claudecodegui.ui;
 
 import com.github.claudecodegui.ClaudeSession;
-import com.github.claudecodegui.provider.claude.ClaudeSDKBridge;
 import com.intellij.ide.util.PropertiesComponent;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.Project;
@@ -17,11 +16,9 @@ public class SettingsLoader {
 
     public static final String PERMISSION_MODE_PROPERTY_KEY = "claude.code.permission.mode";
 
-    private final ClaudeSDKBridge claudeSDKBridge;
     private final Project project;
 
-    public SettingsLoader(ClaudeSDKBridge claudeSDKBridge, Project project) {
-        this.claudeSDKBridge = claudeSDKBridge;
+    public SettingsLoader(Project project) {
         this.project = project;
     }
 

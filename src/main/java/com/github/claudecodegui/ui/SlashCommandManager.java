@@ -1,7 +1,6 @@
 package com.github.claudecodegui.ui;
 
 import com.github.claudecodegui.cache.SlashCommandCache;
-import com.github.claudecodegui.provider.claude.ClaudeSDKBridge;
 import com.github.claudecodegui.util.JsUtils;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
@@ -20,7 +19,6 @@ public class SlashCommandManager {
     private static final Logger LOG = Logger.getInstance(SlashCommandManager.class);
 
     private final Project project;
-    private final ClaudeSDKBridge claudeSDKBridge;
     private final BiConsumer<String, String> jsCallback;
 
     private SlashCommandCache slashCommandCache;
@@ -30,17 +28,14 @@ public class SlashCommandManager {
     /**
      * Creates a SlashCommandManager.
      *
-     * @param project         The IntelliJ project
-     * @param claudeSDKBridge The Claude SDK bridge for API calls
-     * @param jsCallback      Callback to call JavaScript functions: (functionName, escapedArg) -> void
+     * @param project    The IntelliJ project
+     * @param jsCallback Callback to call JavaScript functions: (functionName, escapedArg) -> void
      */
     public SlashCommandManager(
             Project project,
-            ClaudeSDKBridge claudeSDKBridge,
             BiConsumer<String, String> jsCallback
     ) {
         this.project = project;
-        this.claudeSDKBridge = claudeSDKBridge;
         this.jsCallback = jsCallback;
     }
 
@@ -61,7 +56,7 @@ public class SlashCommandManager {
         }
 
         // Create and initialize cache
-        slashCommandCache = new SlashCommandCache(project, claudeSDKBridge, effectiveCwd);
+        slashCommandCache = new SlashCommandCache(project, effectiveCwd);
 
         // Add update listener: notify frontend when cache updates
         slashCommandCache.addUpdateListener(commands -> {

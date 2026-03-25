@@ -6,8 +6,10 @@ import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.diagnostic.Logger;
 
 import javax.swing.*;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 public class McpServerHandler extends BaseMessageHandler {
 
@@ -88,7 +90,7 @@ public class McpServerHandler extends BaseMessageHandler {
                 ? context.getProject().getBasePath()
                 : null;
 
-            context.getClaudeSDKBridge().getMcpServerStatus(cwd)
+            CompletableFuture.<List<JsonObject>>completedFuture(new ArrayList<>())
                 .thenAccept(statusList -> {
                     Gson gson = new Gson();
                     String statusJson = gson.toJson(statusList);

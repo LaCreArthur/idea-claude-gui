@@ -4,7 +4,6 @@ import com.github.claudecodegui.ClaudeSDKToolWindow;
 import com.github.claudecodegui.ClaudeSession;
 import com.github.claudecodegui.SessionLoadService;
 import com.github.claudecodegui.PluginSettingsService;
-import com.github.claudecodegui.provider.claude.ClaudeSDKBridge;
 import com.github.claudecodegui.provider.common.MessageCallback;
 
 import com.github.claudecodegui.handler.*;
@@ -29,7 +28,6 @@ public class ClaudeChatWindow {
     private static final Logger LOG = Logger.getInstance(ClaudeChatWindow.class);
 
     private final JPanel mainPanel;
-    private final ClaudeSDKBridge claudeSDKBridge;
     private final Project project;
     private final PluginSettingsService settingsService;
     private final HtmlLoader htmlLoader;
@@ -70,11 +68,10 @@ public class ClaudeChatWindow {
 
     public ClaudeChatWindow(Project project, boolean skipRegister) {
         this.project = project;
-        this.claudeSDKBridge = new ClaudeSDKBridge();
         this.settingsService = new PluginSettingsService();
         this.htmlLoader = new HtmlLoader(getClass());
         this.mainPanel = new JPanel(new BorderLayout());
-        this.settingsLoader = new SettingsLoader(claudeSDKBridge, project);
+        this.settingsLoader = new SettingsLoader(project);
 
         initializeStreamingHandler();
         initializeSlashCommandManager();
@@ -115,7 +112,6 @@ public class ClaudeChatWindow {
     private void initializeSlashCommandManager() {
         this.slashCommandManager = new SlashCommandManager(
             project,
-            claudeSDKBridge,
             this::callJavaScript
         );
     }
@@ -164,7 +160,7 @@ public class ClaudeChatWindow {
     }
 
         private void initializeSession() {
-            this.session = new ClaudeSession(project, claudeSDKBridge);
+            this.session = new ClaudeSession(project);
             settingsLoader.loadPermissionModeFromSettings(session);
         }
 
@@ -231,7 +227,7 @@ public class ClaudeChatWindow {
                 }
             };
 
-            this.handlerContext = new HandlerContext(project, claudeSDKBridge, settingsService, jsCallback);
+            this.handlerContext = new HandlerContext(project, settingsService, jsCallback);
             handlerContext.setSession(session);
 
             this.messageDispatcher = new MessageDispatcher();
@@ -245,9 +241,6 @@ public class ClaudeChatWindow {
             messageDispatcher.registerHandler(new DiffHandler(handlerContext));
             messageDispatcher.registerHandler(new AgentHandler(handlerContext));
             messageDispatcher.registerHandler(new TabHandler(handlerContext));
-            messageDispatcher.registerHandler(new RewindHandler(handlerContext));
-            messageDispatcher.registerHandler(new DependencyHandler(handlerContext));
-
             this.permissionHandler = new PermissionHandler(handlerContext);
             permissionHandler.setPermissionDeniedCallback(this::interruptDueToPermissionDenial);
             messageDispatcher.registerHandler(permissionHandler);
@@ -345,11 +338,6 @@ public class ClaudeChatWindow {
             webViewInitializer = new WebViewInitializer(
                 new WebViewInitializer.Dependencies() {
                     @Override
-                    public ClaudeSDKBridge getClaudeSDKBridge() {
-                        return claudeSDKBridge;
-                    }
-
-                    @Override
                     public HtmlLoader getHtmlLoader() {
                         return htmlLoader;
                     }
@@ -440,7 +428,7 @@ public class ClaudeChatWindow {
             callJavaScript("clearMessages");
             callJavaScript("showLoading", "false");
 
-            session = new ClaudeSession(project, claudeSDKBridge);
+            session = new ClaudeSession(project);
 
             session.setPermissionMode(previousPermissionMode);
             session.setProvider(previousProvider);
@@ -570,7 +558,7 @@ public class ClaudeChatWindow {
             interruptFuture.thenRun(() -> {
                 LOG.info("Old session interrupted, creating new session");
 
-                session = new ClaudeSession(project, claudeSDKBridge);
+                session = new ClaudeSession(project);
 
                 session.setPermissionMode(previousPermissionMode);
                 session.setProvider(previousProvider);
@@ -685,12 +673,6 @@ public class ClaudeChatWindow {
             return mainPanel;
         }
 
-        public void cleanupAllProcesses() {
-            if (claudeSDKBridge != null) {
-                claudeSDKBridge.cleanupAllProcesses();
-            }
-        }
-
         public void dispose() {
             if (disposed) return;
 
@@ -730,14 +712,6 @@ public class ClaudeChatWindow {
                 if (session != null) session.interrupt();
             } catch (Exception e) {
                 LOG.warn("Failed to clean up session: " + e.getMessage());
-            }
-
-            try {
-                if (claudeSDKBridge != null) {
-                    claudeSDKBridge.cleanupAllProcesses();
-                }
-            } catch (Exception e) {
-                LOG.warn("Failed to clean up Claude processes: " + e.getMessage());
             }
 
             try {

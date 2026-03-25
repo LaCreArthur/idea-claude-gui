@@ -130,7 +130,7 @@ it('calls sendToJava when clicked', async () => {
 - `src/main/java/.../session/CallbackHandler.java` - Callback dispatch to UI layer
 - `src/main/java/.../ui/SessionCallbackFactory.java` - Session callback creation with epoch guards
 - `src/main/java/.../permission/PermissionService.java` - Tool approval logic
-- `src/main/java/.../provider/claude/ClaudeSDKBridge.java` - Gutted stub — slash commands, history, interrupt (Kotlin agent is sole execution path)
+- `src/main/java/.../cache/SlashCommandCache.java` - Slash command cache with file watching; static `readSlashCommands()` reads `~/.claude/commands/` and project commands
 - `src/main/java/.../provider/claude/ProcessManager.java` - Process registry, cleanup
 - `src/main/java/.../settings/WorkingDirectoryManager.java` - CWD resolution
 

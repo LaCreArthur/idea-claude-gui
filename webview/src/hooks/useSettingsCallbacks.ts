@@ -3,16 +3,12 @@ import type { PermissionMode } from '../components/ChatInputBox/types';
 import type { ProviderConfig } from '../types/provider';
 import { sendBridgeEvent } from '../utils/bridge';
 
-type SdkStatusRecord = Record<string, { installed?: boolean; status?: string }>;
-
 interface AuthStatus {
   authenticated: boolean;
   authType: string;
 }
 
 export interface UseSettingsCallbacksParams {
-  setSdkStatus: Dispatch<SetStateAction<SdkStatusRecord>>;
-  setSdkStatusLoaded: Dispatch<SetStateAction<boolean>>;
   setAuthStatus: Dispatch<SetStateAction<AuthStatus | null>>;
   setAuthStatusLoaded: Dispatch<SetStateAction<boolean>>;
 
@@ -35,8 +31,6 @@ export interface UseSettingsCallbacksParams {
 }
 
 export function useSettingsCallbacks({
-  setSdkStatus,
-  setSdkStatusLoaded,
   setAuthStatus,
   setAuthStatusLoaded,
   setUsagePercentage,
@@ -53,32 +47,6 @@ export function useSettingsCallbacks({
   setSendShortcut,
 }: UseSettingsCallbacksParams): void {
   useEffect(() => {
-    const originalUpdateDependencyStatus = window.updateDependencyStatus;
-    window.updateDependencyStatus = (jsonStr: string) => {
-      try {
-        const status = JSON.parse(jsonStr);
-        setSdkStatus(status);
-        setSdkStatusLoaded(true);
-      } catch (error) {
-        console.error('[Frontend] Failed to parse SDK status:', error);
-        setSdkStatusLoaded(true);
-      }
-      if (originalUpdateDependencyStatus && originalUpdateDependencyStatus !== window.updateDependencyStatus) {
-        originalUpdateDependencyStatus(jsonStr);
-      }
-    };
-    (window as any)._appUpdateDependencyStatus = window.updateDependencyStatus;
-
-    if (window.__pendingDependencyStatus) {
-      const pending = window.__pendingDependencyStatus;
-      delete window.__pendingDependencyStatus;
-      window.updateDependencyStatus?.(pending);
-    }
-
-    if (window.sendToJava) {
-      window.sendToJava('get_dependency_status:');
-    }
-
     window.updateAuthStatus = (jsonStr: string) => {
       try {
         const data = JSON.parse(jsonStr);

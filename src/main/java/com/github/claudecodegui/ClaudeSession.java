@@ -15,7 +15,7 @@ import com.github.claudecodegui.agent.ToolRegistry;
 import com.github.claudecodegui.permission.PermissionManager;
 import com.github.claudecodegui.permission.PermissionRequest;
 import com.github.claudecodegui.permission.PermissionService;
-import com.github.claudecodegui.provider.claude.ClaudeSDKBridge;
+import com.github.claudecodegui.provider.claude.ClaudeHistoryReader;
 import com.github.claudecodegui.session.ClaudeMessageHandler;
 import com.anthropic.client.AnthropicClient;
 import kotlinx.coroutines.CoroutineScope;
@@ -51,8 +51,8 @@ public class ClaudeSession {
     // Callback handler
     private final com.github.claudecodegui.session.CallbackHandler callbackHandler;
 
-    // SDK bridge
-    private final ClaudeSDKBridge claudeSDKBridge;
+    // History reader for loading past sessions
+    private final ClaudeHistoryReader historyReader = new ClaudeHistoryReader();
 
     // Permission management
     private final PermissionManager permissionManager = new PermissionManager();
@@ -108,9 +108,8 @@ public class ClaudeSession {
         default void onThinkingDelta(String delta) {}
     }
 
-    public ClaudeSession(Project project, ClaudeSDKBridge claudeSDKBridge) {
+    public ClaudeSession(Project project) {
         this.project = project;
-        this.claudeSDKBridge = claudeSDKBridge;
 
         // Initialize managers
         this.state = new com.github.claudecodegui.session.SessionState();
@@ -217,7 +216,13 @@ public class ClaudeSession {
 
                 String currentChannelId = state.getChannelId();
                 String currentCwd = state.getCwd();
-                JsonObject result = claudeSDKBridge.launchChannel(currentChannelId, currentSessionId, currentCwd);
+                // Trivial channel launch — Kotlin agent doesn't need channels
+                JsonObject result = new JsonObject();
+                result.addProperty("success", true);
+                if (currentSessionId != null) {
+                    result.addProperty("sessionId", currentSessionId);
+                }
+                result.addProperty("channelId", currentChannelId);
 
                 // Check if sessionId exists and is not null
                 if (result.has("sessionId") && !result.get("sessionId").isJsonNull()) {
@@ -670,7 +675,16 @@ public class ClaudeSession {
                 String currentCwd = state.getCwd();
 
                 LOG.info("Loading session from server: sessionId=" + currentSessionId + ", cwd=" + currentCwd);
-                List<JsonObject> serverMessages = claudeSDKBridge.getSessionMessages(currentSessionId, currentCwd);
+                String json = historyReader.getSessionMessagesAsJson(currentCwd, currentSessionId);
+                List<JsonObject> serverMessages;
+                if (json == null || json.isEmpty()) {
+                    serverMessages = new ArrayList<>();
+                } else {
+                    com.google.gson.reflect.TypeToken<List<JsonObject>> type =
+                        new com.google.gson.reflect.TypeToken<List<JsonObject>>() {};
+                    List<JsonObject> parsed = gson.fromJson(json, type.getType());
+                    serverMessages = parsed != null ? parsed : new ArrayList<>();
+                }
                 LOG.debug("Received " + serverMessages.size() + " messages from server");
 
                 state.clearMessages();

@@ -79,8 +79,6 @@ interface Window {
 
   showSwitchSuccess?: (message: string) => void;
 
-  updateNodePath?: (path: string) => void;
-
   updateWorkingDirectory?: (json: string) => void;
 
   showSuccess?: (message: string) => void;
@@ -134,22 +132,6 @@ interface Window {
   onStreamEnd?: () => void;
 
   onRewindResult?: (json: string) => void;
-
-  updateDependencyStatus?: (json: string) => void;
-
-  dependencyInstallProgress?: (json: string) => void;
-
-  dependencyInstallResult?: (json: string) => void;
-
-  dependencyUninstallResult?: (json: string) => void;
-
-  nodeEnvironmentStatus?: (json: string) => void;
-
-  dependencyUpdateAvailable?: (json: string) => void;
-
-  __pendingDependencyUpdates?: string;
-
-  __pendingDependencyStatus?: string;
 
   updateAuthStatus?: (json: string) => void;
   __pendingAuthStatus?: string;

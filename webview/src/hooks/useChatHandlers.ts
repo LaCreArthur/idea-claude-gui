@@ -6,8 +6,6 @@ import type { ProviderConfig } from '../types/provider';
 
 export interface UseChatHandlersParams {
   loading: boolean;
-  sdkStatusLoaded: boolean;
-  currentSdkInstalled: boolean;
   currentProvider: string;
   selectedClaudeModel: string;
   claudePermissionMode: PermissionMode;
@@ -19,7 +17,6 @@ export interface UseChatHandlersParams {
   setLoading: (loading: boolean) => void;
   setLoadingStartTime: (time: number | null) => void;
   setCurrentView: (view: 'chat' | 'history' | 'settings') => void;
-  setSettingsInitialTab: (tab: 'dependencies' | undefined) => void;
   setCurrentProvider: (provider: string) => void;
   setSelectedClaudeModel: (model: string) => void;
   setPermissionMode: (mode: PermissionMode) => void;
@@ -48,8 +45,6 @@ export interface ChatHandlers {
 export function useChatHandlers(params: UseChatHandlersParams): ChatHandlers {
   const {
     loading,
-    sdkStatusLoaded,
-    currentSdkInstalled,
     currentProvider,
     selectedClaudeModel,
     claudePermissionMode,
@@ -61,7 +56,6 @@ export function useChatHandlers(params: UseChatHandlersParams): ChatHandlers {
     setLoading,
     setLoadingStartTime,
     setCurrentView,
-    setSettingsInitialTab,
     setCurrentProvider,
     setSelectedClaudeModel,
     setPermissionMode,
@@ -96,19 +90,6 @@ export function useChatHandlers(params: UseChatHandlersParams): ChatHandlers {
       return;
     }
 
-    if (!sdkStatusLoaded) {
-      addToast('Checking SDK status...', 'info');
-      return;
-    }
-    if (!currentSdkInstalled) {
-      addToast(
-        'Claude Code SDK is not installed. Please install the SDK to start chatting. Go to Install',
-        'warning'
-      );
-      setSettingsInitialTab('dependencies');
-      setCurrentView('settings');
-      return;
-    }
 
     const userContentBlocks: ClaudeContentBlock[] = [];
 
@@ -188,8 +169,6 @@ export function useChatHandlers(params: UseChatHandlersParams): ChatHandlers {
     }
   }, [
     loading,
-    sdkStatusLoaded,
-    currentSdkInstalled,
     currentProvider,
     selectedAgent,
     messagesContainerRef,
@@ -198,7 +177,6 @@ export function useChatHandlers(params: UseChatHandlersParams): ChatHandlers {
     setLoading,
     setLoadingStartTime,
     setCurrentView,
-    setSettingsInitialTab,
     addToast,
   ]);
 

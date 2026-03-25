@@ -27,12 +27,6 @@ interface BasicConfigSectionProps {
   onThemeChange: (theme: 'light' | 'dark') => void;
   fontSizeLevel: number;
   onFontSizeLevelChange: (level: number) => void;
-  nodePath: string;
-  onNodePathChange: (path: string) => void;
-  onSaveNodePath: () => void;
-  savingNodePath: boolean;
-  nodeVersion?: string | null;
-  minNodeVersion?: number;
   workingDirectory?: string;
   onWorkingDirectoryChange?: (dir: string) => void;
   onSaveWorkingDirectory?: () => void;
@@ -53,12 +47,6 @@ const BasicConfigSection = ({
   onThemeChange,
   fontSizeLevel,
   onFontSizeLevelChange,
-  nodePath,
-  onNodePathChange,
-  onSaveNodePath,
-  savingNodePath,
-  nodeVersion,
-  minNodeVersion = 18,
   workingDirectory = '',
   onWorkingDirectoryChange = () => {},
   onSaveWorkingDirectory = () => {},
@@ -71,23 +59,10 @@ const BasicConfigSection = ({
 }: BasicConfigSectionProps) => {
   const [soundEnabled, setSoundState] = useState(isSoundEnabled());
 
-  const parseMajorVersion = (version: string | null | undefined): number => {
-    if (!version) return 0;
-    const versionStr = version.startsWith('v') ? version.substring(1) : version;
-    const dotIndex = versionStr.indexOf('.');
-    if (dotIndex > 0) {
-      return parseInt(versionStr.substring(0, dotIndex), 10) || 0;
-    }
-    return parseInt(versionStr, 10) || 0;
-  };
-
-  const majorVersion = parseMajorVersion(nodeVersion);
-  const isVersionTooLow = nodeVersion && majorVersion > 0 && majorVersion < minNodeVersion;
-
   return (
     <div className={styles.configSection}>
       <h3 className={styles.sectionTitle}>Basic Configuration</h3>
-      <p className={styles.sectionDesc}>Configure page theme and Node.js environment</p>
+      <p className={styles.sectionDesc}>Configure page theme and display settings</p>
 
       <div className={styles.themeSection}>
         <div className={styles.fieldHeader}>
@@ -164,51 +139,6 @@ const BasicConfigSection = ({
         <small className={styles.formHint}>
           <span className="codicon codicon-info" />
           <span>Not editable here. To modify, go to IDEA Settings → Editor → Font (restart IDEA for plugin font to take effect)</span>
-        </small>
-      </div>
-
-      <div className={styles.nodePathSection}>
-        <div className={styles.fieldHeader}>
-          <span className="codicon codicon-terminal" />
-          <span className={styles.fieldLabel}>Node.js Path</span>
-          {nodeVersion && (
-            <span className={`${styles.versionBadge} ${isVersionTooLow ? styles.versionBadgeError : styles.versionBadgeOk}`}>
-              {nodeVersion}
-            </span>
-          )}
-        </div>
-        {isVersionTooLow && (
-          <div className={styles.versionWarning}>
-            <span className="codicon codicon-warning" />
-            {`Node.js version is too low. The plugin requires v${minNodeVersion} or higher to run properly`}
-          </div>
-        )}
-        <div className={styles.nodePathInputWrapper}>
-          <input
-            type="text"
-            className={styles.nodePathInput}
-            placeholder="e.g. C:\Program Files\nodejs\node.exe or /usr/local/bin/node"
-            value={nodePath}
-            onChange={(e) => onNodePathChange(e.target.value)}
-          />
-          <button
-            className={styles.saveBtn}
-            onClick={onSaveNodePath}
-            disabled={savingNodePath}
-          >
-            {savingNodePath && (
-              <span
-                className="codicon codicon-loading codicon-modifier-spin"
-              />
-            )}
-            Save
-          </button>
-        </div>
-        <small className={styles.formHint}>
-          <span className="codicon codicon-info" />
-          <span>
-            Run in terminal <code>node -p "process.execPath"</code> to get the actual Node.js executable path. Leave empty to auto-detect.
-          </span>
         </small>
       </div>
 

@@ -131,15 +131,7 @@ public class ClaudeSDKToolWindow implements ToolWindowFactory, DumbAware {
             ExecutorService executor = Executors.newSingleThreadExecutor();
             try {
                 Future<?> future = executor.submit(() -> {
-                    for (ClaudeChatWindow window : new java.util.ArrayList<>(instances.values())) {
-                        try {
-                            if (window != null) {
-                                window.cleanupAllProcesses();
-                            }
-                        } catch (Exception e) {
-                            LOG.error("[ShutdownHook] Error cleaning up processes: " + e.getMessage());
-                        }
-                    }
+                    // No cleanup needed — Kotlin agent uses coroutine scope cancellation
                 });
 
                 future.get(3, TimeUnit.SECONDS);

@@ -13,7 +13,6 @@ import SettingsHeader from './SettingsHeader';
 import SettingsSidebar, { type SettingsTab } from './SettingsSidebar';
 import BasicConfigSection from './BasicConfigSection';
 import ProviderManageSection from './ProviderManageSection';
-import DependencySection from './DependencySection';
 import PlaceholderSection from './PlaceholderSection';
 import CommunitySection from './CommunitySection';
 import AgentSection from './AgentSection';
@@ -96,11 +95,6 @@ const SettingsView = ({ onClose, initialTab, streamingEnabled: streamingEnabledP
     const level = savedLevel ? parseInt(savedLevel, 10) : 3;
     return level >= 1 && level <= 6 ? level : 3;
   });
-
-  const [nodePath, setNodePath] = useState('');
-  const [nodeVersion, setNodeVersion] = useState<string | null>(null);
-  const [minNodeVersion, setMinNodeVersion] = useState(18);
-  const [savingNodePath, setSavingNodePath] = useState(false);
 
   const [workingDirectory, setWorkingDirectory] = useState('');
   const [savingWorkingDirectory, setSavingWorkingDirectory] = useState(false);
@@ -218,29 +212,12 @@ const SettingsView = ({ onClose, initialTab, streamingEnabled: streamingEnabledP
       console.log('[SettingsView] window.showError called:', message);
       showAlert('error', 'Operation failed', message);
       setLoading(false);
-      setSavingNodePath(false);
       setSavingWorkingDirectory(false);
     };
 
     window.showSwitchSuccess = (message: string) => {
       console.log('[SettingsView] window.showSwitchSuccess called:', message);
       showSwitchSuccess(message);
-    };
-
-    window.updateNodePath = (jsonStr: string) => {
-      console.log('[SettingsView] window.updateNodePath called:', jsonStr);
-      try {
-        const data = JSON.parse(jsonStr);
-        setNodePath(data.path || '');
-        setNodeVersion(data.version || null);
-        if (data.minVersion) {
-          setMinNodeVersion(data.minVersion);
-        }
-      } catch (e) {
-        console.warn('[SettingsView] Failed to parse updateNodePath JSON, fallback to legacy format:', e);
-        setNodePath(jsonStr || '');
-      }
-      setSavingNodePath(false);
     };
 
     window.updateWorkingDirectory = (jsonStr: string) => {
@@ -258,7 +235,6 @@ const SettingsView = ({ onClose, initialTab, streamingEnabled: streamingEnabledP
     window.showSuccess = (message: string) => {
       console.log('[SettingsView] window.showSuccess called:', message);
       showAlert('success', 'Operation successful', message);
-      setSavingNodePath(false);
       setSavingWorkingDirectory(false);
     };
 
@@ -337,7 +313,6 @@ const SettingsView = ({ onClose, initialTab, streamingEnabled: streamingEnabledP
     loadProviders();
     loadAgents();
     loadClaudeConfig();
-    sendToJava('get_node_path:');
     sendToJava('get_working_directory:');
     sendToJava('get_editor_font_config:');
     sendToJava('get_streaming_enabled:');
@@ -354,7 +329,6 @@ const SettingsView = ({ onClose, initialTab, streamingEnabled: streamingEnabledP
       window.updateCurrentClaudeConfig = undefined;
       window.showError = undefined;
       window.showSwitchSuccess = undefined;
-      window.updateNodePath = undefined;
       window.updateWorkingDirectory = undefined;
       window.showSuccess = undefined;
       window.onEditorFontConfigReceived = undefined;
@@ -443,12 +417,6 @@ const SettingsView = ({ onClose, initialTab, streamingEnabled: streamingEnabledP
   const loadClaudeConfig = () => {
     setClaudeConfigLoading(true);
     sendToJava('get_current_claude_config:');
-  };
-
-  const handleSaveNodePath = () => {
-    setSavingNodePath(true);
-    const payload = { path: (nodePath || '').trim() };
-    sendToJava(`set_node_path:${JSON.stringify(payload)}`);
   };
 
   const handleSaveWorkingDirectory = () => {
@@ -661,12 +629,6 @@ const SettingsView = ({ onClose, initialTab, streamingEnabled: streamingEnabledP
               onThemeChange={setTheme}
               fontSizeLevel={fontSizeLevel}
               onFontSizeLevelChange={setFontSizeLevel}
-              nodePath={nodePath}
-              onNodePathChange={setNodePath}
-              onSaveNodePath={handleSaveNodePath}
-              savingNodePath={savingNodePath}
-              nodeVersion={nodeVersion}
-              minNodeVersion={minNodeVersion}
               workingDirectory={workingDirectory}
               onWorkingDirectoryChange={setWorkingDirectory}
               onSaveWorkingDirectory={handleSaveWorkingDirectory}
@@ -692,8 +654,6 @@ const SettingsView = ({ onClose, initialTab, streamingEnabled: streamingEnabledP
               addToast={addToast}
             />
           )}
-
-          {currentTab === 'dependencies' && <DependencySection addToast={addToast} />}
 
           {currentTab === 'mcp' && <PlaceholderSection type="mcp" />}
 

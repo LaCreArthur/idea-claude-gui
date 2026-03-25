@@ -1,7 +1,6 @@
 package com.github.claudecodegui.handler;
 
 import com.github.claudecodegui.ClaudeSession;
-import com.github.claudecodegui.provider.claude.ClaudeSDKBridge;
 import com.github.claudecodegui.PluginSettingsService;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.project.Project;
@@ -16,7 +15,6 @@ import java.util.function.Consumer;
 public class HandlerContext {
 
     private final Project project;
-    private final ClaudeSDKBridge claudeSDKBridge;
     private final PluginSettingsService settingsService;
     private final JsCallback jsCallback;
 
@@ -38,12 +36,10 @@ public class HandlerContext {
 
     public HandlerContext(
             Project project,
-            ClaudeSDKBridge claudeSDKBridge,
             PluginSettingsService settingsService,
             JsCallback jsCallback
     ) {
         this.project = project;
-        this.claudeSDKBridge = claudeSDKBridge;
         this.settingsService = settingsService;
         this.jsCallback = jsCallback;
     }
@@ -51,10 +47,6 @@ public class HandlerContext {
     // Getters
     public Project getProject() {
         return project;
-    }
-
-    public ClaudeSDKBridge getClaudeSDKBridge() {
-        return claudeSDKBridge;
     }
 
     public PluginSettingsService getSettingsService() {

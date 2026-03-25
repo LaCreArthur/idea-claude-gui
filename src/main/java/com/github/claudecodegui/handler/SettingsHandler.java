@@ -20,7 +20,6 @@ public class SettingsHandler extends BaseMessageHandler {
 
     private static final Logger LOG = Logger.getInstance(SettingsHandler.class);
 
-    private static final String NODE_PATH_PROPERTY_KEY = "claude.code.node.path";
     private static final String PERMISSION_MODE_PROPERTY_KEY = "claude.code.permission.mode";
     private static final String SEND_SHORTCUT_PROPERTY_KEY = "claude.code.send.shortcut";
 
@@ -29,8 +28,6 @@ public class SettingsHandler extends BaseMessageHandler {
         "set_mode",
         "set_model",
         "set_provider",
-        "get_node_path",
-        "set_node_path",
         "get_usage_statistics",
         "get_working_directory",
         "set_working_directory",
@@ -95,12 +92,6 @@ public class SettingsHandler extends BaseMessageHandler {
                 return true;
             case "set_provider":
                 handleSetProvider(content);
-                return true;
-            case "get_node_path":
-                handleGetNodePath();
-                return true;
-            case "set_node_path":
-                handleSetNodePath(content);
                 return true;
             case "get_usage_statistics":
                 handleGetUsageStatistics(content);
@@ -384,26 +375,6 @@ public class SettingsHandler extends BaseMessageHandler {
         } catch (Exception e) {
             LOG.error("[SettingsHandler] Failed to set provider: " + e.getMessage(), e);
         }
-    }
-
-    private void handleGetNodePath() {
-        // Node.js is no longer required — return info message
-        ApplicationManager.getApplication().invokeLater(() -> {
-            JsonObject response = new JsonObject();
-            response.addProperty("path", "");
-            response.addProperty("version", "N/A (Kotlin agent)");
-            response.addProperty("minVersion", 0);
-            response.addProperty("message", "Node.js is no longer required — using Kotlin agent runtime");
-            callJavaScript("window.updateNodePath", escapeJs(new Gson().toJson(response)));
-        });
-    }
-
-    private void handleSetNodePath(String content) {
-        // Node.js path setting is a no-op now
-        ApplicationManager.getApplication().invokeLater(() -> {
-            callJavaScript("window.showSwitchSuccess",
-                escapeJs("Node.js is no longer required. The plugin uses Kotlin agent runtime."));
-        });
     }
 
     private void handleGetUsageStatistics(String content) {
