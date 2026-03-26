@@ -42,8 +42,8 @@ dependencies {
     implementation 'com.anthropic:anthropic-java:2.18.0'
 
     // Kotlin coroutines (agent loop, permission suspension, streaming)
-    // Do NOT add kotlin-stdlib — it's bundled with the IDE and adding it causes conflicts
-    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0'
+    // Do NOT add kotlin-stdlib or kotlinx-coroutines-core — both are bundled with the IDE.
+    // Adding them causes loader constraint violations (two versions of the same class).
 
     // Testing - JUnit 5 with JUnit 4 compatibility for IntelliJ Platform (IJPL-159134)
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.1'

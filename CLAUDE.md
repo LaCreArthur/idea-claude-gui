@@ -78,7 +78,7 @@ This same pattern applies to permissions, plan approval, and any interactive pro
 **Rules:**
 - `intellijIdeaCommunity()` is deprecated for 2025.3+ — use `intellijIdea()`
 - Always add `bundledPlugin("org.jetbrains.plugins.terminal")` for TerminalView API
-- Never add `kotlin-stdlib` as a compile dep — it's bundled and causes classpath conflicts
+- Never add `kotlin-stdlib` or `kotlinx-coroutines-core` as compile deps — both are bundled. Adding either causes loader constraint violations at runtime (two classloaders loading the same class)
 - Build skip: `./gradlew clean buildPlugin -x buildWebview` (no webview in this project)
 
 ## Commands
