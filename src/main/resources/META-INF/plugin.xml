@@ -4,90 +4,36 @@
     <vendor>Arthur Scheidel</vendor>
 
     <description><![CDATA[
-        <p><strong>Claude GUI</strong> - A visual interface for <strong>Claude Code</strong> in JetBrains IDEs. Brings Anthropic's AI programming assistant directly into your workflow.</p>
-
-        <p><em>Originally forked from <a href="https://github.com/zhukunpenglinyutong/idea-claude-code-gui">idea-claude-code-gui</a> by zhukunpenglinyutong — rewritten for English-only, Claude-only use.</em></p>
-
-        <h2>Key Features</h2>
+        <p><strong>Claude GUI</strong> — Embeds the <code>claude</code> CLI in a JetBrains TerminalView with native IDE UX on top.</p>
+        <p>Full Sonnet 4.6 / Opus 4.6 access via Claude Max/Pro subscription — no API key required.</p>
         <ul>
-            <li><strong>Flexible Authentication</strong>: Works with Claude subscription (Pro/Max) or API key</li>
-            <li><strong>Model Selection</strong>: Switch between Opus 4.6, Sonnet 4.6, and other Claude models</li>
-            <li><strong>Plan Mode</strong>: Let Claude analyze and plan before making changes</li>
-            <li><strong>Context-aware</strong>: @file references and image support for precise context</li>
-            <li><strong>Agent System</strong>: Built-in agents for automated complex tasks</li>
-            <li><strong>Skills Commands</strong>: Slash command system (/init, /review, etc.)</li>
-            <li><strong>MCP Server</strong>: Extend AI capabilities with Model Context Protocol</li>
-            <li><strong>Code DIFF</strong>: Visual code comparison and file navigation</li>
-            <li><strong>Conversation Rewind</strong>: Flexible history adjustment</li>
-            <li><strong>Session Management</strong>: History, favorites, search, and export</li>
-            <li><strong>Theme Support</strong>: Dark/Light themes with IDE font sync</li>
-            <li><strong>Permission Control</strong>: Comprehensive security management</li>
+            <li>Interactive Claude Code session in a tool window</li>
+            <li>Native dialogs for interactive CLI prompts (AskUserQuestion, permissions, etc.)</li>
+            <li>Send editor selection to Claude (Cmd+Alt+K)</li>
+            <li>Slash command autocomplete</li>
         </ul>
-
-        <h2>How to Use</h2>
-        <ul>
-            <li>Open Claude GUI from the right sidebar</li>
-            <li>Select code and press <kbd>Ctrl+Alt+K</kbd> (Win/Linux) or <kbd>Cmd+Alt+K</kbd> (Mac)</li>
-        </ul>
-
-        <p><em>Keywords: Claude, Claude Code, AI Assistant, Code Generation, AI Coding, Anthropic</em></p>
     ]]></description>
 
     <depends>com.intellij.modules.platform</depends>
-    <!-- Optional: Java support for enhanced context collection in Java/Kotlin IDEs -->
-    <depends optional="true" config-file="java-features.xml">com.intellij.java</depends>
 
     <extensions defaultExtensionNs="com.intellij">
-        <!-- Per-project permission service (ensures prompts appear in correct IDE instance) -->
-        <projectService serviceImplementation="com.github.claudecodegui.permission.PermissionService"/>
-
-        <!-- Claude Code GUI Tool Window (includes history) -->
-        <toolWindow id="Claude GUI"
+        <toolWindow id="Claude"
                     anchor="right"
-                    factoryClass="com.github.claudecodegui.ClaudeSDKToolWindow"
+                    factoryClass="com.github.claudecodegui.ClaudeToolWindowFactory"
                     icon="/icons/cc-gui-icon.svg"
-                    canCloseContents="true"/>
-
-        <!-- Detect plugin version changes -->
-        <postStartupActivity implementation="com.github.claudecodegui.startup.PluginUpdateListener"/>
-
-        <!-- StatusBar widget for task notification -->
-        <statusBarWidgetFactory id="ClaudeStatusBarWidget"
-                                implementation="com.github.claudecodegui.notifications.ClaudeStatusBarWidget$Factory"/>
+                    canCloseContents="false"/>
     </extensions>
 
     <actions>
-        <!-- Send selected code to AI action -->
-        <action id="ClaudeCodeGUI.SendSelectionToTerminalAction"
-                class="com.github.claudecodegui.SendSelectionToTerminalAction"
+        <action id="ClaudeCodeGUI.SendSelectionAction"
+                class="com.github.claudecodegui.SendSelectionAction"
+                text="Send to Claude"
+                description="Send selected code to Claude input bar"
                 icon="/icons/send-to-terminal.svg">
-            <!-- Add to editor context menu (show at top) -->
             <add-to-group group-id="EditorPopupMenu" anchor="first"/>
             <keyboard-shortcut keymap="$default" first-keystroke="ctrl alt K"/>
             <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta alt K"/>
             <keyboard-shortcut keymap="macOS" first-keystroke="meta alt K"/>
         </action>
-
-        <!-- Quick Fix with Claude Action -->
-        <action id="ClaudeCodeGUI.QuickFixWithClaudeAction"
-                class="com.github.claudecodegui.QuickFixWithClaudeAction"
-                icon="/icons/quick-fix.svg">
-            <add-to-group group-id="EditorPopupMenu"
-                           anchor="after"
-                           relative-to-action="ClaudeCodeGUI.SendSelectionToTerminalAction"/>
-        </action>
-
-        <!-- Create New Tab Action (can be invoked via Find Action or programmatically) -->
-        <action id="ClaudeCodeGUI.CreateNewTabAction"
-                class="com.github.claudecodegui.CreateNewTabAction"
-                icon="AllIcons.General.Add"
-                text="New Chat Tab"
-                description="Create a new chat tab in Claude Code GUI tool window"/>
-
-        <!-- Test Action for E2E testing (only visible in test mode) -->
-        <action id="ClaudeCodeGUI.TestSendMessageAction"
-                class="com.github.claudecodegui.TestSendMessageAction"
-                text="Claude GUI Test Command"
-                description="Execute test command from /tmp/claude-gui-test-command.txt (test mode only)"/>
     </actions>
 </idea-plugin>
