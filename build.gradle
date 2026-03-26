@@ -3,7 +3,7 @@ import org.jetbrains.intellij.platform.gradle.TestFrameworkType
 plugins {
     id 'java'
     id 'checkstyle'
-    id 'org.jetbrains.kotlin.jvm' version '1.9.22'
+    id 'org.jetbrains.kotlin.jvm' version '2.2.20'  // match bundled Kotlin in 2025.3 (see .claude/references/gradle-plugin-versions.md)
     id 'org.jetbrains.intellij.platform' version '2.10.5'
 }
 
@@ -42,8 +42,8 @@ dependencies {
     implementation 'com.anthropic:anthropic-java:2.18.0'
 
     // Kotlin coroutines (agent loop, permission suspension, streaming)
-    implementation 'org.jetbrains.kotlin:kotlin-stdlib:1.9.22'
-    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3'
+    // Do NOT add kotlin-stdlib — it's bundled with the IDE and adding it causes conflicts
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0'
 
     // Testing - JUnit 5 with JUnit 4 compatibility for IntelliJ Platform (IJPL-159134)
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.1'
@@ -61,8 +61,9 @@ dependencies {
     testRuntimeOnly 'com.jetbrains.intellij.tools:ide-starter-driver:243.22562.145'
 
     intellijPlatform {
-        intellijIdeaCommunity('2024.3.1')
+        intellijIdea('2025.3.1')
         bundledPlugin('com.intellij.java')  // Java PSI for JavaContextCollector (compile-time only)
+        bundledPlugin('org.jetbrains.plugins.terminal')  // Reworked Terminal API (com.intellij.terminal.frontend.*)
         instrumentationTools()
         testFramework TestFrameworkType.Starter.INSTANCE  // JetBrains Starter Framework for E2E testing
     }

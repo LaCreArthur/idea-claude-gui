@@ -64,6 +64,23 @@ CLI receives the answer
 
 This same pattern applies to permissions, plan approval, and any interactive prompt.
 
+## Build Version Matrix
+
+**Reference:** `.claude/references/gradle-plugin-versions.md` (fetched from JetBrains docs)
+
+| IDE Target | Kotlin Plugin | Kotlin stdlib | Gradle plugin helper |
+|---|---|---|---|
+| 2025.3.x | `2.2.20` | bundled — do NOT add as dep | `intellijIdea("2025.3.1")` |
+| 2025.2.x | `2.1.20` | bundled — do NOT add as dep | `intellijIdea("2025.2.x")` |
+| 2025.1.x | `2.1.10` | bundled | `intellijIdea("2025.1.x")` |
+| 2024.3.x | `2.0.21` | bundled | `intellijIdeaCommunity("2024.3.x")` |
+
+**Rules:**
+- `intellijIdeaCommunity()` is deprecated for 2025.3+ — use `intellijIdea()`
+- Always add `bundledPlugin("org.jetbrains.plugins.terminal")` for TerminalView API
+- Never add `kotlin-stdlib` as a compile dep — it's bundled and causes classpath conflicts
+- Build skip: `./gradlew clean buildPlugin -x buildWebview` (no webview in this project)
+
 ## Commands
 
 ```bash
