@@ -5,6 +5,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
 import java.awt.Component
 import java.awt.Dimension
+import java.awt.Font
 import java.awt.event.FocusAdapter
 import java.awt.event.FocusEvent
 import java.awt.event.KeyEvent
@@ -25,47 +26,83 @@ data class ParsedOption(
     val isFreeText: Boolean = false,
 )
 
+data class PermissionRequest(
+    val action: String,   // "execute this bash command", "read this file", etc.
+    val detail: String,   // the command/path being acted on
+)
+
+private enum class CaptureMode { NONE, QUESTION, PERMISSION }
+
 // ── Parser ──
 
 class CliOutputParser {
     private val log = Logger.getInstance(CliOutputParser::class.java)
     private val buffer = StringBuilder()
-    private var capturing = false
+    private var captureMode = CaptureMode.NONE
     private var captureStartTime = 0L
 
     var onQuestion: ((ParsedQuestion) -> Unit)? = null
+    var onPermission: ((PermissionRequest) -> Unit)? = null
 
     private val ansiRegex = Regex("""\u001b(?:\[[0-9;?]*[a-zA-Z]|\][^\u0007]*\u0007|[()][0-9A-B]|[=>])""")
 
     fun feed(rawText: String) {
         val text = ansiRegex.replace(rawText, "")
 
-        if (text.contains("☐")) {
-            capturing = true
-            buffer.clear()
-            captureStartTime = System.currentTimeMillis()
+        // Start markers — permission check takes priority (it contains no ☐)
+        if (captureMode == CaptureMode.NONE) {
+            when {
+                text.contains("Do you want to allow Claude") -> {
+                    log.warn("[PARSER] Permission prompt start detected")
+                    captureMode = CaptureMode.PERMISSION
+                    buffer.clear()
+                    captureStartTime = System.currentTimeMillis()
+                }
+                text.contains("☐") -> {
+                    log.warn("[PARSER] AskUserQuestion start detected")
+                    captureMode = CaptureMode.QUESTION
+                    buffer.clear()
+                    captureStartTime = System.currentTimeMillis()
+                }
+            }
         }
 
-        if (capturing) {
-            buffer.append(text)
+        if (captureMode == CaptureMode.NONE) return
 
-            // Timeout: stop capturing after 30s
-            if (System.currentTimeMillis() - captureStartTime > 30_000) {
-                log.warn("AskUserQuestion capture timed out")
-                capturing = false
-                buffer.clear()
-                return
-            }
+        buffer.append(text)
 
-            if (buffer.contains("────")) {
-                capturing = false
-                try {
-                    parseQuestion(buffer.toString())?.let { onQuestion?.invoke(it) }
-                } catch (e: Exception) {
-                    log.warn("Failed to parse AskUserQuestion: ${e.message}")
+        if (System.currentTimeMillis() - captureStartTime > 30_000) {
+            log.warn("[PARSER] Capture timed out (mode=$captureMode)")
+            captureMode = CaptureMode.NONE
+            buffer.clear()
+            return
+        }
+
+        when (captureMode) {
+            CaptureMode.QUESTION -> {
+                if (buffer.contains("────")) {
+                    captureMode = CaptureMode.NONE
+                    try {
+                        parseQuestion(buffer.toString())?.let { onQuestion?.invoke(it) }
+                    } catch (e: Exception) {
+                        log.warn("[PARSER] Failed to parse AskUserQuestion: ${e.message}")
+                    }
+                    buffer.clear()
                 }
-                buffer.clear()
             }
+            CaptureMode.PERMISSION -> {
+                // End: we have all 3 options (option 3 = "No, and tell Claude")
+                if (buffer.contains("3.") && buffer.contains("No")) {
+                    captureMode = CaptureMode.NONE
+                    try {
+                        parsePermission(buffer.toString())?.let { onPermission?.invoke(it) }
+                    } catch (e: Exception) {
+                        log.warn("[PARSER] Failed to parse permission prompt: ${e.message}")
+                    }
+                    buffer.clear()
+                }
+            }
+            CaptureMode.NONE -> {}
         }
     }
 
@@ -110,8 +147,30 @@ class CliOutputParser {
         if (options.isEmpty()) return null
 
         val question = ParsedQuestion(title, bodyLines.joinToString("\n"), options)
-        log.info("Parsed AskUserQuestion: '${question.title}' with ${options.size} options")
+        log.warn("[PARSER] AskUserQuestion: '${question.title}' with ${options.size} options")
         return question
+    }
+
+    private fun parsePermission(raw: String): PermissionRequest? {
+        val lines = raw.lines().map { it.trim() }.filter { it.isNotEmpty() }
+
+        // Find "Do you want to allow Claude to X?" line
+        val actionLine = lines.firstOrNull { it.contains("Do you want to allow Claude") } ?: return null
+        val action = actionLine
+            .substringAfter("allow Claude to", "")
+            .trimEnd('?')
+            .trim()
+            .ifEmpty { "perform this action" }
+
+        // Everything between the action line and the first option is the detail (command/path)
+        val actionIdx = lines.indexOf(actionLine)
+        val firstOptionIdx = lines.indexOfFirst { it.matches(Regex("""[❯\s]*1\..+""")) }
+        val detail = if (firstOptionIdx > actionIdx + 1)
+            lines.subList(actionIdx + 1, firstOptionIdx).joinToString("\n")
+        else ""
+
+        log.warn("[PARSER] Permission: action='$action' detail='${detail.take(100)}'")
+        return PermissionRequest(action, detail)
     }
 }
 
@@ -187,6 +246,81 @@ class AskUserQuestionDialog(
     fun getSelectedOptionIndex(): Int = selectedIndex
     fun getFreeText(): String = freeTextField.text.trim()
     fun isFreeTextSelected(): Boolean = question.options.getOrNull(selectedIndex)?.isFreeText == true
+}
+
+// ── Permission Dialog ──
+
+enum class PermissionChoice { ALLOW_ONCE, ALLOW_ALWAYS, DENY }
+
+class PermissionDialog(
+    project: Project,
+    private val request: PermissionRequest,
+) : DialogWrapper(project) {
+
+    private var choice = PermissionChoice.ALLOW_ONCE
+
+    init {
+        title = "Claude Permission Request"
+        setOKButtonText("Allow Once")
+        setCancelButtonText("Deny")
+        init()
+    }
+
+    override fun createCenterPanel(): JComponent {
+        val panel = JPanel()
+        panel.layout = BoxLayout(panel, BoxLayout.Y_AXIS)
+        panel.border = BorderFactory.createEmptyBorder(8, 8, 8, 8)
+
+        val heading = JLabel("<html><b>Claude wants to ${request.action}</b></html>")
+        heading.alignmentX = Component.LEFT_ALIGNMENT
+        panel.add(heading)
+
+        if (request.detail.isNotBlank()) {
+            panel.add(Box.createVerticalStrut(8))
+            val detail = JTextArea(request.detail).apply {
+                isEditable = false
+                lineWrap = true
+                wrapStyleWord = true
+                font = Font("JetBrains Mono", Font.PLAIN, 12)
+                background = UIManager.getColor("Panel.background")
+                border = BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(UIManager.getColor("Separator.foreground")),
+                    BorderFactory.createEmptyBorder(4, 6, 4, 6),
+                )
+                alignmentX = Component.LEFT_ALIGNMENT
+            }
+            panel.add(detail)
+        }
+
+        panel.add(Box.createVerticalStrut(12))
+
+        val group = ButtonGroup()
+        listOf(
+            "Allow once" to PermissionChoice.ALLOW_ONCE,
+            "Always allow for this session" to PermissionChoice.ALLOW_ALWAYS,
+            "Deny" to PermissionChoice.DENY,
+        ).forEachIndexed { idx, (label, value) ->
+            val radio = JRadioButton(label).apply {
+                isSelected = idx == 0
+                alignmentX = Component.LEFT_ALIGNMENT
+                addActionListener { choice = value }
+            }
+            group.add(radio)
+            panel.add(radio)
+        }
+
+        panel.preferredSize = Dimension(440, panel.preferredSize.height)
+        return panel
+    }
+
+    fun getChoice(): PermissionChoice = choice
+
+    // Override OK/Cancel to both close — actual choice read via getChoice()
+    override fun createActions(): Array<Action> = arrayOf(okAction, cancelAction)
+    override fun doOKAction() {
+        if (choice == PermissionChoice.DENY) choice = PermissionChoice.DENY
+        super.doOKAction()
+    }
 }
 
 // ── Answer sender (dispatches key events to terminal) ──
