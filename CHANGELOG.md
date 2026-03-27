@@ -1,3 +1,11 @@
+##### **v0.2.15** (2026-03-25)
+
+**Final Release — Plugin Deprecated**
+
+This is the last release of Claude GUI. Anthropic's Terms of Service now prevent third-party applications from using Claude Max/Pro subscription credentials to access premium models. The direct SDK approach this plugin relies on is limited to Haiku only. Development has stopped.
+
+---
+
 ##### **v0.2.14** (2026-03-15)
 
 **Daemon Mode & Streaming Fixes**
