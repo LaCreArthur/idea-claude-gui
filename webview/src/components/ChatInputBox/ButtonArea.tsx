@@ -19,6 +19,8 @@ export const ButtonArea = ({
   onToggleThinking,
   streamingEnabled = false,
   onStreamingEnabledChange,
+  enable1MContext = false,
+  onEnable1MContextChange,
   selectedAgent,
   onAgentSelect,
   onOpenAgentSettings,
@@ -99,6 +101,8 @@ export const ButtonArea = ({
           onToggleThinking={onToggleThinking}
           streamingEnabled={streamingEnabled}
           onStreamingEnabledChange={onStreamingEnabledChange}
+          enable1MContext={enable1MContext}
+          onEnable1MContextChange={onEnable1MContextChange}
           selectedAgent={selectedAgent}
           onAgentSelect={onAgentSelect}
           onOpenAgentSettings={onOpenAgentSettings}

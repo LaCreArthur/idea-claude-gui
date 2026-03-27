@@ -57,15 +57,14 @@ export const ChatInputBox = ({
   onToggleThinking,
   streamingEnabled,
   onStreamingEnabledChange,
+  enable1MContext,
+  onEnable1MContextChange,
   sendShortcut = 'enter',
   selectedAgent,
   onAgentSelect,
   onOpenAgentSettings,
   hasMessages,
   onRewind,
-  sdkInstalled = true,
-  sdkStatusLoading = false,
-  onInstallSdk,
   authConfigured = true,
   authStatusLoading = false,
   onConfigureAuth,
@@ -382,17 +381,6 @@ export const ChatInputBox = ({
     const content = getTextContent();
     const cleanContent = content.replace(/[\u200B-\u200D\uFEFF]/g, '').trim();
 
-    if (sdkStatusLoading) {
-      addToast?.('Checking SDK status...', 'info');
-      return;
-    }
-
-    if (!sdkInstalled) {
-      addToast?.(`Claude Code SDK is not installed. Please install the SDK to start chatting. Go to Install`, 'warning');
-      onInstallSdk?.();
-      return;
-    }
-
     if (!authConfigured) {
       addToast?.('Not authenticated. Run "claude login" in terminal or configure an API key.', 'warning');
       onConfigureAuth?.();
@@ -427,9 +415,6 @@ export const ChatInputBox = ({
     fileCompletion,
     commandCompletion,
     agentCompletion,
-    sdkStatusLoading,
-    sdkInstalled,
-    onInstallSdk,
     addToast,
     currentProvider,
   ]);
@@ -452,8 +437,6 @@ export const ChatInputBox = ({
     agentCompletionHandleKeyDown: agentCompletion.handleKeyDown,
     handleSubmit,
     handleInput,
-    sdkStatusLoading,
-    sdkInstalled,
     sendShortcut,
   });
 
@@ -650,26 +633,7 @@ export const ChatInputBox = ({
 
   return (
     <div className="chat-input-box" onClick={focusInput} ref={containerRef}>
-      {(sdkStatusLoading || !sdkInstalled) && (
-        <div className={`sdk-warning-bar ${sdkStatusLoading ? 'sdk-loading' : ''}`}>
-          <span className={`codicon ${sdkStatusLoading ? 'codicon-loading codicon-modifier-spin' : 'codicon-warning'}`} />
-          <span className="sdk-warning-text">
-            {sdkStatusLoading
-              ? 'Checking SDK status...'
-              : 'Claude Code SDK is not installed. Please install the SDK to start chatting.'}
-          </span>
-          {!sdkStatusLoading && (
-            <button className="sdk-install-btn" onClick={(e) => {
-              e.stopPropagation();
-              onInstallSdk?.();
-            }}>
-              Go to Install
-            </button>
-          )}
-        </div>
-      )}
-
-      {sdkInstalled && !sdkStatusLoading && (authStatusLoading || !authConfigured) && (
+      {(authStatusLoading || !authConfigured) && (
         <div className={`sdk-warning-bar auth-warning-bar ${authStatusLoading ? 'sdk-loading' : ''}`}>
           <span className={`codicon ${authStatusLoading ? 'codicon-loading codicon-modifier-spin' : 'codicon-warning'}`} />
           <span className="sdk-warning-text">
@@ -783,6 +747,8 @@ export const ChatInputBox = ({
         onToggleThinking={onToggleThinking}
         streamingEnabled={streamingEnabled}
         onStreamingEnabledChange={onStreamingEnabledChange}
+        enable1MContext={enable1MContext}
+        onEnable1MContextChange={onEnable1MContextChange}
         selectedAgent={selectedAgent}
         onAgentSelect={(agent) => onAgentSelect?.(agent)}
         onOpenAgentSettings={onOpenAgentSettings}

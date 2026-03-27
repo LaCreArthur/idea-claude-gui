@@ -52,25 +52,9 @@ if (typeof window !== 'undefined' && !window.setSessionId) {
   };
 }
 
-if (typeof window !== 'undefined' && !window.updateDependencyStatus) {
-  console.log('[Main] Pre-registering updateDependencyStatus placeholder');
-  window.updateDependencyStatus = (json: string) => {
-    console.log('[Main] Storing pending dependency status, length=' + (json ? json.length : 0));
-    window.__pendingDependencyStatus = json;
-  };
-}
-
 if (typeof window !== 'undefined' && !window.updateAuthStatus) {
   window.updateAuthStatus = (json: string) => {
     window.__pendingAuthStatus = json;
-  };
-}
-
-if (typeof window !== 'undefined' && !window.dependencyUpdateAvailable) {
-  console.log('[Main] Pre-registering dependencyUpdateAvailable placeholder');
-  window.dependencyUpdateAvailable = (json: string) => {
-    console.log('[Main] Storing pending dependency updates, length=' + (json ? json.length : 0));
-    window.__pendingDependencyUpdates = json;
   };
 }
 
@@ -107,9 +91,6 @@ waitForBridge(() => {
 
   console.log('[Main] Sending refresh_slash_commands request');
   sendBridgeEvent('refresh_slash_commands');
-
-  console.log('[Main] Requesting dependency status');
-  sendBridgeEvent('get_dependency_status');
 
   console.log('[Main] Requesting auth status');
   sendBridgeEvent('get_auth_status');

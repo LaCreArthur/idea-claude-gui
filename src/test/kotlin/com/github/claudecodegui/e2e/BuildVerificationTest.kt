@@ -57,49 +57,16 @@ class BuildVerificationTest {
 
     @Test
     @Timeout(value = 30, unit = TimeUnit.SECONDS)
-    fun pluginZip_containsAiBridge() {
+    fun pluginZip_doesNotContainAiBridge() {
         skipInCI()
         assumeTrue(PLUGIN_PATH != null, "Skipping: -Dpath.to.build.plugin not set")
         val pluginZip = ZipFile(File(PLUGIN_PATH!!))
         val entries = pluginZip.entries().toList().map { it.name }
         pluginZip.close()
 
-        val aiBridge = entries.find { it.contains("ai-bridge.zip") }
-        assertNotNull(aiBridge, "Plugin must contain ai-bridge.zip")
-        println("[BUILD] ai-bridge.zip found: $aiBridge")
-    }
-
-    @Test
-    @Timeout(value = 60, unit = TimeUnit.SECONDS)
-    fun aiBridge_containsBridgeJs() {
-        skipInCI()
-        assumeTrue(PLUGIN_PATH != null, "Skipping: -Dpath.to.build.plugin not set")
-        val pluginZip = ZipFile(File(PLUGIN_PATH!!))
-
-        val aiBridgeEntry = pluginZip.entries().toList().find { it.name.contains("ai-bridge.zip") }
-        assertNotNull(aiBridgeEntry, "Plugin must contain ai-bridge.zip")
-
-        // Extract ai-bridge.zip to temp
-        val tempDir = Files.createTempDirectory("ai-bridge-verify")
-        val tempAiBridge = tempDir.resolve("ai-bridge.zip")
-        pluginZip.getInputStream(aiBridgeEntry).use { input ->
-            Files.copy(input, tempAiBridge)
-        }
-        pluginZip.close()
-
-        // Check ai-bridge.zip contents
-        val aiBridgeZip = ZipFile(tempAiBridge.toFile())
-        val bridgeEntries = aiBridgeZip.entries().toList().map { it.name }
-        aiBridgeZip.close()
-
-        val hasBridgeJs = bridgeEntries.any { it == "bridge.js" || it.endsWith("/bridge.js") }
-        val hasPackageJson = bridgeEntries.any { it == "package.json" || it.endsWith("/package.json") }
-
-        tempDir.toFile().deleteRecursively()
-
-        assertTrue(hasBridgeJs, "ai-bridge must contain bridge.js")
-        assertTrue(hasPackageJson, "ai-bridge must contain package.json")
-        println("[BUILD] ai-bridge structure verified: bridge.js=$hasBridgeJs, package.json=$hasPackageJson")
+        val aiBridge = entries.find { it.contains("ai-bridge") }
+        assertNull(aiBridge, "Plugin must NOT contain ai-bridge (removed in Phase 2)")
+        println("[BUILD] Confirmed: no ai-bridge artifacts in plugin")
     }
 
     @Test

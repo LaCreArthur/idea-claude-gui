@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Switch } from 'antd';
+import { ToggleSwitch } from './ToggleSwitch';
 import { ClaudeIcon } from '../../../assets/ClaudeIcon';
 import { AVAILABLE_PROVIDERS } from '../types';
 import { agentProvider, CREATE_NEW_AGENT_ID, EMPTY_STATE_ID, type AgentItem } from '../providers/agentProvider';
@@ -13,6 +13,8 @@ interface ConfigSelectProps {
   onToggleThinking?: (enabled: boolean) => void;
   streamingEnabled?: boolean;
   onStreamingEnabledChange?: (enabled: boolean) => void;
+  enable1MContext?: boolean;
+  onEnable1MContextChange?: (enabled: boolean) => void;
   selectedAgent?: SelectedAgent | null;
   onAgentSelect?: (agent: SelectedAgent) => void;
   onOpenAgentSettings?: () => void;
@@ -25,6 +27,8 @@ export const ConfigSelect = ({
   onToggleThinking,
   streamingEnabled,
   onStreamingEnabledChange,
+  enable1MContext,
+  onEnable1MContextChange,
   selectedAgent,
   onAgentSelect,
   onOpenAgentSettings,
@@ -378,12 +382,11 @@ export const ConfigSelect = ({
               <span className="codicon codicon-sync" />
               <span>Streaming</span>
             </div>
-            <Switch
-              size="small"
+            <ToggleSwitch
               checked={streamingEnabled ?? false}
               onClick={(checked, e) => {
-                 e.stopPropagation();
-                 onStreamingEnabledChange?.(checked);
+                e.stopPropagation();
+                onStreamingEnabledChange?.(checked);
               }}
             />
           </div>
@@ -403,12 +406,35 @@ export const ConfigSelect = ({
               <span className="codicon codicon-lightbulb" />
               <span>Thinking</span>
             </div>
-            <Switch
-              size="small"
+            <ToggleSwitch
               checked={alwaysThinkingEnabled ?? false}
               onClick={(checked, e) => {
-                 e.stopPropagation();
-                 onToggleThinking?.(checked);
+                e.stopPropagation();
+                onToggleThinking?.(checked);
+              }}
+            />
+          </div>
+
+          <div style={{ height: 1, background: 'var(--dropdown-border)', margin: '4px 0', opacity: 0.5 }} />
+
+          <div
+            className="selector-option"
+            onClick={(e) => {
+              e.stopPropagation();
+              onEnable1MContextChange?.(!enable1MContext);
+            }}
+            onMouseEnter={() => setActiveSubmenu('none')}
+            style={{ justifyContent: 'space-between', cursor: 'pointer' }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span className="codicon codicon-database" />
+              <span>1M Context</span>
+            </div>
+            <ToggleSwitch
+              checked={enable1MContext ?? false}
+              onClick={(checked, e) => {
+                e.stopPropagation();
+                onEnable1MContextChange?.(checked);
               }}
             />
           </div>

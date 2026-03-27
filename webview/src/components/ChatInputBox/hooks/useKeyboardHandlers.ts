@@ -13,8 +13,6 @@ export interface KeyboardHandlersConfig {
   agentCompletionHandleKeyDown: (e: KeyboardEvent) => boolean;
   handleSubmit: () => void;
   handleInput: (isComposingFromEvent?: boolean) => void;
-  sdkStatusLoading: boolean;
-  sdkInstalled: boolean;
   sendShortcut: 'enter' | 'cmdEnter';
 }
 
@@ -39,8 +37,6 @@ export function useKeyboardHandlers({
   agentCompletionHandleKeyDown,
   handleSubmit,
   handleInput,
-  sdkStatusLoading,
-  sdkInstalled,
   sendShortcut,
 }: KeyboardHandlersConfig): KeyboardHandlersReturn {
   const shiftKeyPressedRef = useRef(false);
@@ -272,9 +268,6 @@ export function useKeyboardHandlers({
 
     if (isSendKey) {
       e.preventDefault();
-      if (sdkStatusLoading || !sdkInstalled) {
-        return;
-      }
       submittedOnEnterRef.current = true;
       handleSubmit();
       return;
@@ -309,8 +302,6 @@ export function useKeyboardHandlers({
     fileCompletionHandleKeyDown,
     commandCompletionHandleKeyDown,
     agentCompletionHandleKeyDown,
-    sdkStatusLoading,
-    sdkInstalled,
     sendShortcut,
     lastCompositionEndTimeRef,
   ]);

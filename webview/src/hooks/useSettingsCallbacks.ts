@@ -3,16 +3,12 @@ import type { PermissionMode } from '../components/ChatInputBox/types';
 import type { ProviderConfig } from '../types/provider';
 import { sendBridgeEvent } from '../utils/bridge';
 
-type SdkStatusRecord = Record<string, { installed?: boolean; status?: string }>;
-
 interface AuthStatus {
   authenticated: boolean;
   authType: string;
 }
 
 export interface UseSettingsCallbacksParams {
-  setSdkStatus: Dispatch<SetStateAction<SdkStatusRecord>>;
-  setSdkStatusLoaded: Dispatch<SetStateAction<boolean>>;
   setAuthStatus: Dispatch<SetStateAction<AuthStatus | null>>;
   setAuthStatusLoaded: Dispatch<SetStateAction<boolean>>;
 
@@ -32,11 +28,10 @@ export interface UseSettingsCallbacksParams {
   setClaudeSettingsAlwaysThinkingEnabled: Dispatch<SetStateAction<boolean>>;
   setStreamingEnabledSetting: Dispatch<SetStateAction<boolean>>;
   setSendShortcut: Dispatch<SetStateAction<'enter' | 'cmdEnter'>>;
+  setEnable1MContext: Dispatch<SetStateAction<boolean>>;
 }
 
 export function useSettingsCallbacks({
-  setSdkStatus,
-  setSdkStatusLoaded,
   setAuthStatus,
   setAuthStatusLoaded,
   setUsagePercentage,
@@ -51,34 +46,9 @@ export function useSettingsCallbacks({
   setClaudeSettingsAlwaysThinkingEnabled,
   setStreamingEnabledSetting,
   setSendShortcut,
+  setEnable1MContext,
 }: UseSettingsCallbacksParams): void {
   useEffect(() => {
-    const originalUpdateDependencyStatus = window.updateDependencyStatus;
-    window.updateDependencyStatus = (jsonStr: string) => {
-      try {
-        const status = JSON.parse(jsonStr);
-        setSdkStatus(status);
-        setSdkStatusLoaded(true);
-      } catch (error) {
-        console.error('[Frontend] Failed to parse SDK status:', error);
-        setSdkStatusLoaded(true);
-      }
-      if (originalUpdateDependencyStatus && originalUpdateDependencyStatus !== window.updateDependencyStatus) {
-        originalUpdateDependencyStatus(jsonStr);
-      }
-    };
-    (window as any)._appUpdateDependencyStatus = window.updateDependencyStatus;
-
-    if (window.__pendingDependencyStatus) {
-      const pending = window.__pendingDependencyStatus;
-      delete window.__pendingDependencyStatus;
-      window.updateDependencyStatus?.(pending);
-    }
-
-    if (window.sendToJava) {
-      window.sendToJava('get_dependency_status:');
-    }
-
     window.updateAuthStatus = (jsonStr: string) => {
       try {
         const data = JSON.parse(jsonStr);
@@ -176,6 +146,15 @@ export function useSettingsCallbacks({
       }
     };
 
+    window.update1MContextEnabled = (jsonStr: string) => {
+      try {
+        const data = JSON.parse(jsonStr);
+        setEnable1MContext(data.enabled ?? false);
+      } catch (error) {
+        console.error('[Frontend] Failed to parse 1M context config:', error);
+      }
+    };
+
     const MAX_RETRIES = 30;
 
     let providerRetryCount = 0;
@@ -231,6 +210,19 @@ export function useSettingsCallbacks({
       }
     };
     setTimeout(requestSendShortcut, 200);
+
+    let context1MRetryCount = 0;
+    const request1MContext = () => {
+      if (window.sendToJava) {
+        sendBridgeEvent('get_enable_1m_context');
+      } else {
+        context1MRetryCount++;
+        if (context1MRetryCount < MAX_RETRIES) {
+          setTimeout(request1MContext, 100);
+        }
+      }
+    };
+    setTimeout(request1MContext, 200);
 
   }, []);
 

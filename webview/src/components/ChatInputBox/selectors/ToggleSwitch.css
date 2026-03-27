@@ -1,0 +1,39 @@
+/* Minimal sliding toggle switch — no dependencies */
+.toggle-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 28px;
+  height: 16px;
+  border-radius: 8px;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  background: var(--text-muted, #666666);
+  transition: background 0.2s ease;
+  flex-shrink: 0;
+}
+
+.toggle-switch--on {
+  background: var(--button-primary, #007fd4);
+}
+
+.toggle-switch__thumb {
+  position: absolute;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.2s ease;
+  pointer-events: none;
+}
+
+.toggle-switch--on .toggle-switch__thumb {
+  transform: translateX(12px);
+}
+
+.toggle-switch:focus-visible {
+  outline: 2px solid var(--input-focus-border, #007fd4);
+  outline-offset: 2px;
+}

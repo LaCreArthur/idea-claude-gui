@@ -73,3 +73,5 @@ tests/e2e/screenshots/
 tests/tests/
 *.hprof
 .ralph/
+.idea-forge/
+/com/

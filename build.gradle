@@ -3,7 +3,7 @@ import org.jetbrains.intellij.platform.gradle.TestFrameworkType
 plugins {
     id 'java'
     id 'checkstyle'
-    id 'org.jetbrains.kotlin.jvm' version '1.9.22'
+    id 'org.jetbrains.kotlin.jvm' version '2.2.20'  // match bundled Kotlin in 2025.3 (see .claude/references/gradle-plugin-versions.md)
     id 'org.jetbrains.intellij.platform' version '2.10.5'
 }
 
@@ -38,6 +38,13 @@ repositories {
 dependencies {
     implementation 'com.google.code.gson:gson:2.10.1'
 
+    // Anthropic SDK (Kotlin agent runtime — replaces Node.js bridge)
+    implementation 'com.anthropic:anthropic-java:2.18.0'
+
+    // Kotlin coroutines (agent loop, permission suspension, streaming)
+    // Do NOT add kotlin-stdlib or kotlinx-coroutines-core — both are bundled with the IDE.
+    // Adding them causes loader constraint violations (two versions of the same class).
+
     // Testing - JUnit 5 with JUnit 4 compatibility for IntelliJ Platform (IJPL-159134)
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.1'
     testImplementation 'org.junit.vintage:junit-vintage-engine:5.10.1'
@@ -47,16 +54,16 @@ dependencies {
     testImplementation 'org.mockito:mockito-junit-jupiter:5.8.0'
 
     // E2E Testing - JetBrains IDE Starter for remote IDE control
-    testImplementation 'org.jetbrains.kotlin:kotlin-stdlib:1.9.22'
-    testImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3'
+    testImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3'
     // Explicitly add Starter runtime dependencies
     testRuntimeOnly 'com.jetbrains.intellij.tools:ide-starter-squashed:243.22562.145'
     testRuntimeOnly 'com.jetbrains.intellij.tools:ide-starter-junit5:243.22562.145'
     testRuntimeOnly 'com.jetbrains.intellij.tools:ide-starter-driver:243.22562.145'
 
     intellijPlatform {
-        intellijIdeaCommunity('2024.3.1')
+        intellijIdea('2025.3.1')
         bundledPlugin('com.intellij.java')  // Java PSI for JavaContextCollector (compile-time only)
+        bundledPlugin('org.jetbrains.plugins.terminal')  // Reworked Terminal API (com.intellij.terminal.frontend.*)
         instrumentationTools()
         testFramework TestFrameworkType.Starter.INSTANCE  // JetBrains Starter Framework for E2E testing
     }
@@ -203,12 +210,6 @@ tasks.named('runIde') {
     }
 }
 
-// AI Bridge for Claude SDK
-def aiBridgeDir = file("ai-bridge")
-def aiBridgePackDir = layout.buildDirectory.dir('ai-bridge-pack').get().asFile
-def aiBridgeArchive = new File(aiBridgePackDir, 'ai-bridge.zip')
-def aiBridgeHashFile = new File(aiBridgePackDir, 'ai-bridge.hash')
-
 // Auto-build webview
 def webviewDir = file('webview')
 tasks.register('buildWebview', Exec) {
@@ -235,169 +236,8 @@ tasks.named('processResources') {
     mustRunAfter('buildWebview')
 }
 
-// Package ai-bridge using system zip command to preserve file permissions
-tasks.register('packageAiBridge', Exec) {
-    onlyIf { aiBridgeDir.exists() }
-
-    // Change to ai-bridge directory to avoid including top-level directory
-    workingDir aiBridgeDir
-
-    // Ensure output directory exists
-    doFirst {
-        aiBridgePackDir.mkdirs()
-        // Delete old zip file
-        if (aiBridgeArchive.exists()) {
-            aiBridgeArchive.delete()
-        }
-    }
-
-    // Use system zip command: -r recursive, -y preserve symlinks
-    // Exclude SDK packages (installed by user on-demand to ~/.claude-gui/dependencies/)
-    if (System.getProperty('os.name').toLowerCase().contains('windows')) {
-        // Windows: Use PowerShell to exclude SDK packages
-        // Compress-Archive doesn't support exclude patterns, so we copy to temp dir first
-        // Use parameter array to prevent command injection
-        commandLine 'powershell', '-Command', '''
-            $excludeDirs = @(
-                "node_modules\\.pnpm",
-                "node_modules\\@anthropic-ai",
-                "node_modules\\@openai"
-            )
-            $tempDir = Join-Path $env:TEMP "ai-bridge-temp-$(Get-Random)"
-            New-Item -ItemType Directory -Path $tempDir -Force | Out-Null
-            Get-ChildItem -Path . -Recurse | Where-Object {
-                $path = $_.FullName
-                -not ($excludeDirs | Where-Object { $path -like "*$_*" })
-            } | ForEach-Object {
-                $dest = Join-Path $tempDir $_.FullName.Substring((Get-Location).Path.Length + 1)
-                if ($_.PSIsContainer) {
-                    New-Item -ItemType Directory -Path $dest -Force | Out-Null
-                } else {
-                    $destDir = Split-Path $dest -Parent
-                    if (-not (Test-Path $destDir)) {
-                        New-Item -ItemType Directory -Path $destDir -Force | Out-Null
-                    }
-                    Copy-Item $_.FullName -Destination $dest -Force
-                }
-            }
-            Compress-Archive -Path "$tempDir\\*" -DestinationPath "''' + aiBridgeArchive.absolutePath + '''" -Force
-            Remove-Item -Path $tempDir -Recurse -Force
-        '''
-    } else {
-        // Unix/Linux/macOS: Use zip command to preserve permissions
-        // Exclude SDK package directories
-        commandLine 'zip', '-r', '-y', aiBridgeArchive.absolutePath,
-            '.',
-            '-x', '*/node_modules/.pnpm/*',
-            '-x', '*/node_modules/@anthropic-ai/*',
-            '-x', '*/node_modules/@openai/*'
-    }
-
-    doLast {
-        if (aiBridgeArchive.exists()) {
-            println "ai-bridge.zip created: ${aiBridgeArchive.absolutePath}"
-            println "  Size: ${aiBridgeArchive.length() / 1024 / 1024} MB"
-
-            // Generate ai-bridge.hash file (SHA-256)
-            def digest = java.security.MessageDigest.getInstance('SHA-256')
-            aiBridgeArchive.withInputStream { is ->
-                byte[] buffer = new byte[8192]
-                int read
-                while ((read = is.read(buffer)) != -1) {
-                    digest.update(buffer, 0, read)
-                }
-            }
-            def hashHex = digest.digest().collect { String.format('%02x', it) }.join('')
-            aiBridgeHashFile.text = hashHex
-            println "ai-bridge.hash created: ${hashHex}"
-        } else {
-            throw new GradleException("Packaging failed: ai-bridge.zip not generated")
-        }
-    }
-}
-
-// Extract plugin name
-def pluginName = project.name
-
-tasks.matching { it.name.startsWith('prepareSandbox') }.configureEach {
-    dependsOn('buildWebview', 'packageAiBridge')
-    def sandboxRootProvider = layout.buildDirectory.dir('idea-sandbox')
-    // 在配置阶段捕获需要的文件引用
-    def archiveSource = aiBridgeArchive
-    def hashSource = aiBridgeHashFile
-    def bridgeDir = aiBridgeDir
-
-    doLast {
-        if (!bridgeDir.exists() && !archiveSource.exists()) {
-            throw new GradleException('ai-bridge directory not found. Please ensure it has been pulled and dependencies installed.')
-        }
-        def sandboxRoot = sandboxRootProvider.get().asFile
-        def pluginDir = new File(sandboxRoot, "plugins/${pluginName}")
-
-        def extractedDir = new File(pluginDir, 'ai-bridge')
-        def archiveTarget = new File(pluginDir, 'ai-bridge.zip')
-        def hashTarget = new File(pluginDir, 'ai-bridge.hash')
-
-        // 使用 ant 任务删除和复制，避免使用 project.* 方法
-        ant.delete(dir: extractedDir, failonerror: false)
-        ant.delete(file: archiveTarget, failonerror: false)
-        ant.delete(file: hashTarget, failonerror: false)
-        ant.copy(file: archiveSource, todir: pluginDir)
-        if (hashSource.exists()) {
-            ant.copy(file: hashSource, todir: pluginDir)
-        }
-    }
-}
-
-// Configure tasks after prepareSandbox to ensure ai-bridge.zip is included
-tasks.matching { it.name == 'preparePluginForDistribution' || it.name == 'composedJar' }.configureEach {
-    dependsOn('packageAiBridge')
-}
-
 tasks.named('buildPlugin') {
-    dependsOn('packageAiBridge', 'checkstyleMain')
-
-    doLast {
-        // Extract plugin zip, add ai-bridge.zip and ai-bridge.hash, then repack
-        def distributionFile = archiveFile.get().asFile
-        if (distributionFile.exists() && aiBridgeArchive.exists()) {
-            def tempDir = file("${layout.buildDirectory.get()}/tmp/plugin-repack")
-            delete(tempDir)
-
-            // Extract
-            copy {
-                from zipTree(distributionFile)
-                into tempDir
-            }
-
-            // Find plugin directory and add ai-bridge.zip and ai-bridge.hash
-            def pluginDir = new File(tempDir, pluginName)
-            if (pluginDir.exists()) {
-                copy {
-                    from aiBridgeArchive
-                    from aiBridgeHashFile
-                    into pluginDir
-                }
-
-                // Delete searchableOptions jar (if exists)
-                fileTree(new File(pluginDir, 'lib')).matching {
-                    include '**/*searchableOptions*.jar'
-                }.each { jarFile ->
-                    delete(jarFile)
-                    println "Deleted searchableOptions jar: ${jarFile.name}"
-                }
-
-                // Repack
-                delete(distributionFile)
-                ant.zip(destfile: distributionFile) {
-                    fileset(dir: tempDir)
-                }
-                println "Added ai-bridge.zip and ai-bridge.hash to plugin package and removed searchableOptions jar"
-            }
-
-            delete(tempDir)
-        }
-    }
+    dependsOn('checkstyleMain')
 }
 
 // ============================================================================
